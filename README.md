@@ -1,0 +1,2 @@
+# coolbits.ai
+CoolBits.ai
