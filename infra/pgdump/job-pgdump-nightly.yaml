@@ -1,67 +1,48 @@
 apiVersion: run.googleapis.com/v1
 kind: Job
 metadata:
-  annotations:
-    run.googleapis.com/client-name: gcloud
-    run.googleapis.com/client-version: 537.0.0
-    run.googleapis.com/creator: coolbits.dm@gmail.com
-    run.googleapis.com/lastModifier: coolbits.dm@gmail.com
-    run.googleapis.com/operation-id: b0a75f97-4dba-4c56-91ee-50efb9c469f7
-  creationTimestamp: '2025-09-13T09:20:27.995491Z'
-  generation: 3
-  labels:
-    cloud.googleapis.com/location: europe-west3
-    run.googleapis.com/lastUpdatedTime: '2025-09-13T09:54:39.379358Z'
-    run.googleapis.com/satisfiesPzs: 'true'
   name: pgdump-nightly
-  namespace: '271190369805'
-  resourceVersion: AAY+q8lmQ8o
-  selfLink: /apis/run.googleapis.com/v1/namespaces/271190369805/jobs/pgdump-nightly
-  uid: 43b83ee5-a6db-46d0-a0b6-ed76be96d5fe
+  namespace: coolbits
 spec:
   template:
     metadata:
       annotations:
-        run.googleapis.com/client-name: gcloud
-        run.googleapis.com/client-version: 537.0.0
         run.googleapis.com/cloudsql-instances: coolbits-ai:europe-west3:coolbits-rag-e
         run.googleapis.com/execution-environment: gen2
-      labels:
-        client.knative.dev/nonce: can_men_bay
     spec:
       taskCount: 1
       template:
         spec:
           containers:
-          - env:
-            - name: INSTANCE_CONN
-              value: coolbits-ai:europe-west3:coolbits-rag-e
-            - name: DBNAME
-              value: coolbits_rag
-            - name: BUCKET
-              value: gs://coolbits-ai-sql-backups-ew3
-            - name: PGPASSWORD
-              valueFrom:
-                secretKeyRef:
-                  key: latest
-                  name: postgres-password
-            image: europe-west3-docker.pkg.dev/coolbits-ai/containers/pgdump:v16-20250913-094714
-            resources:
-              limits:
-                cpu: '1'
-                memory: 512Mi
-          maxRetries: 3
+            - name: pgdump
+              image: europe-west3-docker.pkg.dev/coolbits-ai/containers/pgdump:v16-fixed
+              command: ["/bin/bash", "/app/entrypoint.sh"]
+              env:
+                - name: INSTANCE_CONN
+                  value: coolbits-ai:europe-west3:coolbits-rag-e
+                - name: DBNAME
+                  value: coolbits_rag
+                - name: BUCKET
+                  value: gs://coolbits-ai-sql-backups-ew3
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-password
+                      key: latest
+              volumeMounts:
+                - name: cloudsql
+                  mountPath: /cloudsql
+                  readOnly: true
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 512Mi
+          volumes:
+            - name: cloudsql
+              secret:
+                secretName: cloudsql-instance-credentials
+          restartPolicy: Never
           serviceAccountName: 271190369805-compute@developer.gserviceaccount.com
-          timeoutSeconds: '3600'
-status:
-  conditions:
-  - lastTransitionTime: '2025-09-13T09:20:28.426938Z'
-    status: 'True'
-    type: Ready
-  executionCount: 3
-  latestCreatedExecution:
-    completionStatus: EXECUTION_SUCCEEDED
-    completionTimestamp: '2025-09-13T09:56:38.757329Z'
-    creationTimestamp: '2025-09-13T09:56:17.226350Z'
-    name: pgdump-nightly-vbrr9
-  observedGeneration: 3
+          timeoutSeconds: 3600
+          maxRetries: 3
+  launchStage: GA
