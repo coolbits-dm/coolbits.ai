@@ -37,11 +37,14 @@ jobs:
       - name: gcloud version
         run: gcloud version
 
+      - name: Install Cloud Tasks client
+        run: python3 -m pip install --upgrade google-cloud-tasks
+
       - name: Execute requested action
         env:
           REGION: ${{ github.event.inputs.region }}
           ACTION: ${{ github.event.inputs.action }}
-          ARGS: ${{ github.event.inputs.args }}
+          ARGS:   ${{ github.event.inputs.args }}
         run: |
           set -euo pipefail
           echo "Action: $ACTION | Region: $REGION | Args: $ARGS"
@@ -52,13 +55,13 @@ jobs:
               SA="o-runner@${PROJECT}.iam.gserviceaccount.com"
               SVC="andy-gateway"
 
-              echo "[1] IAM roles on project"
+              echo "[IAM] grant roles to SA on project"
               for ROLE in roles/cloudtasks.enqueuer roles/run.invoker roles/iap.httpsResourceAccessor; do
-                gcloud projects add-iam-policy-binding $PROJECT \
+                gcloud projects add-iam-policy-binding "$PROJECT" \
                   --member="serviceAccount:${SA}" --role="$ROLE" || true
               done
 
-              echo "[2] Grant Run invoker on service"
+              echo "[Run] add invoker on service"
               gcloud run services add-iam-policy-binding "$SVC" \
                 --region="$REGION" \
                 --member="serviceAccount:${SA}" \
@@ -68,43 +71,52 @@ jobs:
             create-queue)
               PROJECT="coolbits-ai"
               QUEUE="${ARGS:-ogpt-default-queue}"
-              echo "[Queue] $QUEUE in $REGION"
+              echo "[Tasks] ensure queue '$QUEUE' in $REGION"
               gcloud tasks queues describe "$QUEUE" --location="$REGION" --project="$PROJECT" \
                 || gcloud tasks queues create "$QUEUE" --location="$REGION" --project="$PROJECT"
-              gcloud tasks queues describe "$QUEUE" --location="$REGION" --project="$PROJECT" --format="yaml(state,rateLimits,retryConfig)"
+              gcloud tasks queues describe "$QUEUE" --location="$REGION" --project="$PROJECT" \
+                --format="yaml(name,state,rateLimits,retryConfig)"
               ;;
 
             ping-task)
-              export TASK_PROJECT="coolbits-ai"
-              export TASK_REGION="$REGION"
-              export TASK_QUEUE="${ARGS:-ogpt-default-queue}"
-              export TASK_URL="$(gcloud run services describe andy-gateway --region="$REGION" --project="$TASK_PROJECT" --format="value(status.url)")/api/v1/task-hook"
+              PROJECT="coolbits-ai"
+              QUEUE="${ARGS:-ogpt-default-queue}"
 
-              echo "[Create Task] $TASK_QUEUE -> $TASK_URL"
-              python3 - <<'PY'
-import json
-import os
+              BASE_URL=$(gcloud run services describe andy-gateway --region="$REGION" --project="$PROJECT" --format="value(status.url)")
+              TASK_URL="${BASE_URL}/api/v1/task-hook"
+              echo "[Create Task] $QUEUE -> $TASK_URL"
+
+              cat > ping_task.py <<'PY'
+import os, json
 from google.cloud import tasks_v2
 
-project = os.environ["TASK_PROJECT"]
-region = os.environ["TASK_REGION"]
-queue = os.environ["TASK_QUEUE"]
-url = os.environ["TASK_URL"]
+project = "coolbits-ai"
+region  = os.environ["REGION"]
+queue   = os.environ.get("QUEUE", "ogpt-default-queue")
+url     = os.environ["TASK_URL"]
+aud     = os.environ["TASK_AUD"]
+sa      = os.environ["TASK_SA"]
 
 client = tasks_v2.CloudTasksClient()
 parent = client.queue_path(project, region, queue)
+
 payload = {"job": "ping", "args": {"x": 1}}
 task = {
-    "http_request": {
-        "http_method": tasks_v2.HttpMethod.POST,
-        "url": url,
-        "headers": {"Content-Type": "application/json"},
-        "body": json.dumps(payload).encode("utf-8"),
+  "http_request": {
+    "http_method": tasks_v2.HttpMethod.POST,
+    "url": url,
+    "headers": {"Content-Type": "application/json"},
+    "body": json.dumps(payload).encode("utf-8"),
+    "oidc_token": {
+      "service_account_email": sa,
+      "audience": aud
     }
+  }
 }
 resp = client.create_task(request={"parent": parent, "task": task})
 print(resp.name)
 PY
+              REGION="$REGION" QUEUE="$QUEUE" TASK_URL="$TASK_URL" TASK_AUD="$BASE_URL" TASK_SA="o-runner@coolbits-ai.iam.gserviceaccount.com" python3 ping_task.py
               ;;
 
             *)
