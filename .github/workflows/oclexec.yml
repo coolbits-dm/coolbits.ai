@@ -75,13 +75,15 @@ jobs:
               ;;
 
             ping-task)
-              TASK_PROJECT="coolbits-ai"
-              TASK_QUEUE="${ARGS:-ogpt-default-queue}"
-              TASK_URL=$(gcloud run services describe andy-gateway --region="$REGION" --project="$TASK_PROJECT" --format="value(status.url)")/api/v1/task-hook
+              export TASK_PROJECT="coolbits-ai"
+              export TASK_REGION="$REGION"
+              export TASK_QUEUE="${ARGS:-ogpt-default-queue}"
+              export TASK_URL="$(gcloud run services describe andy-gateway --region="$REGION" --project="$TASK_PROJECT" --format="value(status.url)")/api/v1/task-hook"
 
               echo "[Create Task] $TASK_QUEUE -> $TASK_URL"
-              TASK_PROJECT="$TASK_PROJECT" TASK_REGION="$REGION" TASK_QUEUE="$TASK_QUEUE" TASK_URL="$TASK_URL" python3 - <<'PY'
-import json, os
+              python3 - <<'PY'
+import json
+import os
 from google.cloud import tasks_v2
 
 project = os.environ["TASK_PROJECT"]
