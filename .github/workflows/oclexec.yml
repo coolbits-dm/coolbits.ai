@@ -1,0 +1,112 @@
+name: oCL Exec
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: "GCP region"
+        required: true
+        default: "europe-west3"
+      action:
+        description: "Action name"
+        required: true
+        default: "iam-queue-invoker"
+      args:
+        description: "Extra args (optional)"
+        required: false
+        default: ""
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: coolbits-ai
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}   # ex: projects/123/locations/global/workloadIdentityPools/gh-pool/providers/gh-provider
+          service_account: ${{ secrets.GCP_SA_EMAIL }}                  # ex: o-runner@coolbits-ai.iam.gserviceaccount.com
+
+      - name: gcloud version
+        run: gcloud version
+
+      - name: Execute requested action
+        env:
+          REGION: ${{ github.event.inputs.region }}
+          ACTION: ${{ github.event.inputs.action }}
+          ARGS: ${{ github.event.inputs.args }}
+        run: |
+          set -euo pipefail
+          echo "Action: $ACTION | Region: $REGION | Args: $ARGS"
+
+          case "$ACTION" in
+            iam-queue-invoker)
+              PROJECT="coolbits-ai"
+              SA="o-runner@${PROJECT}.iam.gserviceaccount.com"
+              SVC="andy-gateway"
+
+              echo "[1] IAM roles on project"
+              for ROLE in roles/cloudtasks.enqueuer roles/run.invoker roles/iap.httpsResourceAccessor; do
+                gcloud projects add-iam-policy-binding $PROJECT \
+                  --member="serviceAccount:${SA}" --role="$ROLE" || true
+              done
+
+              echo "[2] Grant Run invoker on service"
+              gcloud run services add-iam-policy-binding "$SVC" \
+                --region="$REGION" \
+                --member="serviceAccount:${SA}" \
+                --role="roles/run.invoker" || true
+              ;;
+
+            create-queue)
+              PROJECT="coolbits-ai"
+              QUEUE="${ARGS:-ogpt-default-queue}"
+              echo "[Queue] $QUEUE in $REGION"
+              gcloud tasks queues describe "$QUEUE" --location="$REGION" --project="$PROJECT" \
+                || gcloud tasks queues create "$QUEUE" --location="$REGION" --project="$PROJECT"
+              gcloud tasks queues describe "$QUEUE" --location="$REGION" --project="$PROJECT" --format="yaml(state,rateLimits,retryConfig)"
+              ;;
+
+            ping-task)
+              TASK_PROJECT="coolbits-ai"
+              TASK_QUEUE="${ARGS:-ogpt-default-queue}"
+              TASK_URL=$(gcloud run services describe andy-gateway --region="$REGION" --project="$TASK_PROJECT" --format="value(status.url)")/api/v1/task-hook
+
+              echo "[Create Task] $TASK_QUEUE -> $TASK_URL"
+              TASK_PROJECT="$TASK_PROJECT" TASK_REGION="$REGION" TASK_QUEUE="$TASK_QUEUE" TASK_URL="$TASK_URL" python3 - <<'PY'
+import json, os
+from google.cloud import tasks_v2
+
+project = os.environ["TASK_PROJECT"]
+region = os.environ["TASK_REGION"]
+queue = os.environ["TASK_QUEUE"]
+url = os.environ["TASK_URL"]
+
+client = tasks_v2.CloudTasksClient()
+parent = client.queue_path(project, region, queue)
+payload = {"job": "ping", "args": {"x": 1}}
+task = {
+    "http_request": {
+        "http_method": tasks_v2.HttpMethod.POST,
+        "url": url,
+        "headers": {"Content-Type": "application/json"},
+        "body": json.dumps(payload).encode("utf-8"),
+    }
+}
+resp = client.create_task(request={"parent": parent, "task": task})
+print(resp.name)
+PY
+              ;;
+
+            *)
+              echo "Unknown action: $ACTION" >&2
+              exit 2
+              ;;
+          esac
