@@ -40,6 +40,14 @@ jobs:
       - name: Install Cloud Tasks client
         run: python3 -m pip install --upgrade google-cloud-tasks
 
+      - name: DIAG gcloud context
+        run: |
+          set -x
+          gcloud auth list
+          gcloud config list
+          gcloud run services describe andy-gateway --region=europe-west3 --format="yaml(status.url)" || true
+          gcloud tasks queues list --location=europe-west3 || true
+
       - name: Execute requested action
         env:
           REGION: ${{ github.event.inputs.region }}
