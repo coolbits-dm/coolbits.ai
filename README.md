@@ -62,6 +62,49 @@ echo "SA=${SA_EMAIL}"
 
 Output-ul final trebuie să listeze clar `PROVIDER=` și `SA=`. Dacă lipsesc, corectează erorile înainte de a merge mai departe.
 
+### 1.1 Verificare & remediere WIF (mesaj pentru @oCL)
+Ori de câte ori pairing-ul eșuează în Actions, rulează blocul de mai jos în Cloud Shell pentru a confirma că binding-urile WIF și rolurile proiectului sunt încă valide. Nu sări peste pași: dacă un pas raportează o eroare, repar-o și relansează blocul complet până când output-ul se încheie cu `DONE_WIF=OK`.
+
+```bash
+# ==== VERIFY & FIX WIF BINDINGS (Cloud Shell) ====
+set -euo pipefail
+PROJECT="coolbits-ai"
+SA_EMAIL="o-runner@${PROJECT}.iam.gserviceaccount.com"
+POOL_ID="gh-pool"
+PROVIDER_ID="gh-provider"
+REPO="coolbits-dm/coolbits.ai"
+
+gcloud config set project "$PROJECT" >/dev/null
+
+# 0) Afișează providerul și copiază EXACT valoarea PROVIDER= pentru @oCC
+POOL_FULL="projects/$(gcloud projects describe $PROJECT --format='value(projectNumber)')/locations/global/workloadIdentityPools/${POOL_ID}"
+PROVIDER_FULL="${POOL_FULL}/providers/${PROVIDER_ID}"
+echo "PROVIDER=${PROVIDER_FULL}"
+echo "SA=${SA_EMAIL}"
+
+# 1) Verifică politica SA: trebuie să vezi principalSet cu attribute.repository/coolbits-dm/coolbits.ai
+gcloud iam service-accounts get-iam-policy "$SA_EMAIL" \
+  --format="yaml(bindings)"
+
+# 2) Dacă NU vezi principalSet://.../attribute.repository/coolbits-dm/coolbits.ai, rulează:
+gcloud iam service-accounts add-iam-policy-binding "$SA_EMAIL" \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/${POOL_FULL}/attribute.repository/${REPO}"
+
+# 3) Dă rolurile minime la SA (idempotent). Asta se face la nivel de proiect de către tine, nu de către workflow.
+for ROLE in roles/cloudtasks.enqueuer roles/run.invoker roles/iap.httpsResourceAccessor; do
+  gcloud projects add-iam-policy-binding "$PROJECT" \
+    --member="serviceAccount:${SA_EMAIL}" --role="$ROLE" || true
+done
+
+# 4) Confirmă că există queue-ul (nu creează, doar verifică regiunea)
+gcloud tasks queues list --location=europe-west3 --format="table(name,state)"
+
+echo "DONE_WIF=OK"
+```
+
+Output-ul trebuie să includă binding-ul `principalSet://iam.googleapis.com/.../attribute.repository/coolbits-dm/coolbits.ai` la pasul 1 și mesajul final `DONE_WIF=OK`. Fără acești pași, GitHub Actions nu se poate autentifica prin WIF.
+
 ---
 
 ## 2. GitHub secrets & workflow scaffolding (message for @oCC)
