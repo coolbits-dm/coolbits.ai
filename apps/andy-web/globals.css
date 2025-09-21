@@ -1,0 +1,69 @@
+/* app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light defaults */
+:root{
+  --accent:#2563eb;           /* albastru implicit în light */
+  --logo-color:var(--accent);
+
+  --accent-3:  color-mix(in srgb, var(--accent) 3%,  transparent);
+  --accent-6:  color-mix(in srgb, var(--accent) 6%,  transparent);
+  --accent-12: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-18: color-mix(in srgb, var(--accent) 18%, transparent);
+
+  accent-color: var(--accent);
+
+  --bg-app:#f6f7f9;
+  --bg-panel:#ffffff;
+  --text:#0b0e14;
+  --muted:#5b6472;
+  --border:#e6e9ef;
+}
+
+/* Dark defaults */
+html.dark{
+  --accent:#ffffff;           /* alb implicit în dark */
+  --logo-color:#ffffff;
+
+  --bg-app:#0c0e12;
+  --bg-panel:#111418;
+  --text:#e8eaed;
+  --muted:#a0a7b0;
+  --border:#262b33;
+}
+
+/* dacă userul alege manual accentul, logo-ul urmează accentul */
+html[data-accent-override="true"]{
+  --logo-color:var(--accent) !important;
+}
+
+/* utilitare folosite în UI */
+.bg-app    { background-color: var(--bg-app); }
+.bg-panel  { background-color: var(--bg-panel); }
+.text-app  { color: var(--text); }
+.text-muted{ color: var(--muted); }
+.border-app{ border-color: var(--border); }
+
+.divider-accent {
+  background: linear-gradient(90deg, transparent, var(--accent-12), transparent);
+}
+
+.bg-panel-soft,
+.hover\:bg-panel-soft:hover { background-color: color-mix(in srgb, var(--bg-panel) 88%, transparent); }
+
+.bubble-user {
+  background-color: color-mix(in srgb, var(--accent) 6%, var(--bg-panel));
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--border));
+}
+
+/* logo: la fel ca SVG-ul, doar culoarea se inversează în dark */
+.logo-dark-white { filter:none; }
+html.dark .logo-dark-white { filter:brightness(0) invert(1); }
+
+html,body{ height:100%; }
+body{
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}

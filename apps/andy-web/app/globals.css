@@ -1,0 +1,48 @@
+/* app/globals.css */
+
+/* Font & base reset minimal */
+:root {
+  --accent: #2563eb;            /* default accent (blue) */
+  --app: #0b0d11;               /* bg app dark */
+  --panel: #101218;             /* surfaces */
+  --panel-soft: #0f1116;        /* softer surface */
+  --text: 235 235 236;          /* rgb for text */
+  --muted: 156 163 175;         /* slate-400-ish */
+}
+
+html.light {
+  --app: #f7f7f9;
+  --panel: #ffffff;
+  --panel-soft: #fafafa;
+  --text: 15 16 20;
+  --muted: 100 116 139;
+  --accent: #2563eb;            /* în light, implicit blue */
+}
+
+/* Utilitare pe variabile (folosite de tailwind cu @apply sau direct) */
+.bg-app { background-color: var(--app); }
+.bg-panel { background-color: var(--panel); }
+.bg-panel-soft { background-color: var(--panel-soft); }
+.text-app { color: rgb(var(--text)); }
+.text-muted { color: rgb(var(--muted)); }
+.border-app\/10 { border-color: color-mix(in oklab, rgb(var(--text)) 12%, transparent); }
+.border-app\/15 { border-color: color-mix(in oklab, rgb(var(--text)) 15%, transparent); }
+
+/* Selection */
+::selection { background: color-mix(in oklab, var(--accent) 30%, transparent); }
+
+/* Tailwind base */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Small helpers */
+.divider-accent { background: color-mix(in oklab, var(--accent) 18%, transparent); height:1px; }
+
+/* Accent override hook (no styles needed, doar markup pentru JS) */
+/* [data-accent-override="true"] poate fi folosit dacă vrei ceva condițional */
+
+/* Accent helpers (vizibile imediat) */
+.accent-border-30 { border-color: color-mix(in oklab, var(--accent) 30%, transparent); }
+.accent-bg-10    { background:   color-mix(in oklab, var(--accent) 10%, transparent); }
+.accent-text     { color: var(--accent); }
