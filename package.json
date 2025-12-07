@@ -1,0 +1,8 @@
+{
+  "name": "coolbits-ui",
+  "private": true,
+  "scripts": {
+    "build": "echo \"no build step for static CoolBits UI\"",
+    "deploy": "wrangler pages deploy"
+  }
+}

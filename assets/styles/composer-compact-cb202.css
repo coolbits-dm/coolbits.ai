@@ -1,0 +1,228 @@
+/* === CB202 Compact Composer === */
+/* ChatGPT-inspired: Single seamless container */
+
+/* Single unified container - fluid responsive width */
+.chat-composer {
+  padding: 0 !important;
+  border-radius: 24px !important;
+  background: rgba(17, 24, 39, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3) !important;
+  overflow: hidden !important;
+  max-width: 1000px !important; /* Maximum on large screens */
+  width: calc(100% - 32px) !important; /* Fluid with 16px margin each side */
+  margin: 0 auto !important; /* Center horizontally */
+  box-sizing: border-box !important;
+}
+
+/* When sidebar is active, reduce composer width to prevent overlap */
+body.cb-shell-active .chat-composer {
+  max-width: min(1000px, calc(100vw - 260px)) !important; /* Viewport minus sidebar and safe margins */
+  width: calc(100% - 32px) !important;
+}
+
+/* When sidebar is collapsed (under 900px), use full width */
+@media (max-width: 900px) {
+  body.cb-shell-active .chat-composer,
+  .chat-composer {
+    max-width: 1000px !important;
+    width: calc(100% - 24px) !important;
+  }
+}
+
+/* Form is vertical layout with padding - FORCE vertical on all screens */
+.cb-composer {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  padding: 14px 16px 12px !important;
+}
+
+/* Prevent mobile from breaking vertical layout */
+body.cb-mobile .cb-composer,
+body.chat-page.cb-mobile .cb-composer {
+  flex-direction: column !important;
+  gap: 0 !important;
+}
+
+/* Textarea - no visible border, seamless */
+.cb-composer textarea {
+  width: 100% !important;
+  min-height: 52px !important;
+  max-height: 260px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: 0.95rem !important;
+  line-height: 26px !important;
+  resize: none !important;
+  overflow-y: auto !important;
+  transition: none !important;
+  border: none !important;
+  background: transparent !important;
+  color: inherit !important;
+  outline: none !important;
+}
+
+.cb-composer textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Controls row - subtle top border only */
+.cb-composer-controls {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  margin-top: 10px !important;
+  padding-top: 10px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Council pill on the left */
+.cb-composer .cb-council-pill {
+  display: flex !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
+  gap: 0 !important;
+  border-radius: 999px !important;
+  overflow: visible !important;
+}
+
+/* Compact council buttons - show both C and +N */
+.cb-composer .cb-council-pill-btn {
+  padding: 6px 12px !important;
+  font-size: 0.875rem !important;
+  min-height: 32px !important;
+  height: 32px !important;
+  border-radius: 999px !important;
+  white-space: nowrap !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.cb-composer .cb-council-pill-btn--left {
+  padding: 6px 8px 6px 10px !important;
+  border-radius: 999px 0 0 999px !important;
+}
+
+.cb-composer .cb-council-pill-btn--right {
+  padding: 6px 12px 6px 8px !important;
+  border-radius: 0 999px 999px 0 !important;
+  margin-left: -1px !important; /* Overlap border for seamless look */
+}
+
+/* Send button on the right - circular */
+.cb-composer button[type="submit"] {
+  padding: 0 !important;
+  font-size: 0.9rem !important;
+  min-width: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+  flex: 0 0 32px !important;
+}
+
+/* More specific override for .btn class */
+#cb-composer .btn.cb-composer-send {
+  min-width: 32px !important;
+  min-height: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  flex: 0 0 32px !important;
+  border-radius: 50% !important;
+}
+
+/* Custom scrollbar for composer textarea */
+.cb-composer textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cb-composer textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cb-composer textarea::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+}
+
+.cb-composer textarea::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .chat-composer {
+    border-radius: 20px !important;
+  }
+  
+  .cb-composer {
+    padding: 12px 14px 10px !important;
+  }
+  
+  .cb-composer textarea {
+    min-height: 48px !important;
+    font-size: 0.9rem !important;
+    line-height: 24px !important;
+  }
+  
+  .cb-composer-controls {
+    gap: 8px !important;
+    margin-top: 8px !important;
+    padding-top: 8px !important;
+  }
+  
+  .cb-composer .cb-council-pill-btn {
+    padding: 5px 10px !important;
+    font-size: 0.8rem !important;
+    min-height: 28px !important;
+    height: 28px !important;
+  }
+  
+  .cb-composer button[type="submit"] {
+    padding: 0 !important;
+    font-size: 0.85rem !important;
+    width: 28px !important;
+    height: 28px !important;
+  }
+}
+
+/* Climate badge positioning - below composer, above footer */
+.climate-badge {
+  bottom: 28px !important; /* Above footer stripe (22px footer + 6px gap) */
+  z-index: 101 !important; /* Above composer (100) */
+  display: flex !important; /* Make sure it's visible */
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Center the arrow icon properly in circular button */
+.cb-composer-send-icon {
+  transform: translateY(1px) !important; /* Move arrow down slightly to center */
+}
+
+/* Chat body matches composer width and has generous bottom padding */
+.chat-body {
+  max-width: 1000px !important; /* Same as composer max-width */
+  margin: 0 auto !important; /* Center horizontally */
+  padding-bottom: 80px !important; /* Generous space before composer */
+}
+
+/* ChatGPT-style: remove chat-container border and background */
+/* CRITICAL: Must override main-full.css AND chat-fit-cb202.css !important rules */
+/* Using !important because chat-fit has !important on layout properties */
+/* VERSION MARKER: CB208-FINAL */
+.chat-container {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  margin-bottom: 0 !important;
+  /* TEMP DEBUG MARKER */
+  background: rgba(255, 0, 0, 0.1) !important;
+}
+

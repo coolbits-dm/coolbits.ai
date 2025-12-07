@@ -1,0 +1,194 @@
+/* Header redesign - reduced height, model selector */
+
+/* Hide old legacy elements that may flash during load */
+[data-level-pill],
+[data-level-mode],
+[data-level-unlock],
+[data-level-banner],
+[data-reasoning-badge],
+.level-banner,
+.reasoning-row {
+  display: none !important;
+}
+
+/* Reduce top-bar height */
+.top-bar {
+  height: 48px !important;
+  min-height: 48px !important;
+  padding: 0 20px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.top-bar-left {
+  gap: 12px !important;
+}
+
+.top-bar-logo {
+  width: 28px !important;
+  height: 28px !important;
+}
+
+.top-bar-title {
+  font-size: 15px !important;
+  font-weight: 500 !important;
+}
+
+/* Model selector wrapper - left-aligned like ChatGPT */
+.cb-model-selector-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Model selector dropdown - aligned to left */
+.cb-model-selector {
+  appearance: none;
+  background-color: rgba(255, 255, 255, 0.05);
+  background-image: url('data:image/svg+xml;charset=UTF-8,<svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1.5L6 6.5L11 1.5" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 36px 8px 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+.cb-model-selector:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.cb-model-selector:focus {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
+}
+
+.cb-model-selector option {
+  background-color: #1a1a1a;
+  color: rgba(255, 255, 255, 0.9);
+  padding: 8px;
+}
+
+/* Chat action buttons container */
+.cb-chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Chat action buttons (share, menu) */
+.cb-chat-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background-color: transparent;
+  border: none;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.cb-chat-action-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.cb-chat-action-btn:active {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.cb-chat-action-btn svg {
+  flex-shrink: 0;
+}
+
+/* Adjust user area for reduced header */
+.top-bar-right {
+  gap: 12px !important;
+}
+
+#cb-user-area {
+  display: flex;
+  align-items: center;
+  gap: 10px !important;
+}
+
+.cb-user-badge {
+  font-size: 12px !important;
+  padding: 4px 10px !important;
+  height: auto !important;
+}
+
+.cb-avatar-btn {
+  width: 32px !important;
+  height: 32px !important;
+}
+
+/* Hide old tab navigation (replaced by model selector) */
+.cb-main-tabs {
+  display: none !important;
+}
+
+/* Adjust main view spacing */
+.cb-main-view {
+  padding-top: 0 !important;
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+  .top-bar {
+    height: 52px !important;
+    min-height: 52px !important;
+    padding: 0 16px !important;
+  }
+
+  .top-bar-logo {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  .top-bar-title {
+    font-size: 14px !important;
+  }
+
+  .cb-model-selector-wrapper {
+    padding: 10px 16px;
+  }
+
+  .cb-model-selector {
+    font-size: 13px;
+    padding: 7px 32px 7px 12px;
+  }
+
+  .cb-chat-action-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .cb-chat-action-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .cb-avatar-btn {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .cb-user-badge {
+    font-size: 11px !important;
+    padding: 3px 8px !important;
+  }
+}

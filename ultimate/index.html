@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CoolBits Ultimate Planner</title>
+    <link rel="stylesheet" href="../assets/style.css" />
+    <link rel="stylesheet" href="./vertex.css" />
+    <link rel="icon" type="image/x-icon" href="../favicon.ico" />
+  </head>
+  <body data-vertex-mode="live">
+    <div class="vertex-shell">
+      <header class="vertex-header">
+        <div>
+          <p class="vertex-eyebrow">Level 4</p>
+          <h1>Ultimate campaign planner</h1>
+          <p class="vertex-subtitle">Deep, AI-assisted marketing plans built on top of your business context.</p>
+        </div>
+        <a class="vertex-secondary" href="/chat.html">Back to chat</a>
+      </header>
+      <div class="vertex-mode-banner" data-vertex-mode-banner>Vertex orchestration is active.</div>
+
+      <main class="vertex-main">
+        <section class="wizard" data-wizard>
+          <div class="wizard-steps">
+            <span data-step-indicator="0" class="is-active">1. Business</span>
+            <span data-step-indicator="1">2. Objectives</span>
+            <span data-step-indicator="2">3. Budget & Platforms</span>
+            <span data-step-indicator="3">4. Review</span>
+          </div>
+
+          <form class="wizard-form" data-wizard-form>
+            <section class="wizard-panel is-active" data-step-panel="0">
+              <label>
+                Business name
+                <input type="text" name="businessName" placeholder="Maison Dadoo" required />
+              </label>
+              <label>
+                Industry
+                <input type="text" name="industry" placeholder="Florist" required />
+              </label>
+              <label>
+                Website
+                <input type="url" name="website" placeholder="https://..." />
+              </label>
+              <label>
+                Geography / region
+                <input type="text" name="geo" placeholder="Iasi, RO" />
+              </label>
+              <label>
+                Notes
+                <textarea name="notes" rows="3" placeholder="Key differentiators, partners, etc."></textarea>
+              </label>
+            </section>
+
+            <section class="wizard-panel" data-step-panel="1">
+              <label>
+                Primary objective
+                <select name="primaryObjective" required>
+                  <option value="lead_generation">Lead generation</option>
+                  <option value="black_friday_sales">Black Friday sales</option>
+                  <option value="brand_awareness">Brand awareness</option>
+                  <option value="product_launch">Product launch</option>
+                  <option value="retention">Retention</option>
+                </select>
+              </label>
+              <label>
+                Secondary objectives (comma separated)
+                <input type="text" name="secondaryObjectives" placeholder="increase_traffic, boost_roas" />
+              </label>
+              <label>
+                Timeframe start
+                <input type="date" name="timeframeStart" required />
+              </label>
+              <label>
+                Timeframe end
+                <input type="date" name="timeframeEnd" required />
+              </label>
+            </section>
+
+            <section class="wizard-panel" data-step-panel="2">
+              <label>
+                Budget amount
+                <input type="number" name="budgetAmount" placeholder="10000" min="1" required />
+              </label>
+              <label>
+                Currency
+                <input type="text" name="budgetCurrency" value="USD" maxlength="4" required />
+              </label>
+              <label>
+                Period
+                <input type="text" name="budgetPeriod" value="seasonal" />
+              </label>
+              <fieldset>
+                <legend>Platforms</legend>
+                <label><input type="checkbox" name="platforms" value="google-ads" checked /> Google Ads</label>
+                <label><input type="checkbox" name="platforms" value="meta-ads" /> Meta Ads</label>
+                <label><input type="checkbox" name="platforms" value="tiktok-ads" /> TikTok Ads</label>
+                <label><input type="checkbox" name="platforms" value="linkedin-ads" /> LinkedIn Ads</label>
+              </fieldset>
+              <label class="checkbox-inline">
+                <input type="checkbox" name="reasoningBoost" checked /> Request reasoning boost if available
+              </label>
+            </section>
+
+            <section class="wizard-panel" data-step-panel="3">
+              <p>Review the details and launch the plan. The Vertex engine will return a campaign blueprint.</p>
+              <ul class="review-list" data-review-list></ul>
+            </section>
+          </form>
+
+          <div class="wizard-footer">
+            <button type="button" class="vertex-secondary" data-prev disabled>Back</button>
+            <button type="button" class="vertex-secondary" data-next>Next</button>
+            <button type="button" class="vertex-primary" data-submit>Generate plan</button>
+          </div>
+        </section>
+
+        <section class="vertex-output">
+          <div class="alert" data-alert hidden></div>
+          <div class="output-meta">
+            <p><strong>Status:</strong> <span data-plan-status>Waiting for input</span></p>
+            <p><strong>Engine:</strong> <span data-plan-engine>vertex</span></p>
+          </div>
+          <div class="plan-content" data-plan-output>
+            <p>No plan yet. Complete the wizard and click Generate.</p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./index.js"></script>
+  </body>
+</html>

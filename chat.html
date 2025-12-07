@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<!-- [CB_VERSION] CB213-SPACING-IN-CB209 -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cool Bits - Chat</title>
+    <link rel="stylesheet" href="./assets/styles/main.css?v=cb214" />
+  <style>
+    /* Compress header + chat top spacing */
+    .top-bar { margin-bottom: 0 !important; }
+    .cb-model-selector-wrapper { padding-top: 4px !important; padding-bottom: 4px !important; }
+    .cb-app-main { gap: 0 !important; }
+    
+    .chat-wrapper { padding-top: 0 !important; padding-bottom: 110px !important; }
+    .cb-main-view { margin-top: 0 !important; padding-top: 0 !important; }
+    
+    /* Scroll container: give it clearance and let it scroll */
+    .chat-container {
+      margin-top: 0 !important;
+      overflow-y: auto !important;
+      padding-bottom: 140px !important;
+      scroll-padding-bottom: 140px !important;
+      max-height: none !important;
+      height: auto !important;
+    }
+    
+    /* Custom scrollbar styling */
+    .chat-container::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .chat-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    .chat-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 999px;
+    }
+    
+    .chat-container::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+    
+    /* Messages: hard spacer at the end */
+    .chat-messages::after {
+      content: '';
+      display: block;
+      height: 140px;
+      flex-shrink: 0;
+      width: 100%;
+    }
+    
+    /* Keep panel/body from fighting the padding */
+    .chat-panel,
+    .chat-body {
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      overflow: visible !important;
+      flex: 1 0 auto !important;
+      min-height: auto !important;
+    }
+    
+    /* Council pill buttons - fix text visibility */
+    .cb-composer .cb-council-pill {
+      font-size: 0 !important; /* Collapse whitespace between buttons */
+      overflow: hidden !important; /* Hide hover background overflow */
+    }
+    
+    .cb-composer .cb-council-pill-btn {
+      font-size: 0.875rem !important; /* Restore readable size */
+      font-weight: 500 !important;
+      line-height: 1 !important;
+    }
+    
+    /* Remove any hover backgrounds */
+    .cb-composer .cb-council-pill-btn:hover {
+      background: transparent !important;
+    }
+    
+    /* Force left button to 44px - must override #cb-composer .btn selector */
+    #cb-composer .cb-council-pill-btn--left,
+    .cb-composer .cb-council-pill-btn--left {
+      padding: 6px 8px 6px 6px !important;
+      min-width: 36px !important;
+      max-width: 36px !important;
+      width: 36px !important;
+      flex: 0 0 36px !important;
+      box-sizing: border-box !important;
+      text-align: right !important;
+      justify-content: flex-end !important;
+    }
+    
+    /* Remove duplicate "C" from ::before pseudo-element */
+    .cb-composer .cb-council-pill-btn--left::before {
+      content: none !important;
+      display: none !important;
+    }
+    
+    #cb-composer .cb-council-pill-btn--right,
+    .cb-composer .cb-council-pill-btn--right {
+      padding: 6px 6px 6px 8px !important;
+      min-width: 40px !important;
+      max-width: 40px !important;
+      width: 40px !important;
+      flex: 0 0 40px !important;
+      box-sizing: border-box !important;
+      text-align: left !important;
+      justify-content: flex-start !important;
+    }
+    
+    body.cb-shell-active .chat-wrapper { padding-bottom: 110px !important; padding-top: 0 !important; }
+    .chat-composer { bottom: 20px !important; }
+    
+    @media (max-width: 640px) {
+      .chat-wrapper { padding-bottom: 120px !important; }
+    }
+  </style>
+  <link rel="icon" type="image/x-icon" href="./favicon.ico" />
+</head>
+<body class="chat-page" data-enable-suggestions="true">
+  <div class="cb-app-shell" data-app-shell>
+    <aside class="cb-sidebar" id="cb-sidebar" data-sidebar data-collapsed="false" aria-label="CoolBits workspace navigation">
+      <div class="cb-sidebar-scroll">
+        <div class="cb-sidebar-header">
+          <button type="button" class="cb-sidebar-logo" data-sidebar-logo aria-label="CoolBits home">
+            <img src="./coolbits-alt.png" alt="CoolBits" />
+            <span class="cb-sidebar-logo-label">CoolBits</span>
+          </button>
+          <div class="cb-sidebar-header-actions">
+            <button type="button" class="cb-sidebar-toggle" data-sidebar-toggle aria-label="Collapse sidebar">
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </button>
+            <button type="button" class="cb-sidebar-close" data-sidebar-close aria-label="Close sidebar">
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="cb-sidebar-section">
+          <button type="button" class="cb-sidebar-new-chat" data-sidebar-new-chat aria-label="New Chat">
+            <span class="cb-sidebar-icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24">
+                <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path>
+              </svg>
+            </span>
+            <span class="cb-sidebar-label">New Chat</span>
+          </button>
+        </div>
+        <div class="cb-sidebar-section cb-sidebar-workspace">
+          <div class="cb-sidebar-section-header">Workspace</div>
+          <button type="button" class="cb-sidebar-select" id="cb-workspace-selector" aria-haspopup="listbox" aria-expanded="false" aria-label="Select workspace">
+            <span class="cb-sidebar-select-label" id="cb-workspace-current-label">Business</span>
+            <span class="cb-sidebar-chevron" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </span>
+          </button>
+          <div class="cb-sidebar-menu" id="cb-workspace-menu" role="listbox" aria-label="Select workspace" hidden></div>
+        </div>
+        <div class="cb-sidebar-section">
+          <div class="cb-sidebar-section-header">Connectors</div>
+          <button type="button" class="cb-sidebar-item" data-sidebar-feature="connectors" data-sidebar-tooltip="Coming soon" aria-label="Manage connectors">
+            <span class="cb-sidebar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M7 12h10M7 6h4M13 18h4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"></path>
+                <circle cx="17" cy="6" r="2" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+                <circle cx="7" cy="12" r="2" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+                <circle cx="17" cy="18" r="2" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+              </svg>
+            </span>
+            <span class="cb-sidebar-label">Manage Connectors</span>
+            <span class="cb-sidebar-pill">Soon</span>
+          </button>
+        </div>
+        <div class="cb-sidebar-section">
+          <div class="cb-sidebar-section-header">Bits Orchestrator</div>
+          <button type="button" class="cb-sidebar-item" data-sidebar-feature="orchestrator" data-sidebar-tooltip="Coming soon" aria-label="Bits Orchestrator">
+            <span class="cb-sidebar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M5 12a7 7 0 0114 0" stroke="currentColor" stroke-width="1.5" fill="none"></path>
+                <path d="M12 5v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+              </svg>
+            </span>
+            <span class="cb-sidebar-label">Bits Orchestrator</span>
+            <span class="cb-sidebar-pill">Soon</span>
+          </button>
+        </div>
+        <div class="cb-sidebar-section cb-sidebar-projects" data-projects-section>
+          <div class="cb-sidebar-section-header">Projects</div>
+          <button type="button" class="cb-sidebar-select" id="cb-project-selector" aria-haspopup="listbox" aria-expanded="false" aria-label="Select project">
+            <span class="cb-sidebar-select-label" id="cb-project-current-label">All projects</span>
+            <span class="cb-sidebar-chevron" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </span>
+          </button>
+          <div class="cb-sidebar-menu" id="cb-project-menu" role="listbox" aria-label="Project list" hidden></div>
+          <p class="cb-sidebar-hint" id="cb-projects-guest-hint" hidden>Sign in to organize chats by project.</p>
+          <p class="cb-sidebar-error" id="cb-projects-error" hidden></p>
+        </div>
+        <div class="cb-sidebar-section cb-sidebar-chats-section">
+          <div class="cb-sidebar-section-header">Chats</div>
+          <ul class="cb-sidebar-chat-list" data-sidebar-chat-list></ul>
+        </div>
+      </div>
+      <div class="cb-sidebar-footer" id="cb-sidebar-user-slot" aria-live="polite" hidden></div>
+    </aside>
+    <div class="cb-sidebar-backdrop" data-sidebar-backdrop hidden aria-hidden="true"></div>
+    <div class="cb-app-main">
+      <div class="chat-wrapper">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <button
+          type="button"
+          class="cb-mobile-menu-button"
+          data-sidebar-mobile-toggle
+          aria-label="Open navigation menu"
+          aria-controls="cb-sidebar"
+          aria-expanded="false"
+        >
+          <span class="cb-mobile-menu-icon" aria-hidden="true"></span>
+        </button>
+        <img src="./coolbits-alt.png" class="top-bar-logo" alt="CoolBits" />
+      </div>
+      <div class="top-bar-right">
+        <div id="cb-user-area">
+          <div class="user-plan-label" id="cb-user-badge">
+            <span class="cb-user-badge-line cb-user-badge-email" id="cb-header-user-email">Guest</span>
+            <span class="cb-user-badge-line cb-user-badge-plan" id="cb-header-user-plan"></span>
+            <span class="cb-user-badge-line cb-user-badge-tokens" id="cb-header-user-tokens"></span>
+          </div>
+          <button class="user-avatar-button" id="cb-user-button" type="button" aria-label="User menu" aria-haspopup="menu" aria-expanded="false">
+            <span class="user-avatar-icon"></span>
+          </button>
+          <div id="cb-user-menu" class="cb-user-menu" aria-hidden="true">
+            <div class="cb-user-menu-plan-row">
+              <div class="cb-user-menu-plan-copy">
+                <span id="cb-user-menu-name">Guest</span>
+                <span id="cb-user-menu-plan-short" class="cb-user-plan-tokens">Starter</span>
+              </div>
+              <button type="button" class="cb-user-menu-pill-btn" id="cb-user-menu-plan" data-menu-action="plan-billing">
+                Manage plan
+              </button>
+            </div>
+            <div class="cb-user-menu-divider" role="separator"></div>
+            <button type="button" class="cb-user-menu-item" id="cb-user-menu-account" data-menu-action="account-billing">Account</button>
+            <button type="button" class="cb-user-menu-item" id="cb-user-menu-profile" data-menu-action="profile">Profile</button>
+            <button type="button" class="cb-user-menu-item" id="cb-user-menu-settings" data-menu-action="settings">Settings</button>
+            <div class="cb-user-menu-divider" role="separator"></div>
+            <button type="button" class="cb-user-menu-item" id="cb-menu-signout" data-menu-action="signout">Sign out</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cb-model-selector-wrapper">
+      <select class="cb-model-selector" id="cb-model-selector">
+        <option value="auto" selected>Auto</option>
+        <option value="chatgpt">ChatGPT</option>
+        <option value="claude">Claude</option>
+        <option value="gemini">Gemini</option>
+        <option value="grok">Grok</option>
+        <option value="copilot">Copilot</option>
+      </select>
+      <div class="cb-chat-actions">
+        <button type="button" class="cb-chat-action-btn" aria-label="Share conversation">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 13.5L9 19.5M9 4.5L3 10.5M9 4.5L17.5 9.5M9 4.5V19.5M9 19.5L17.5 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="19.5" cy="9.5" r="2.5" stroke="currentColor" stroke-width="2"/>
+            <circle cx="19.5" cy="14.5" r="2.5" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </button>
+        <button type="button" class="cb-chat-action-btn cb-chat-menu-btn" aria-label="Chat options">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="5" r="2" fill="currentColor"/>
+            <circle cx="12" cy="12" r="2" fill="currentColor"/>
+            <circle cx="12" cy="19" r="2" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div id="cb-chat-view" class="cb-main-view is-active" data-view="chat">
+      <div id="cb-token-limit-banner" class="cb-token-banner" style="display: none;">
+        <p>
+          Running low on tokens. Upgrade to Pro for higher limits.
+          <button type="button" id="cb-upgrade-button" class="cb-upgrade-button">Upgrade to Pro</button>
+        </p>
+        <p id="cb-upgrade-error" class="cb-upgrade-error" hidden></p>
+      </div>
+      <div id="chat-header"></div>
+      <main id="chat-scroll" class="chat-container">
+        <div class="chat-panel">
+          <div class="chat-body">
+            <div class="chat-suggestions" data-chat-suggestions>
+              <p class="suggestions-heading" data-suggestions-heading>Suggested prompts</p>
+            </div>
+            <div class="cb-guest-hint" id="cb-guest-hint" data-guest-hint hidden>
+              <span>Sign in with Google to unlock saved chats, accurate usage tracking, and higher limits.</span>
+              <button type="button" class="cb-guest-hint-button" data-guest-login>Sign in</button>
+            </div>
+            <div class="chat-messages" data-chat-messages></div>
+          </div>
+        </div>
+      </main>
+      <div id="chat-composer" class="chat-composer" data-chat-composer>
+        <div id="cb-council-active" class="cb-council-active" hidden></div>
+        <form id="cb-composer" class="cb-composer" data-chat-form autocomplete="off">
+            <textarea
+              id="chat-input"
+              name="chat-input"
+              placeholder="Press Enter to send, Shift+Enter for a new line"
+              autocomplete="off"
+              required
+              aria-label="Chat message"
+            ></textarea>
+            <div class="cb-composer-controls">
+              <div class="cb-council-pill">
+                <button
+                  type="button"
+                  id="cb-council-label"
+                  class="btn btn-gradient cb-council-pill-btn cb-council-pill-btn--left"
+                  data-role="council-label"
+                  onclick="cbOnCouncilLabelClick()"
+                >
+                  C
+                </button>
+                <button
+                  type="button"
+                  id="cb-council-count"
+                  class="btn btn-gradient cb-council-pill-btn cb-council-pill-btn--right"
+                  data-role="council-count"
+                  onclick="cbOnCouncilCountClick()"
+                >
+                  +0
+                </button>
+              </div>
+              <button type="submit" class="btn cb-composer-send" aria-label="Send message">
+                <span class="cb-composer-send-icon" aria-hidden="true"></span>
+              </button>
+            </div>
+        </form>
+        <p class="chat-error" data-chat-error hidden></p>
+      </div>
+    </div>
+    <div id="cb-agents-view" class="cb-main-view" data-view="agents" hidden>
+      <div id="cb-agents-panel" class="cb-agents-panel">
+        <div class="cb-agents-layout">
+          <section class="cb-agents-sidebar">
+            <h2 class="cb-agents-title">Automation agents</h2>
+            <p class="cb-agents-desc">
+              Run a multi-agent Google Ads audit for the current workspace.
+            </p>
+            <button id="cb-agents-run-btn" class="cb-btn cb-btn-primary cb-agents-run-btn">
+              Run Google Ads Audit
+            </button>
+            <p class="cb-agents-footnote">
+              Read-only: no live changes are applied to Google Ads campaigns.
+            </p>
+          </section>
+          <section class="cb-agents-main">
+            <div id="cb-agents-runs-card" class="cb-card cb-agents-card"></div>
+          </section>
+          <aside class="cb-agents-registry">
+            <div id="cb-agents-registry-card" class="cb-card cb-agents-card"></div>
+          </aside>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+  <div class="climate-badge">
+    <span>We donate 1% of revenue to remove CO₂</span>
+    <span class="climate-leaf" aria-hidden="true">🍃</span>
+  </div>
+  <div class="climate-note-mobile" aria-hidden="true">We donate 1% of revenue to remove CO₂ <span class="climate-leaf" aria-hidden="true">🍃</span></div>
+  <footer class="chat-footer">
+    <p>© 2025 Cool Bits SRL · Iași, RO · powered by cbLM.ai <span class="footer-mobile-extra">· orchestrated by <a href="https://camarad.ai" target="_blank" rel="noopener">Camarad</a> · backed by <a href="https://stripe.com" target="_blank" rel="noopener">Stripe</a></span></p>
+  </footer>
+  <div id="cb-profile-modal" class="cb-modal-backdrop" hidden aria-hidden="true">
+    <div class="cb-modal" role="dialog" aria-modal="true" aria-labelledby="cb-profile-title">
+      <div class="cb-modal-header">
+        <h2 class="cb-modal-title" id="cb-profile-title">Profile</h2>
+        <button type="button" class="cb-modal-close" aria-label="Close Profile" data-modal-id="cb-profile-modal">&times;</button>
+      </div>
+      <div class="cb-modal-body">
+        <div class="cb-modal-section" id="cb-profile-guest" hidden>
+          <p>You are browsing as Guest. Sign in with Google to unlock full account features.</p>
+          <button type="button" class="btn btn-primary cb-modal-primary-button" id="cb-profile-connect">Continue with Google</button>
+        </div>
+        <div id="cb-profile-details" hidden>
+          <div class="cb-modal-section">
+            <div class="cb-modal-label">Email</div>
+            <div class="cb-modal-value" id="cb-profile-email">—</div>
+          </div>
+          <div class="cb-modal-section">
+            <div class="cb-modal-label">Plan</div>
+            <div class="cb-modal-value" id="cb-profile-plan">—</div>
+          </div>
+          <div class="cb-modal-section">
+            <div class="cb-modal-label">Tokens remaining</div>
+            <div class="cb-modal-value" id="cb-profile-tokens">—</div>
+          </div>
+          <div class="cb-modal-section">
+            <div class="cb-modal-label">Verification</div>
+            <div class="cb-modal-value" id="cb-profile-verification">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="cb-billing-modal" class="cb-modal-backdrop" hidden aria-hidden="true">
+    <div class="cb-modal" role="dialog" aria-modal="true" aria-labelledby="cb-billing-title">
+      <div class="cb-modal-header">
+        <h2 class="cb-modal-title" id="cb-billing-title">Billing</h2>
+        <button type="button" class="cb-modal-close" aria-label="Close Billing" data-modal-id="cb-billing-modal">&times;</button>
+      </div>
+      <div class="cb-modal-body">
+        <div class="cb-modal-section" id="cb-billing-guest" hidden>
+          <p>Sign in with Google to view plans, tokens, and manage billing.</p>
+          <button type="button" class="btn btn-primary cb-modal-primary-button" id="cb-billing-connect">Continue with Google</button>
+        </div>
+        <div id="cb-billing-details" hidden>
+          <div class="cb-modal-section">
+            <div class="cb-modal-label">Plan</div>
+            <div class="cb-modal-value" id="cb-billing-plan">—</div>
+          </div>
+          <div class="cb-modal-section">
+            <div class="cb-modal-label">Tokens remaining</div>
+            <div class="cb-modal-value" id="cb-billing-tokens">-</div>
+          </div>
+          <div class="cb-modal-section">
+            <p class="cb-modal-note" id="cb-billing-description">
+              Click &ldquo;Upgrade to Pro&rdquo; to open a secure Stripe checkout page. Once payment is complete,
+              your plan and tokens will update automatically.
+            </p>
+          </div>
+          <p class="cb-upgrade-error" id="cb-billing-error" hidden></p>
+          <div class="cb-modal-actions">
+            <button type="button" class="btn btn-primary" id="cb-billing-upgrade-btn">Upgrade to Pro</button>
+            <button type="button" class="btn-secondary" id="cb-billing-downgrade-btn">Downgrade to Starter</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="cb-plan-modal" class="cb-modal-backdrop" hidden aria-hidden="true">
+    <div class="cb-modal" role="dialog" aria-modal="true" aria-labelledby="cb-plan-modal-title">
+      <div class="cb-modal-header">
+        <h2 class="cb-modal-title" id="cb-plan-modal-title">Choose your CoolBits plan</h2>
+        <button type="button" class="cb-modal-close" aria-label="Close Plans" data-modal-id="cb-plan-modal">&times;</button>
+      </div>
+      <div class="cb-modal-body">
+        <p class="cb-modal-note" id="cb-plan-modal-note"></p>
+        <p class="cb-upgrade-error" id="cb-plan-modal-error" hidden></p>
+        <div id="cb-plan-cards" class="cb-plan-grid"></div>
+      </div>
+    </div>
+  </div>
+  <div id="cb-account-billing" class="cb-modal-backdrop cb-account-panel" hidden aria-hidden="true">
+    <div class="cb-modal cb-account-panel-modal" role="dialog" aria-modal="true" aria-labelledby="cb-account-billing-title">
+      <div class="cb-modal-header">
+        <div>
+          <h2 class="cb-modal-title" id="cb-account-billing-title">Account &amp; Billing</h2>
+          <p class="cb-modal-note">Manage your plan, tokens, and billing details.</p>
+        </div>
+        <button type="button" class="cb-modal-close" aria-label="Close Account &amp; Billing" data-modal-id="cb-account-billing">&times;</button>
+      </div>
+      <div class="cb-modal-body cb-account-panel-body">
+        <div class="cb-modal-section" id="cb-account-billing-guest" hidden>
+          <p>Sign in with Google to view plans, tokens, and manage billing.</p>
+          <button type="button" class="btn btn-primary" id="cb-account-billing-connect">Continue with Google</button>
+        </div>
+        <div id="cb-account-billing-content" hidden>
+          <section class="cb-account-card" id="cb-account-plan-card">
+            <header class="cb-account-card-header">
+              <div class="cb-account-plan-heading">
+                <p class="cb-account-card-subtitle">Current plan</p>
+                <h3 class="cb-account-plan-title" id="cb-account-plan-name">Starter</h3>
+              </div>
+              <div class="cb-account-plan-price" id="cb-account-plan-price">€29 / month</div>
+            </header>
+            <p class="cb-account-plan-status" id="cb-account-plan-status">Trial</p>
+            <p class="cb-account-plan-next-charge" id="cb-account-plan-next-charge"></p>
+            <p class="cb-account-plan-message" id="cb-account-plan-message" hidden></p>
+            <div class="cb-account-plan-actions">
+              <button type="button" class="btn btn-primary" id="cb-account-plan-change">Change plan</button>
+              <button type="button" class="btn-secondary" id="cb-account-plan-manage">Manage subscription</button>
+            </div>
+          </section>
+          <section class="cb-account-card" id="cb-account-tokens-card">
+            <header class="cb-account-card-header">
+              <div>
+                <p class="cb-account-card-subtitle">Tokens</p>
+                <h3>Usage this period</h3>
+              </div>
+            </header>
+            <p id="cb-account-tokens-allowance">Monthly allowance: –</p>
+            <p id="cb-account-tokens-usage">Used: – · Remaining: –</p>
+            <div class="cb-account-tokens-progress" aria-hidden="true">
+              <span id="cb-account-tokens-progress-fill"></span>
+            </div>
+            <p class="cb-account-tokens-warning" id="cb-account-tokens-warning" hidden>Low tokens – consider upgrading your plan.</p>
+          </section>
+          <section class="cb-account-card" id="cb-account-limits-card">
+            <header class="cb-account-card-header">
+              <div>
+                <p class="cb-account-card-subtitle">Workspaces &amp; projects</p>
+                <h3>Limits</h3>
+              </div>
+            </header>
+            <ul class="cb-account-limits-list">
+              <li id="cb-account-limit-workspaces">Workspaces: –</li>
+              <li id="cb-account-limit-projects">Projects: –</li>
+              <li id="cb-account-limit-agents">AI agents: –</li>
+            </ul>
+          </section>
+          <section class="cb-account-card" id="cb-account-support-card">
+            <header class="cb-account-card-header">
+              <div>
+                <p class="cb-account-card-subtitle">Need help?</p>
+                <h3>Support</h3>
+              </div>
+            </header>
+            <ul class="cb-account-support-list">
+              <li>Billing FAQ (coming soon)</li>
+              <li>How trials &amp; tokens work (coming soon)</li>
+            </ul>
+            <a class="cb-account-support-link" href="mailto:office@coolbits.ai?subject=CoolBits%20Billing" id="cb-account-support-contact">Contact support</a>
+          </section>
+          <div class="cb-account-footer-actions">
+            <a class="btn btn-primary cb-account-footer-btn" href="mailto:office@coolbits.ai?subject=CoolBits%20Billing">Contact</a>
+            <button type="button" class="btn-secondary cb-account-footer-btn" data-modal-id="cb-account-billing" aria-label="Close billing panel" data-modal-close>Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="cb-settings-modal" class="cb-modal-backdrop" hidden aria-hidden="true">
+    <div class="cb-modal" role="dialog" aria-modal="true" aria-labelledby="cb-settings-title">
+      <div class="cb-modal-header">
+        <h2 class="cb-modal-title" id="cb-settings-title">Settings</h2>
+        <button type="button" class="cb-modal-close" aria-label="Close Settings" data-modal-id="cb-settings-modal">&times;</button>
+      </div>
+      <div class="cb-modal-body">
+        <div class="cb-settings-row">
+          <div class="cb-settings-row-text">
+            <div class="cb-modal-value">Prefer English responses</div>
+            <p class="cb-modal-note">Keep replies in English even if the chat starts in another language.</p>
+          </div>
+          <button type="button" class="cb-settings-toggle" id="cb-setting-prefer-english" data-setting-key="preferEnglish" role="switch" aria-checked="false">
+            <span class="cb-settings-toggle-thumb"></span>
+          </button>
+        </div>
+        <div class="cb-settings-row">
+          <div class="cb-settings-row-text">
+            <div class="cb-modal-value">Show advanced prompts</div>
+            <p class="cb-modal-note">Display extra prompt chips inside the chat composer.</p>
+          </div>
+          <button type="button" class="cb-settings-toggle" id="cb-setting-show-advanced" data-setting-key="showAdvancedPrompts" role="switch" aria-checked="false">
+            <span class="cb-settings-toggle-thumb"></span>
+          </button>
+        </div>
+        <div class="cb-settings-row">
+          <div class="cb-settings-row-text">
+            <div class="cb-modal-value">Beta feature notices</div>
+            <p class="cb-modal-note">Get alerts when experimental capabilities unlock on this device.</p>
+          </div>
+          <button type="button" class="cb-settings-toggle" id="cb-setting-beta-notices" data-setting-key="showBetaNotices" role="switch" aria-checked="false">
+            <span class="cb-settings-toggle-thumb"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="cb-onboarding-modal" class="user-overlay-backdrop" aria-hidden="true">
+    <div class="user-overlay user-onboarding-modal">
+      <h2>Create your CoolBits account</h2>
+      <p>Sign in with your Google account to unlock higher limits, saved chats, and proper usage tracking.</p>
+      <ol>
+        <li>Sign in with your Google account.</li>
+        <li>We create your CoolBits profile using your email.</li>
+        <li>Come back here and continue the conversation.</li>
+      </ol>
+      <p class="cb-onboarding-error" id="cb-onboarding-error" hidden></p>
+      <div class="user-overlay-actions cb-onboarding-actions">
+        <button type="button" class="btn btn-primary" id="cb-onboarding-google">Continue with Google</button>
+        <button type="button" class="btn-secondary" id="cb-onboarding-not-now">Not now</button>
+      </div>
+    </div>
+  </div>
+  <div id="cb-project-modal" class="cb-modal-backdrop" hidden aria-hidden="true">
+    <div class="cb-modal" role="dialog" aria-modal="true" aria-labelledby="cb-project-modal-title">
+      <div class="cb-modal-header">
+        <h2 class="cb-modal-title" id="cb-project-modal-title">Create a new project</h2>
+        <button type="button" class="cb-modal-close" aria-label="Close project modal" data-modal-id="cb-project-modal">&times;</button>
+      </div>
+      <div class="cb-modal-body">
+        <label class="cb-input-label" for="cb-project-name-input">Project name</label>
+        <input id="cb-project-name-input" class="cb-input" type="text" autocomplete="off" placeholder="e.g. CoolBits launch" />
+        <p class="cb-modal-note" id="cb-project-modal-error" hidden></p>
+      </div>
+      <div class="cb-modal-actions">
+        <button type="button" class="btn btn-secondary" id="cb-project-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="cb-project-create">Create</button>
+      </div>
+    </div>
+  </div>
+  <div id="cb-delete-modal" class="cb-modal-backdrop" hidden aria-hidden="true">
+    <div class="cb-modal" role="dialog" aria-modal="true" aria-labelledby="cb-delete-modal-title">
+      <div class="cb-modal-header">
+        <h2 class="cb-modal-title" id="cb-delete-modal-title">Delete chat</h2>
+        <button type="button" class="cb-modal-close" aria-label="Close delete modal" data-modal-id="cb-delete-modal">&times;</button>
+      </div>
+      <div class="cb-modal-body">
+        <p>Are you sure you want to delete this chat?</p>
+      </div>
+      <div class="cb-modal-actions">
+        <button type="button" class="btn btn-secondary" id="cb-delete-cancel">Cancel</button>
+        <button type="button" class="btn cb-btn-danger" id="cb-delete-confirm">Delete</button>
+      </div>
+    </div>
+  </div>
+  <div id="cb-rename-modal" class="cb-modal-backdrop" hidden aria-hidden="true">
+    <div class="cb-modal" role="dialog" aria-modal="true" aria-labelledby="cb-rename-modal-title">
+      <div class="cb-modal-header">
+        <h2 class="cb-modal-title" id="cb-rename-modal-title">Rename chat</h2>
+        <button type="button" class="cb-modal-close" aria-label="Close rename modal" data-modal-id="cb-rename-modal">&times;</button>
+      </div>
+      <div class="cb-modal-body">
+        <label class="cb-input-label" for="cb-rename-input">Chat name</label>
+        <input id="cb-rename-input" class="cb-input" type="text" autocomplete="off" placeholder="Enter a new name" />
+        <p class="cb-modal-note" id="cb-rename-error" hidden></p>
+      </div>
+      <div class="cb-modal-actions">
+        <button type="button" class="btn btn-secondary" id="cb-rename-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="cb-rename-confirm">Save</button>
+      </div>
+    </div>
+  </div>
+<div
+  id="cb-council-popover"
+  class="cb-modal-backdrop cb-council-popover-backdrop"
+  hidden
+  aria-hidden="true"
+  data-role="council-modal"
+>
+    <div
+      class="cb-modal cb-council-popover"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cb-council-title"
+    >
+      <div class="cb-modal-header cb-council-header">
+        <h2 class="cb-modal-title" id="cb-council-title">Council</h2>
+        <button
+          type="button"
+          class="cb-modal-close"
+          aria-label="Close council selector"
+          data-modal-id="cb-council-popover"
+          onclick="cbOnCouncilModalClose()"
+        >
+          ×
+        </button>
+      </div>
+      <div class="cb-modal-body cb-council-body">
+        <p class="cb-council-subtitle">
+          Choose who should answer this message.
+        </p>
+        <div class="cb-council-list" data-role="council-list">
+          <button class="cb-council-pill-toggle" data-council-id="ceo" onclick="cbToggleCouncilMember('ceo', this)">
+            <span class="cb-council-pill-role">CEO</span>
+            <span class="cb-council-pill-desc">Strategy</span>
+          </button>
+          <button class="cb-council-pill-toggle" data-council-id="cto" onclick="cbToggleCouncilMember('cto', this)">
+            <span class="cb-council-pill-role">CTO</span>
+            <span class="cb-council-pill-desc">Tech</span>
+          </button>
+          <button class="cb-council-pill-toggle" data-council-id="cfo" onclick="cbToggleCouncilMember('cfo', this)">
+            <span class="cb-council-pill-role">CFO</span>
+            <span class="cb-council-pill-desc">Finance</span>
+          </button>
+          <button class="cb-council-pill-toggle" data-council-id="cmo" onclick="cbToggleCouncilMember('cmo', this)">
+            <span class="cb-council-pill-role">CMO</span>
+            <span class="cb-council-pill-desc">Growth</span>
+          </button>
+          <button class="cb-council-pill-toggle" data-council-id="coo" onclick="cbToggleCouncilMember('coo', this)">
+            <span class="cb-council-pill-role">COO</span>
+            <span class="cb-council-pill-desc">Ops</span>
+          </button>
+        </div>
+        <div class="cb-council-footer">
+          <button
+            type="button"
+            class="cb-council-close-btn"
+            onclick="cbOnCouncilModalClose()"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="assets/chat.js?v=council-pill-v3" type="module"></script>
+  <div id="cb-billing-toast" class="cb-billing-toast" aria-live="polite" hidden>Subscription updated. You're all set!</div>
+  
+  <!-- Spacing validation -->
+  <script>
+(() => {
+  const container = document.querySelector('.chat-container');
+  const messages = document.querySelector('.chat-messages');
+  
+  console.log('=== SPACING DEBUG ===');
+  if (container) {
+    console.log('.chat-container padding-bottom:', window.getComputedStyle(container).paddingBottom);
+    console.log('.chat-container scroll-padding-bottom:', window.getComputedStyle(container).scrollPaddingBottom);
+  }
+  if (messages) {
+    const afterStyle = window.getComputedStyle(messages, '::after');
+    console.log('.chat-messages::after height:', afterStyle.height);
+  }
+})();
+</script>
+</body>
+</html>
+
+
+
+
+
+

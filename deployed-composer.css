@@ -1,0 +1,327 @@
+/* === CB202 Composer & Council Pill Styles === */
+
+.chat-composer {
+  position: fixed;
+  bottom: 20px;
+  left: calc(50% + var(--cb-sidebar-offset, 0px));
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 780px;
+  background: rgba(17, 24, 39, 0.95);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border-strong);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 16px 24px;
+  z-index: 999;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3);
+}
+
+.chat-composer form {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.cb-composer-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#cb-composer textarea,
+#cb-composer #chat-input {
+  flex: 1;
+  min-height: 48px;
+  max-height: 120px;
+  padding: 10px 12px;
+  line-height: 1.4;
+  border-radius: var(--radius-md);
+}
+
+.cb-composer-addon,
+#cb-composer .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: var(--radius-md);
+}
+
+.cb-composer-addon {
+  background: var(--cb-surface-elevated);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cb-composer-addon:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.45);
+}
+
+.cb-composer-addon:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.5);
+}
+
+.cb-composer-addon[data-has-selection="true"] {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(56, 189, 248, 0.7);
+}
+
+.cb-composer-addon[data-has-selection="true"] .cb-council-plus {
+  color: #e5f3ff;
+}
+
+.cb-council-plus {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #dbeafe;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.cb-council-active {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Council pill – base (non-composer contexts) */
+.cb-council-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 360px;
+  padding: 6px 8px 6px 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0f172a, #020617);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: #e5f3ff;
+}
+
+/* === Council pill (composer) – TWO SEPARATE PILLS === */
+.cb-composer .cb-council-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  transition: filter 0.2s ease;
+}
+
+.cb-composer .cb-council-pill .cb-council-pill-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  margin: 0;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.35);
+  position: relative;
+  z-index: 1;
+  font-size: 14px;
+  background: linear-gradient(135deg, #5fe1cf, #3b82f6);
+  color: #0f172a;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cb-composer .cb-council-pill .cb-council-pill-btn--left {
+  border-radius: 12px 0 0 12px;
+  padding-left: 24px;
+}
+
+.cb-composer .cb-council-pill .cb-council-pill-btn--right {
+  border-radius: 0 12px 12px 0;
+  padding-right: 20px;
+}
+
+/* ===  ARMED STATE - ORANGE GLOW === */
+.cb-council-pill.cb-council-pill--armed .cb-council-pill-btn,
+.cb-council-pill.cb-council-armed .cb-council-pill-btn,
+.cb-council-pill.cb-pill-armed-on .cb-council-pill-btn {
+  box-shadow: 0 0 20px rgba(251, 146, 60, 0.9), 0 0 40px rgba(249, 115, 22, 0.7), 0 4px 12px rgba(15, 23, 42, 0.35);
+}
+
+/* Composer-specific armed override */
+.cb-composer .cb-council-pill.cb-council-pill--armed .cb-council-pill-btn,
+.cb-composer .cb-council-pill.cb-council-armed .cb-council-pill-btn,
+.cb-composer .cb-council-pill.cb-pill-armed-on .cb-council-pill-btn {
+  box-shadow: 0 0 20px rgba(251, 146, 60, 0.9), 0 0 40px rgba(249, 115, 22, 0.7), 0 4px 12px rgba(15, 23, 42, 0.35);
+}
+
+.cb-council-pill-role {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.cb-council-item-badge {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(96, 165, 250, 0.9);
+  opacity: 0.85;
+}
+
+.cb-council-pill-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(15, 23, 42, 0.9);
+  color: rgba(248, 250, 252, 0.9);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.cb-council-pill-clear:hover {
+  background: rgba(248, 113, 113, 0.9);
+  transform: translateY(-1px);
+}
+
+.chat-composer input[type="text"] {
+  flex: 1;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(30, 41, 59, 0.8);
+  color: var(--text);
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  height: 48px;
+}
+
+.chat-composer input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(30, 41, 59, 1);
+}
+
+.chat-composer input[type="text"]::placeholder {
+  color: var(--muted);
+}
+
+.composer-form {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chat-composer textarea {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(30, 41, 59, 0.8);
+  color: var(--text);
+  font-size: 1rem;
+  font-family: inherit;
+  resize: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  min-height: 44px;
+  line-height: 1.35;
+  overflow-y: hidden;
+}
+
+.chat-composer textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(30, 41, 59, 1);
+}
+
+.chat-composer textarea::placeholder {
+  color: var(--muted);
+}
+
+.chat-composer button {
+  background: linear-gradient(135deg, var(--accent), #3b82f6);
+  color: #000;
+  padding: 14px 28px;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(95, 225, 207, 0.3);
+}
+
+.chat-composer button:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--accent-hover), #2563eb);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(95, 225, 207, 0.4);
+}
+
+.chat-composer button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.chat-error {
+  color: #ef4444;
+  font-size: 0.8rem;
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+.chat-error[hidden] {
+  display: none;
+}
+
+.composer-error {
+  position: fixed;
+  bottom: 130px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #dc2626;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  z-index: 998;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+  animation: errorSlideIn 0.3s ease-out;
+}
+
+@keyframes errorSlideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (max-width: 768px) {
+  .cb-composer-inner {
+    gap: 6px;
+  }
+  #cb-composer textarea {
+    min-height: 56px;
+  }
+}

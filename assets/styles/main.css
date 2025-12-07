@@ -1,0 +1,34 @@
+/* === CB202 Modular CSS Architecture === */
+/* Main stylesheet - imports all component CSS files */
+/* Changed structure to force Cloudflare cache refresh */
+
+/* Core styles - ALL legacy styles */
+@import url('main-full.css');
+
+/* OVERRIDE: Header redesign - reduced height, model selector */
+@import url('header-cb202.css');
+
+/* OVERRIDE: Composer with ARMED STATE orange glow */
+@import url('composer-armed-cb202.css');
+
+/* OVERRIDE: Council panel - pill toggles instead of checkboxes */
+@import url('council-panel-cb202.css');
+
+/* OVERRIDE: Layout adjustments - composer to footer alignment */
+@import url('layout-adjustments-cb202.css');
+
+/* OVERRIDE: Mobile fixes - composer layout and council pill compact */
+@import url('mobile-fixes-cb202.css');
+
+/* OVERRIDE: Compact composer - CB209 CLEAN VERSION - LAST to override everything */
+@import url('composer-compact-cb209.css?v=cb214');
+
+/* 
+Next phase: Split into modules
+@import url('base.css');
+@import url('sidebar.css');
+@import url('header.css');
+@import url('chat-window.css');
+@import url('modals.css');
+@import url('footer.css');
+*/

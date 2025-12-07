@@ -1,0 +1,106 @@
+/* === CB202 Council Panel Redesign === */
+/* Compact pill-based council selector with blue/orange toggle */
+
+/* Narrower modal width */
+.cb-council-popover {
+  max-width: 320px !important;
+  width: 90%;
+}
+
+.cb-council-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  margin: 0;
+}
+
+.cb-council-pill-toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  border-radius: 10px;
+  background: linear-gradient(135deg, #5fe1cf, #3b82f6);
+  color: #0f172a;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2);
+  width: 100%;
+  text-align: left;
+}
+
+.cb-council-pill-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
+}
+
+.cb-council-pill-toggle.is-selected {
+  background: linear-gradient(135deg, #f97316, #fb923c);
+  border-color: rgba(249, 115, 22, 0.6);
+  color: #fff;
+}
+
+.cb-council-pill-role {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.cb-council-pill-desc {
+  font-size: 0.75rem;
+  opacity: 0.75;
+  font-weight: 500;
+}
+
+.cb-council-pill-desc::before {
+  content: "- ";
+  opacity: 0.6;
+}
+
+/* X button styling */
+.cb-modal-close {
+  font-size: 2rem !important;
+  line-height: 1 !important;
+  padding: 0 !important;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Footer with close button */
+.cb-council-footer {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 0;
+  margin-top: 16px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.cb-council-close-btn {
+  padding: 8px 32px;
+  background: linear-gradient(135deg, #5fe1cf, #3b82f6);
+  color: #0f172a;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cb-council-close-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3);
+}
+
+/* Hide old checkbox styles */
+.cb-council-row,
+.cb-council-checkbox {
+  display: none;
+}

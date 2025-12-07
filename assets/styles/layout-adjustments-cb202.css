@@ -1,0 +1,281 @@
+/* === CB202 Layout Adjustments === */
+/* Composer sticks to footer, chat window adjusted to prevent overlap */
+/* CB212: Restored proper spacing with 110px padding */
+
+/* Composer positioned just above footer strip */
+.chat-composer {
+  bottom: 20px !important; /* Clearance above footer stripe */
+  z-index: 100 !important; /* Below modals and menus but above chat content */
+}
+
+/* Chat wrapper needs bottom padding for scroll space */
+.chat-wrapper {
+  padding-bottom: 110px !important; /* Space for fixed composer */
+}
+
+body.cb-shell-active .chat-wrapper {
+  padding-bottom: 110px !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 960px) {
+  .chat-wrapper {
+    padding-bottom: 110px !important;
+  }
+  
+  body.cb-shell-active .chat-wrapper {
+    padding-bottom: 110px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .chat-wrapper {
+    padding-bottom: 120px !important; /* Extra on mobile */
+  }
+  
+  /* Composer stays above footer on mobile too */
+  .chat-composer {
+    bottom: 20px !important;
+  }
+}
+
+/* Sidebar header controls wrapper */
+.cb-sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 900px) {
+  /* Sidebar shrinks to 56px in main-full.css; keep offset in sync for centering math */
+  body.cb-shell-active {
+    --cb-sidebar-offset: 28px;
+  }
+
+  /* Keep chat content aligned with composer when sidebar is visible */
+  .chat-container,
+  .chat-body {
+    max-width: calc(100vw - (var(--cb-sidebar-offset, 0px) * 2) - 32px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
+.cb-sidebar-close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.cb-sidebar-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.cb-sidebar-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.cb-mobile-menu-button {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.92);
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.cb-mobile-menu-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.cb-mobile-menu-icon {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+
+.cb-mobile-menu-icon::before,
+.cb-mobile-menu-icon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 999px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.cb-mobile-menu-icon::before {
+  top: -6px;
+}
+
+.cb-mobile-menu-icon::after {
+  top: 6px;
+}
+
+.cb-sidebar-backdrop {
+  display: none;
+}
+
+.cb-sidebar-backdrop[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 700px) {
+  .chat-footer .footer-mobile-extra {
+    display: none !important;
+  }
+
+  .chat-footer p {
+    white-space: nowrap;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: calc(100% - 20px);
+  }
+}
+
+/* Climate note placement for very small screens */
+.climate-note-mobile {
+  display: none;
+}
+
+@media (max-width: 445px) {
+  body .climate-badge {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+
+  .climate-note-mobile {
+    display: flex;
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 152px;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.32);
+    pointer-events: none;
+    z-index: 1400;
+    text-align: center;
+    line-height: 1.2;
+    gap: 4px;
+    align-items: center;
+    width: calc(100% - 32px);
+    justify-content: center;
+  }
+}
+
+@media (max-width: 900px) {
+  body.cb-shell-active.cb-mobile .top-bar {
+    display: flex !important;
+    position: sticky;
+    top: 0;
+    z-index: 1100;
+    background: linear-gradient(180deg, rgba(12, 17, 38, 0.96), rgba(8, 12, 28, 0.94));
+    backdrop-filter: blur(6px);
+  }
+
+  .top-bar-left {
+    gap: 10px !important;
+  }
+
+  .cb-mobile-menu-button {
+    display: inline-flex;
+  }
+
+  body.cb-mobile .cb-sidebar-toggle {
+    display: none !important;
+  }
+
+  body.cb-mobile .cb-sidebar-close {
+    display: inline-flex;
+  }
+
+  body.cb-mobile .cb-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100vh;
+    max-height: none;
+    width: 280px !important;
+    min-width: 280px !important;
+    max-width: 280px !important;
+    padding: 18px 14px;
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+    transform: translateX(-105%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.28s ease, opacity 0.22s ease;
+    z-index: 1250;
+  }
+
+  body.cb-mobile .cb-sidebar[data-collapsed="true"] {
+    width: 280px !important;
+  }
+
+  body.cb-mobile .cb-sidebar-scroll {
+    padding-right: 6px;
+  }
+
+  .cb-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.48);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 1200;
+  }
+
+  body.cb-mobile.cb-mobile-sidebar-open {
+    overflow: hidden;
+  }
+
+  body.cb-mobile.cb-mobile-sidebar-open .cb-sidebar {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  body.cb-mobile.cb-mobile-sidebar-open .cb-sidebar-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  body.cb-mobile.cb-mobile-sidebar-open .cb-mobile-menu-icon {
+    background: transparent;
+  }
+
+  body.cb-mobile.cb-mobile-sidebar-open .cb-mobile-menu-icon::before {
+    transform: translateY(6px) rotate(45deg);
+  }
+
+  body.cb-mobile.cb-mobile-sidebar-open .cb-mobile-menu-icon::after {
+    transform: translateY(-6px) rotate(-45deg);
+  }
+}

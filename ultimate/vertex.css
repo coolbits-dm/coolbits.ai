@@ -1,0 +1,224 @@
+:root {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #0a0b12, #030308);
+  color: #eef5f4;
+}
+
+.vertex-shell {
+  width: min(1080px, 95%);
+  margin: 0 auto;
+  padding: 48px 0 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.vertex-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.vertex-mode-banner {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(143, 255, 199, 0.08);
+  padding: 14px 18px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.vertex-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  font-size: 0.75rem;
+  color: #8de4ff;
+}
+
+.vertex-subtitle {
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.vertex-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 24px;
+}
+
+.wizard {
+  background: rgba(14, 17, 25, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.wizard-steps {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.wizard-steps span {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.85rem;
+}
+
+.wizard-steps .is-active {
+  background: rgba(143, 255, 199, 0.25);
+  color: #9fffd6;
+}
+
+.wizard-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+  min-height: 420px;
+}
+
+.wizard-panel {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wizard-panel.is-active {
+  display: flex;
+}
+
+.wizard-panel label,
+fieldset label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.wizard-panel input,
+.wizard-panel textarea,
+.wizard-panel select {
+  margin-top: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  padding: 10px 12px;
+}
+
+fieldset {
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 12px;
+  gap: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.checkbox-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.wizard-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.vertex-primary,
+.vertex-secondary {
+  border-radius: 999px;
+  border: none;
+  padding: 0.65rem 1.5rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.vertex-primary {
+  background: linear-gradient(120deg, #6ef8d6, #00d6ff);
+  color: #04120f;
+}
+
+.vertex-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+}
+
+.vertex-output {
+  background: rgba(7, 9, 14, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: 720px;
+}
+
+.output-meta {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.plan-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.plan-section {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.plan-section h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.alert {
+  border-radius: 14px;
+  padding: 12px;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.05);
+  display: none;
+}
+
+.alert.is-visible {
+  display: block;
+}
+
+.review-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+@media (max-width: 900px) {
+  .vertex-main {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,216 @@
+/* === CB202 Mobile Fixes === */
+/* Fix composer layout issues on mobile screens */
+
+/* User menu should be above composer */
+.cb-user-menu {
+  z-index: 5000 !important;
+}
+
+/* Remove the left margin that hides half the composer under 900px */
+@media (max-width: 900px) {
+  .cb-app-main {
+    margin-left: 0 !important;
+  }
+
+  /* FORCE vertical layout - never horizontal */
+  body.cb-mobile .chat-composer form,
+  body.chat-page.cb-mobile .chat-composer form,
+  body.cb-mobile .cb-composer,
+  body.chat-page.cb-mobile .cb-composer,
+  .chat-composer form,
+  .cb-composer {
+    flex-direction: column !important;
+    gap: 0 !important;
+    display: flex !important;
+  }
+
+  /* Keep buttons in controls row, not standalone */
+  body.cb-mobile .cb-composer-controls button,
+  body.chat-page.cb-mobile .cb-composer-controls button,
+  .cb-composer-controls button {
+    flex-shrink: 0 !important;
+  }
+  
+  /* Send button stays circular */
+  .cb-composer-send {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+  }
+
+  /* Textarea takes full width in vertical layout */
+  body.cb-mobile .cb-composer textarea,
+  .cb-composer textarea {
+    width: 100% !important;
+    flex: none !important;
+  }
+
+  /* Remove composer-inner if it exists - we use controls directly */
+  .cb-composer-inner {
+    display: none !important;
+  }
+}
+
+/* Medium screens - tablet range - fluid width */
+@media (max-width: 900px) {
+  .chat-composer {
+    width: calc(100% - 24px) !important; /* Smaller margins on tablets */
+    max-width: none !important; /* Remove max-width restriction */
+    margin: 0 auto !important;
+  }
+
+  .chat-body {
+    width: calc(100% - 24px) !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .chat-composer {
+    width: calc(100% - 20px) !important; /* Even smaller margins */
+    padding: 10px 14px 12px !important;
+    border-radius: 20px !important;
+  }
+
+  .chat-body {
+    width: calc(100% - 20px) !important;
+  }
+
+  .cb-composer {
+    padding: 12px 14px 10px !important;
+  }
+  
+  /* Smaller controls */
+  .cb-composer-send {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  
+  .cb-council-pill {
+    height: 28px !important;
+    max-width: 42px !important;
+    min-width: 42px !important;
+    width: 42px !important;
+  }
+  
+  .cb-council-pill-btn {
+    height: 28px !important;
+    width: 42px !important;
+    font-size: 0.75rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Mobile - minimal margins */
+  .chat-composer {
+    width: calc(100% - 16px) !important;
+    padding: 10px 12px 12px !important;
+    border-radius: 20px !important;
+  }
+
+  .chat-body {
+    width: calc(100% - 16px) !important;
+  }
+
+  .cb-composer {
+    padding: 10px 12px 10px !important;
+  }
+  
+  /* Compact controls on mobile */
+  .cb-composer-send {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  
+  .cb-council-pill {
+    height: 28px !important;
+    max-width: 40px !important;
+    min-width: 40px !important;
+    width: 40px !important;
+  }
+  
+  .cb-council-pill-btn {
+    height: 28px !important;
+    width: 40px !important;
+    font-size: 0.7rem !important;
+  }
+}
+
+  /* Compact council pill for mobile - show "C +N" format */
+  .cb-composer .cb-council-pill {
+    max-width: 100px !important;
+  }
+
+  .cb-composer .cb-council-pill-btn--left {
+    font-size: 0.8rem !important;
+    padding: 6px 10px !important;
+    min-width: auto !important;
+  }
+
+  .cb-composer .cb-council-pill-btn--right {
+    font-size: 0.8rem !important;
+    padding: 6px 10px !important;
+    min-width: auto !important;
+  }
+
+  /* Shorten "Council" text to "C" on mobile */
+  .cb-composer .cb-council-pill-btn--left::before {
+    content: "C";
+    font-weight: 700;
+    font-size: 0.8rem !important;
+  }
+
+  .cb-composer .cb-council-pill-btn--left {
+    font-size: 0 !important; /* Hide original text */
+  }
+
+  /* Compact placeholder text on mobile */
+  .chat-composer input[type="text"]::placeholder {
+    font-size: 0.85rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* Adjust composer inner layout for mobile */
+  .cb-composer-inner {
+    gap: 6px !important;
+    overflow: hidden !important;
+  }
+
+  /* Make send button more compact */
+  .chat-composer button[type="submit"] {
+    padding: 10px 12px !important;
+    font-size: 0.9rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Ensure form doesn't overflow */
+  .chat-composer form {
+    gap: 8px !important;
+  }
+
+  /* Input should flex properly */
+  .chat-composer input[type="text"] {
+    min-width: 0 !important;
+    flex: 1 !important;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 400px) {
+  .chat-composer {
+    padding: 8px 10px 10px !important;
+    width: calc(100% - 12px) !important;
+  }
+
+  .cb-composer-inner {
+    gap: 4px !important;
+  }
+
+  .cb-composer .cb-council-pill-btn--left,
+  .cb-composer .cb-council-pill-btn--right {
+    padding: 5px 8px !important;
+    font-size: 0.75rem !important;
+  }
+}
