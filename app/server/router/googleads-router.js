@@ -1,0 +1,443 @@
+import express from 'express';
+import { google } from 'googleapis';
+import { URL } from 'node:url';
+import { requireUser } from '../middleware/auth.js';
+import { getUserByEmail } from '../userStore.js';
+import { logError } from '../logger.js';
+import {
+  getConnectionByWorkspace,
+  upsertConnection,
+  markDisconnected,
+  updateCustomerId,
+} from '../repos/googleAdsConnectionsRepo.js';
+
+const router = express.Router();
+console.log('[GOOGLEADS_ROUTER_LOADED]');
+const GOOGLE_ADS_SCOPES = ['https://www.googleapis.com/auth/adwords'];
+
+function getUserKey(user) {
+  return user && user.id ? String(user.id) : null;
+}
+
+function getWorkspaceId(req) {
+  return req.query?.workspaceId || req.body?.workspaceId || req.workspaceId || 'business';
+}
+
+function createOAuthClient() {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const base = process.env.GOOGLE_ADS_OAUTH_REDIRECT_BASE;
+  const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+
+  if (!clientId || !clientSecret || !base || !developerToken) {
+    const msg = 'Google Ads OAuth env vars missing';
+    console.warn('[GOOGLEADS_CONFIG_MISSING]', { clientId: !!clientId, clientSecret: !!clientSecret, base: !!base, developerToken: !!developerToken });
+    throw new Error(msg);
+  }
+
+  const redirectUri = `${base.replace(/\/$/, '')}/api/connectors/googleads/oauth/callback`;
+
+  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+  return oauth2Client;
+}
+
+router.get('/status', requireUser, async (req, res) => {
+  const email = req.userEmail || req.user?.email || null;
+  if (!email) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    createOAuthClient();
+  } catch (err) {
+    console.warn('[GOOGLEADS_STATUS] config missing; returning disconnected');
+    return res.json({
+      connected: false,
+      customerId: null,
+      lastSyncAt: null,
+      status: 'disconnected',
+      error: 'not_configured',
+    });
+  }
+  const user = await getUserByEmail(email);
+  const userKey = getUserKey(user);
+  if (!userKey) return res.status(401).json({ error: 'Unauthorized' });
+  const workspaceId = getWorkspaceId(req);
+
+  const record = await getConnectionByWorkspace(workspaceId, userKey);
+  const connected = Boolean(record && record.status === 'connected' && record.refreshToken);
+  console.log('[GOOGLEADS_STATUS]', { workspaceId, userId: userKey, connected });
+
+  if (!connected) {
+    return res.json({
+      connected: false,
+      customerId: record?.customerId || null,
+      lastSyncAt: record?.updatedAt || null,
+      status: record?.status || 'disconnected',
+      error: record?.status === 'error' ? 'connection_error' : null,
+    });
+  }
+
+  return res.json({
+    connected: true,
+    customerId: record.customerId || null,
+    lastSyncAt: record.updatedAt ? record.updatedAt.toISOString() : null,
+    status: record.status,
+    error: null,
+  });
+});
+
+router.get('/auth/url', requireUser, async (req, res) => {
+  const email = req.userEmail || req.user?.email || null;
+  if (!email) return res.status(401).json({ error: 'Unauthorized' });
+  const user = await getUserByEmail(email);
+  const userKey = getUserKey(user);
+  if (!userKey) return res.status(401).json({ error: 'Unauthorized' });
+
+  let oauth2Client;
+  try {
+    oauth2Client = createOAuthClient();
+  } catch (err) {
+    logError(err);
+    return res.status(500).json({ error: 'Google Ads OAuth not configured' });
+  }
+
+  const statePayload = {
+    u: userKey,
+    e: user?.email || email,
+    ws: req.workspaceId || 'business',
+    ts: Date.now(),
+  };
+  const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
+
+  const url = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: GOOGLE_ADS_SCOPES,
+    state,
+  });
+
+  console.log('[GOOGLEADS_AUTH_URL]', { userId: userKey });
+
+  return res.json({ url });
+});
+
+router.get('/customers', requireUser, async (req, res) => {
+  const email = req.userEmail || req.user?.email || null;
+  if (!email) return res.status(401).json({ error: 'Unauthorized' });
+  const user = await getUserByEmail(email);
+  const userKey = getUserKey(user);
+  if (!userKey) return res.status(401).json({ error: 'Unauthorized' });
+  const workspaceId = getWorkspaceId(req);
+
+  let oauth2Client;
+  try {
+    oauth2Client = createOAuthClient();
+  } catch (err) {
+    logError(err);
+    return res.status(500).json({ error: 'not_configured' });
+  }
+
+  const conn = await getConnectionByWorkspace(workspaceId, userKey);
+  if (!conn || conn.status !== 'connected' || !conn.refreshToken) {
+    return res.status(400).json({ error: 'not_connected' });
+  }
+
+  try {
+    oauth2Client.setCredentials({ refresh_token: conn.refreshToken });
+    const tokenInfo = await oauth2Client.getAccessToken();
+    const accessToken = tokenInfo?.token;
+    if (!accessToken) {
+      return res.status(500).json({ error: 'googleads_api_error' });
+    }
+
+    const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      'developer-token': developerToken,
+      'Content-Type': 'application/json',
+    };
+
+    // List accessible customer resource names
+    const listResp = await fetch('https://googleads.googleapis.com/v17/customers:listAccessibleCustomers', {
+      method: 'GET',
+      headers,
+    });
+    if (!listResp.ok) {
+      throw new Error(`listAccessibleCustomers failed: ${listResp.status}`);
+    }
+    const listJson = await listResp.json();
+    const resourceNames = Array.isArray(listJson.resourceNames) ? listJson.resourceNames : [];
+
+    const customers = [];
+    for (const rn of resourceNames) {
+      const cid = typeof rn === 'string' && rn.includes('/') ? rn.split('/').pop() : rn;
+      if (!cid) continue;
+      try {
+        const custResp = await fetch(`https://googleads.googleapis.com/v17/customers/${cid}`, {
+          method: 'GET',
+          headers,
+        });
+        if (!custResp.ok) {
+          console.warn('[GOOGLEADS_CUSTOMERS_FETCH_WARN]', cid, custResp.status);
+          continue;
+        }
+        const custJson = await custResp.json();
+        const c = custJson.customer || custJson;
+        customers.push({
+          customerId: c.id || cid,
+          descriptiveName: c.descriptiveName || c.descriptive_name || cid,
+          currencyCode: c.currencyCode || c.currency_code || null,
+          isManager: Boolean(c.manager || c.managerCustomer || c.manager_customer),
+        });
+      } catch (innerErr) {
+        console.warn('[GOOGLEADS_CUSTOMERS_ENTRY_WARN]', cid, innerErr?.message);
+      }
+    }
+
+    console.log('[GOOGLEADS_CUSTOMERS]', { workspaceId, userId: userKey, count: customers.length });
+    return res.json({ customers });
+  } catch (err) {
+    console.error('[GOOGLEADS_CUSTOMERS_ERROR]', err?.message);
+    return res.status(500).json({ error: 'googleads_api_error' });
+  }
+});
+
+router.post('/customer', requireUser, async (req, res) => {
+  const email = req.userEmail || req.user?.email || null;
+  if (!email) return res.status(401).json({ error: 'Unauthorized' });
+  const user = await getUserByEmail(email);
+  const userKey = getUserKey(user);
+  if (!userKey) return res.status(401).json({ error: 'Unauthorized' });
+  const workspaceId = getWorkspaceId(req);
+  const customerId = (req.body?.customerId || '').trim();
+
+  if (!customerId) {
+    return res.status(400).json({ error: 'invalid_customer' });
+  }
+
+  await updateCustomerId({ workspaceId, userId: userKey, customerId });
+  const record = await getConnectionByWorkspace(workspaceId, userKey);
+
+  return res.json({
+    connected: Boolean(record && record.status === 'connected' && record.refreshToken),
+    customerId: customerId,
+    lastSyncAt: record?.updatedAt || null,
+    status: record?.status || 'connected',
+    error: null,
+  });
+});
+
+router.get('/oauth/callback', async (req, res) => {
+  const logPrefix = '[GOOGLEADS_OAUTH_CALLBACK]';
+  const { code, state } = req.query || {};
+  const appBase = process.env.APP_BASE_URL || process.env.COOLBITS_PUBLIC_BASE_URL || 'https://coolbits.ai';
+  const buildRedirect = (status, errorCode) => {
+    const url = new URL('/chat', appBase);
+    url.searchParams.set('connector', 'googleads');
+    url.searchParams.set('status', status);
+    if (errorCode) url.searchParams.set('error', errorCode);
+    return url.toString();
+  };
+
+  if (!code) {
+    console.error(logPrefix, 'missing code', req.query);
+    return res.redirect(302, buildRedirect('error', 'missing_code'));
+  }
+
+  let decoded = null;
+  if (state) {
+    try {
+      decoded = JSON.parse(Buffer.from(String(state), 'base64url').toString('utf8'));
+    } catch (err) {
+      console.error(logPrefix, 'failed to parse state', err?.message);
+    }
+  }
+
+  const userKey = decoded?.u || decoded?.userId || null;
+  const email = decoded?.e || decoded?.email || null;
+  const workspaceId = decoded?.ws || decoded?.workspaceId || 'business';
+
+  let oauth2Client;
+  try {
+    oauth2Client = createOAuthClient();
+  } catch (err) {
+    console.error(logPrefix, 'config error', err?.message);
+    return res.redirect(302, buildRedirect('error', 'not_configured'));
+  }
+
+  try {
+    const { tokens } = await oauth2Client.getToken(String(code));
+    const refreshToken = tokens.refresh_token || null;
+
+    if (!refreshToken) {
+      console.warn(logPrefix, 'no refresh token returned', { userKey });
+    }
+
+    const record = {
+      userId: userKey,
+      email,
+      customerId: null, // TODO: populate after calling Ads API with developer token
+      refreshToken,
+      status: refreshToken ? 'connected' : 'error',
+      lastSyncAt: null,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (userKey) {
+      await upsertConnection({
+        workspaceId,
+        userId: userKey,
+        customerId: null,
+        refreshToken,
+        status: refreshToken ? 'connected' : 'error',
+        connectedAt: new Date(),
+      });
+    }
+
+    console.log(logPrefix, 'stored connection', {
+      userId: userKey,
+      workspaceId,
+      hasRefresh: Boolean(refreshToken),
+    });
+
+    return res.redirect(302, buildRedirect(refreshToken ? 'success' : 'error'));
+  } catch (err) {
+    console.error(logPrefix, 'token exchange failed', err?.message);
+    return res.redirect(302, buildRedirect('error', 'token_exchange_failed'));
+  }
+});
+
+router.post('/disconnect', requireUser, async (req, res) => {
+  const email = req.userEmail || req.user?.email || null;
+  if (!email) return res.status(401).json({ error: 'Unauthorized' });
+  const user = await getUserByEmail(email);
+  const userKey = getUserKey(user);
+  if (!userKey) return res.status(401).json({ error: 'Unauthorized' });
+  const workspaceId = getWorkspaceId(req);
+
+  const record = await getConnectionByWorkspace(workspaceId, userKey);
+  if (record?.refreshToken) {
+    try {
+      const client = createOAuthClient();
+      client.setCredentials({ refresh_token: record.refreshToken });
+      await client.revokeToken(record.refreshToken);
+    } catch (err) {
+      console.warn('[GOOGLEADS_DISCONNECT] revoke failed', err?.message);
+    }
+  }
+
+  await markDisconnected({ workspaceId, userId: userKey });
+
+  console.log('[GOOGLEADS_DISCONNECT] disconnected', { workspaceId, userId: userKey });
+
+  return res.json({ ok: true });
+});
+
+router.get('/summary', requireUser, async (req, res) => {
+  const email = req.userEmail || req.user?.email || null;
+  if (!email) return res.status(401).json({ error: 'Unauthorized' });
+
+  let oauth2Client;
+  try {
+    oauth2Client = createOAuthClient();
+  } catch (err) {
+    logError(err);
+    return res.status(500).json({ error: 'not_configured' });
+  }
+
+  const user = await getUserByEmail(email);
+  const userKey = getUserKey(user);
+  if (!userKey) return res.status(401).json({ error: 'Unauthorized' });
+
+  const workspaceId = req.query?.workspaceId || req.workspaceId || 'business';
+  const dateRange = req.query?.dateRange || 'last_7_days';
+
+  const conn = await getConnectionByWorkspace(workspaceId, userKey);
+  if (!conn || conn.status !== 'connected' || !conn.refreshToken) {
+    return res.status(400).json({ error: 'not_connected' });
+  }
+
+  if (!conn.customerId) {
+    return res.status(400).json({ error: 'customer_not_set' });
+  }
+
+  try {
+    oauth2Client.setCredentials({ refresh_token: conn.refreshToken });
+    const tokenInfo = await oauth2Client.getAccessToken();
+    const accessToken = tokenInfo?.token;
+    if (!accessToken) {
+      return res.status(500).json({ error: 'googleads_api_error' });
+    }
+
+    const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      'developer-token': developerToken,
+      'Content-Type': 'application/json',
+    };
+
+    const cid = conn.customerId;
+
+    // Fetch metrics for last 7 days
+    const query = `
+      SELECT
+        metrics.cost_micros,
+        metrics.conversions,
+        metrics.clicks,
+        metrics.impressions,
+        customer.currency_code
+      FROM customer
+      WHERE segments.date DURING LAST_7_DAYS
+    `;
+
+    const searchResp = await fetch(`https://googleads.googleapis.com/v17/customers/${cid}/googleAds:searchStream`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ query }),
+    });
+    if (!searchResp.ok) {
+      throw new Error(`searchStream failed: ${searchResp.status}`);
+    }
+    const chunks = await searchResp.json();
+    let costMicros = 0;
+    let conversions = 0;
+    let clicks = 0;
+    let impressions = 0;
+    let currency = 'USD';
+    const rows = Array.isArray(chunks) ? chunks.flatMap((c) => c.results || []) : [];
+    for (const row of rows) {
+      const metrics = row.metrics || {};
+      costMicros += Number(metrics.costMicros || metrics.cost_micros || 0);
+      conversions += Number(metrics.conversions || 0);
+      clicks += Number(metrics.clicks || 0);
+      impressions += Number(metrics.impressions || 0);
+      if (row.customer?.currencyCode || row.customer?.currency_code) {
+        currency = row.customer.currencyCode || row.customer.currency_code;
+      }
+    }
+
+    const cost = costMicros / 1_000_000;
+    const cpa = cost / Math.max(conversions || 0, 1);
+    const ctr = impressions > 0 ? clicks / impressions : 0;
+    const conversionRate = clicks > 0 ? conversions / clicks : 0;
+    const avgCpc = clicks > 0 ? cost / clicks : 0;
+
+    console.log('[GOOGLEADS_SUMMARY]', { workspaceId, userId: userKey, cid, cost, conversions, clicks, impressions });
+
+    return res.json({
+      dateRange,
+      currency,
+      cost,
+      conversions,
+      clicks,
+      impressions,
+      cpa,
+      ctr,
+      conversionRate,
+      avgCpc,
+    });
+  } catch (err) {
+    console.error('[GOOGLEADS_SUMMARY_ERROR]', err?.message);
+    return res.status(500).json({ error: 'googleads_api_error' });
+  }
+});
+
+export default router;

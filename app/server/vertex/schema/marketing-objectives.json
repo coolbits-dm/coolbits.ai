@@ -1,0 +1,25 @@
+{
+  "$id": "https://coolbits.ai/schema/marketing-objectives",
+  "definitions": {
+    "primary": {
+      "type": "string",
+      "enum": [
+        "lead_generation",
+        "black_friday_sales",
+        "brand_awareness",
+        "product_launch",
+        "retention"
+      ]
+    },
+    "secondary": {
+      "type": "string",
+      "enum": [
+        "increase_traffic",
+        "grow_email_list",
+        "upsell_existing",
+        "cross_sell",
+        "boost_roas"
+      ]
+    }
+  }
+}

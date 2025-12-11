@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cool Bits - Chat</title>
+  <link rel="stylesheet" href="./assets/style.css?v=20251120" />
+  <link rel="icon" type="image/x-icon" href="./favicon.ico" />
+</head>
+<body class="chat-page" data-enable-suggestions="true">
+  <img src="./coolbits-alt.png" class="top-logo" alt="CoolBits" />
+  <div class="chat-wrapper">
+    <div id="chat-header"></div>
+    <main id="chat-scroll" class="chat-container">
+      <div class="chat-panel">
+        <div class="level-banner" data-level-banner>
+          <p class="level-pill" data-level-pill>Guest tier</p>
+          <p class="level-mode" data-level-mode>Status: LEVEL-0</p>
+          <p class="level-unlock" data-level-unlock>Share more intent to unlock Level 1.</p>
+          <button type="button" class="campaign-button btn" data-campaign-button hidden>Request Campaign Plan</button>
+        </div>
+        <div class="reasoning-row">
+          <span class="reasoning-badge" data-reasoning-badge>Reasoning inactive</span>
+          <button type="button" class="reasoning-button btn" data-reasoning-button>Boost Reasoning</button>
+        </div>
+        <div class="chat-suggestions" data-chat-suggestions>
+          <p class="suggestions-heading" data-suggestions-heading>Suggested prompts</p>
+        </div>
+    <div class="chat-messages" data-chat-messages></div>
+    <div id="cb-prompt-meter"></div>
+      </div>
+    </main>
+  </div>
+  <div id="chat-composer" class="chat-composer" data-chat-composer>
+    <form data-chat-form>
+        <input
+          id="chat-input"
+          type="text"
+          name="chat-input"
+          placeholder="Describe your idea..."
+        autocomplete="off"
+        required
+        aria-label="Chat message"
+      />
+      <button type="submit" class="btn">Send</button>
+    </form>
+    <p class="chat-error" data-chat-error hidden></p>
+  </div>
+  <div class="climate-badge">
+    <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 3c5.25 0 9 2.76 9 7.5S16.5 21 12 21s-9-3.75-9-7.5S6.75 3 12 3zm0 2C8.25 5 5 7.11 5 10.5S8.09 17 12 17s7-2.61 7-6.5S15.75 5 12 5zm0 2c3 0 5 1.37 5 3.5S15.5 14 12 14s-5-1.37-5-3.5S9 7 12 7z"
+        fill="currentColor"
+      />
+    </svg>
+    <span>We donate 1% of revenue to remove CO₂</span>
+  </div>
+  <footer class="chat-footer">
+    <p>© 2025 Cool Bits SRL · Iași, RO · powered by cbLM.ai · orchestrated by <a href="https://camarad.ai" target="_blank" rel="noopener">Camarad</a> · backed by <a href="https://stripe.com" target="_blank" rel="noopener">Stripe</a></p>
+  </footer>
+  <script src="./assets/chat.js?v=20251120" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+function getVertexConfig() {
+  return {
+    projectId: process.env.VERTEX_PROJECT_ID,
+    location: process.env.VERTEX_LOCATION,
+    model: process.env.VERTEX_MODEL_NAME,
+    endpoint: process.env.VERTEX_API_ENDPOINT,
+    apiKey: process.env.VERTEX_API_KEY,
+  };
+}
+
+function ensureConfig(config) {
+  if (!config.projectId || !config.location || !config.model || !config.apiKey) {
+    const err = new Error('Vertex not configured');
+    err.code = 'VERTEX_NOT_CONFIGURED';
+    throw err;
+  }
+}
+
+function buildEndpoint(config) {
+  if (config.endpoint) {
+    return config.endpoint;
+  }
+  const base = `${config.location}-aiplatform.googleapis.com`;
+  return `https://${base}/v1/projects/${config.projectId}/locations/${config.location}/publishers/google/models/${config.model}:generateContent`;
+}
+
+function buildPrompt({ site, budget, markets, channels, language }) {
+  const marketList = markets.length ? markets.join(', ') : 'unspecified markets';
+  const channelList = channels.length ? channels.join(', ') : 'Google Ads, Meta Ads';
+  const budgetLabel = typeof budget === 'number' && Number.isFinite(budget) ? `$${budget}` : String(budget || 'unknown');
+  return [
+    'You are a senior performance marketer at CoolBits.ai. Draft a pre-sales campaign plan.',
+    `Site or product: ${site}.`,
+    `Primary markets: ${marketList}.`,
+    `Preferred channels: ${channelList}.`,
+    `Monthly budget: ${budgetLabel}.`,
+    'Deliverables:',
+    '- List recommended channels and explain why each matters.',
+    '- Provide a monthly budget split per channel (percentage).',
+    '- Outline funnel actions for top, mid, and bottom-of-funnel.',
+    '- Mention quick wins and prerequisites.',
+    `Respond in ${language || 'en'} using markdown bullets.`,
+  ].join('\n');
+}
+
+function extractText(payload) {
+  const parts = payload?.candidates?.[0]?.content?.parts;
+  if (Array.isArray(parts)) {
+    return parts
+      .map((part) => {
+        if (typeof part.text === 'string') {
+          return part.text;
+        }
+        if (part?.markdown) {
+          return part.markdown;
+        }
+        return '';
+      })
+      .join('\n')
+      .trim();
+  }
+  return '';
+}
+
+function extractUsage(payload) {
+  const meta = payload?.usageMetadata || {};
+  const inputTokens = Number(meta.promptTokenCount || meta.inputTokenCount || 0);
+  const outputTokens = Number(meta.candidatesTokenCount || meta.outputTokenCount || 0);
+  const totalTokens = Number(meta.totalTokenCount || inputTokens + outputTokens);
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens,
+  };
+}
+
+export async function runCampaignPlan({ site, budget, markets = [], channels = [], language = 'en' }) {
+  const config = getVertexConfig();
+  ensureConfig(config);
+
+  const endpoint = buildEndpoint(config);
+  const prompt = buildPrompt({ site, budget, markets, channels, language });
+  const body = {
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: prompt }],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.25,
+      maxOutputTokens: 2048,
+    },
+  };
+
+  const fetchImpl = globalThis.fetch;
+  if (typeof fetchImpl !== 'function') {
+    throw new Error('Global fetch not available');
+  }
+
+  const response = await fetchImpl(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${config.apiKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = await response.json();
+  if (!response.ok) {
+    const message = payload?.error?.message || 'Vertex request failed';
+    const err = new Error(message);
+    err.code = payload?.error?.status || 'VERTEX_ERROR';
+    throw err;
+  }
+
+  const plan = extractText(payload);
+  const tokens = extractUsage(payload);
+  return { plan, tokens };
+}

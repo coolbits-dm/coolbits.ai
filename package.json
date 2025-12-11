@@ -1,0 +1,29 @@
+{
+  "name": "coolbits.ai",
+  "version": "1.0.0",
+  "description": "CoolBits.ai — staging environment for the CoolBits landing page and portal.",
+  "main": "ecosystem.config.cjs",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "node app/server/server.js",
+    "start": "node app/server/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.44.7",
+    "express": "^5.1.0",
+    "google-auth-library": "^9.15.1",
+    "googleapis": "^144.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^3.3.2",
+    "pg": "^8.16.3",
+    "stripe": "^20.0.0"
+  },
+  "type": "module"
+}

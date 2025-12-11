@@ -1,0 +1,53 @@
+{
+  "business": {
+    "slug": "business",
+    "label": "Business Council",
+    "description": "Owner-level view: objectives, KPIs, risk and tech roadmap.",
+    "agents": [
+      "cbAgent-B-001-ceo",
+      "cbAgent-B-002-cto",
+      "cbAgent-A-002-analytics",
+      "cbAgent-D-001-devops"
+    ],
+    "defaultScenarioId": "businessOverview",
+    "scenarios": [
+      { "id": "businessOverview", "label": "Business overview", "status": "coming_soon" },
+      { "id": "growthPlanDraft", "label": "Growth plan draft", "status": "coming_soon" },
+      { "id": "riskReview", "label": "Risk & reliability review", "status": "coming_soon" }
+    ]
+  },
+  "performance": {
+    "slug": "performance",
+    "label": "Performance Council",
+    "description": "PPC, analytics and creative working together on Ads performance.",
+    "agents": [
+      "cbAgent-A-001-ppc",
+      "cbAgent-A-002-analytics",
+      "cbAgent-A-003-creative",
+      "cbAgent-B-001-ceo",
+      "cbAgent-D-001-devops"
+    ],
+    "defaultScenarioId": "googleAdsAudit",
+    "scenarios": [
+      { "id": "googleAdsAudit", "label": "Google Ads audit", "status": "active" },
+      { "id": "performanceSnapshot", "label": "Performance snapshot", "status": "coming_soon" },
+      { "id": "monthlyRebalance", "label": "Monthly budget rebalance", "status": "coming_soon" }
+    ]
+  },
+  "build": {
+    "slug": "build",
+    "label": "Build Council",
+    "description": "Tech architecture, integrations, infra and LLM cost guardrails.",
+    "agents": [
+      "cbAgent-B-002-cto",
+      "cbAgent-D-001-devops",
+      "cbAgent-A-002-analytics"
+    ],
+    "defaultScenarioId": "infraHealthCheck",
+    "scenarios": [
+      { "id": "infraHealthCheck", "label": "Infra health check", "status": "coming_soon" },
+      { "id": "roadmapFromBrief", "label": "Roadmap from business brief", "status": "coming_soon" },
+      { "id": "incidentPostmortem", "label": "Incident postmortem", "status": "coming_soon" }
+    ]
+  }
+}

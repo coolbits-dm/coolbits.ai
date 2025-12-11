@@ -1,0 +1,78 @@
+{
+  "test@example.com": {
+    "email": "test@example.com",
+    "plan": "Starter",
+    "tokensRemaining": 975,
+    "totalUsed": 25,
+    "createdAt": "2025-11-22T08:09:04.478Z",
+    "updatedAt": "2025-11-22T08:10:12.901Z"
+  },
+  "quota@test.com": {
+    "email": "quota@test.com",
+    "planId": "STARTER_FREE",
+    "tokensRemaining": 950,
+    "totalUsed": 50,
+    "createdAt": "2025-11-22T08:36:03.719Z",
+    "updatedAt": "2025-11-22T08:44:25.847Z"
+  },
+  "rate@test.com": {
+    "email": "rate@test.com",
+    "planId": "STARTER_FREE",
+    "tokensRemaining": 1000,
+    "totalUsed": 0,
+    "createdAt": "2025-11-22T12:07:18.497Z",
+    "updatedAt": "2025-11-22T12:07:18.497Z"
+  },
+  "billing@test.com": {
+    "email": "billing@test.com",
+    "planId": "STARTER_FREE",
+    "tokensRemaining": 1000,
+    "totalUsed": 0,
+    "createdAt": "2025-11-22T12:10:51.156Z",
+    "updatedAt": "2025-11-22T12:15:00.735Z"
+  },
+  "andrei@coolbits.ai": {
+    "email": "andrei@coolbits.ai",
+    "planId": "STARTER_FREE",
+    "tokensRemaining": 975,
+    "totalUsed": 25,
+    "createdAt": "2025-11-22T13:07:56.114Z",
+    "updatedAt": "2025-11-22T13:09:48.824Z"
+  },
+  "verify@test.com": {
+    "email": "verify@test.com",
+    "planId": "STARTER_FREE",
+    "tokensRemaining": 1000,
+    "totalUsed": 0,
+    "emailVerified": false,
+    "emailVerifiedAt": null,
+    "createdAt": "2025-11-22T13:27:32.967Z",
+    "updatedAt": "2025-11-22T13:27:32.967Z"
+  },
+  "andreicraescu@gmail.com": {
+    "email": "andreicraescu@gmail.com",
+    "planId": "PRO",
+    "tokensRemaining": 49925,
+    "totalUsed": 650,
+    "emailVerified": true,
+    "emailVerifiedAt": "2025-11-22T23:24:13.758Z",
+    "createdAt": "2025-11-22T23:24:13.758Z",
+    "updatedAt": "2025-11-24T15:08:14.139Z",
+    "planLabel": "Starter (free)"
+  },
+  "bogdan.boureanu@gmail.com": {
+    "id": "bogdan.boureanu@gmail.com",
+    "email": "bogdan.boureanu@gmail.com",
+    "planId": "STARTER_FREE",
+    "planLabel": "Starter (free)",
+    "tokensRemaining": 975,
+    "totalUsed": 25,
+    "emailVerified": false,
+    "emailVerifiedAt": "2025-11-24T13:46:39.257Z",
+    "stripeCustomerId": null,
+    "stripeSubscriptionId": null,
+    "stripeStatus": null,
+    "createdAt": "2025-11-24T13:46:39.258Z",
+    "updatedAt": "2025-11-24T13:46:58.844Z"
+  }
+}

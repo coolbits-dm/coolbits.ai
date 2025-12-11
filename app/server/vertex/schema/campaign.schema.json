@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coolbits.ai/schema/ultimate-campaign",
+  "title": "Ultimate Campaign Input",
+  "type": "object",
+  "properties": {
+    "visitorId": { "type": ["string", "null"], "minLength": 1 },
+    "businessProfile": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "industry": { "type": "string" },
+        "website": { "type": "string", "format": "uri" },
+        "geo": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["name", "industry"],
+      "additionalProperties": true
+    },
+    "objectives": {
+      "type": "object",
+      "properties": {
+        "primary": { "$ref": "./marketing-objectives.json#/definitions/primary" },
+        "secondary": {
+          "type": "array",
+          "items": { "$ref": "./marketing-objectives.json#/definitions/secondary" }
+        }
+      },
+      "required": ["primary"],
+      "additionalProperties": false
+    },
+    "budget": {
+      "type": "object",
+      "properties": {
+        "amount": { "type": "number", "minimum": 0 },
+        "currency": { "type": "string", "minLength": 3, "maxLength": 4 },
+        "period": { "type": "string" }
+      },
+      "required": ["amount", "currency"],
+      "additionalProperties": false
+    },
+    "platforms": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "timeframe": {
+      "type": "object",
+      "properties": {
+        "start": { "type": "string", "format": "date" },
+        "end": { "type": "string", "format": "date" }
+      },
+      "required": ["start", "end"],
+      "additionalProperties": false
+    },
+    "reasoningBoost": { "type": "boolean" }
+  },
+  "required": ["businessProfile", "objectives", "budget", "platforms", "timeframe"],
+  "additionalProperties": false
+}

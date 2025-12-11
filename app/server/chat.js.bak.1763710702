@@ -1,0 +1,206 @@
+import fetch from 'node-fetch';
+import { classifyMessage } from './router/intent-router.js';
+import { getSuggestions } from './router/suggestions.js';
+import { getLevelEngine, buildLevelContext } from './levels/index.js';
+import { logError } from './logger.js';
+
+// IMPORTANT: am scos complet importul cu config.json (aia era sursa cancerului)
+// import config from '../../server/config/config.json' with { type: 'json' };
+
+const GUARDRAIL_RESPONSE =
+  'I can help you only with CoolBits business, agency or devops topics.\nLet’s get back on track.';
+
+const SUPPORTED_LANGUAGES = ['en', 'ro', 'es', 'fr', 'de'];
+const DEFAULT_MAX_TOKENS = Number(process.env.OPENAI_MAX_TOKENS) || 4096;
+const USE_REAL_LLM = String(process.env.USE_REAL_LLM || '').toLowerCase() === 'true';
+
+const MOCK_MODEL_NAME = 'mock-llm';
+// curatat mock-ul, fara Andy
+const MOCK_ACK =
+  'Thanks for the context! A draft reply is being prepared while the live model is disabled.';
+
+const levelEngine = getLevelEngine();
+const ADVANCED_MODEL = process.env.OPENAI_MODEL_ADVANCED;
+
+// ------------ ANTI-ANDY STRIPPER ------------
+const ANDY_DISCLAIMER_SNIPPET = 'Andy is not a real person';
+
+function stripAndyDisclaimer(text) {
+  if (!text || typeof text !== 'string') return '';
+  const idx = text.indexOf(ANDY_DISCLAIMER_SNIPPET);
+  if (idx === -1) {
+    return text.trim();
+  }
+  // taiem tot ce e de la "Andy is not a real person" incolo
+  const cleaned = text.slice(0, idx).trim();
+  return cleaned;
+}
+
+// CLEAN VERSION: no disclaimers, no pollution
+function appendClean(text) {
+  return stripAndyDisclaimer(text || '');
+}
+// -------------------------------------------
+
+function detectLanguage(req) {
+  const header = (req.headers['accept-language'] || '').toLowerCase();
+  const candidate =
+    req.body && typeof req.body.language === 'string'
+      ? req.body.language.toLowerCase()
+      : '';
+  const tokens = [candidate, ...header.split(',')];
+  for (const token of tokens) {
+    const code = token.trim().slice(0, 2);
+    if (SUPPORTED_LANGUAGES.includes(code)) return code;
+  }
+  return 'en';
+}
+
+function sanitizeHistory(history) {
+  if (!Array.isArray(history)) return [];
+  return history
+    .filter((h) => h && typeof h.role === 'string' && typeof h.content === 'string')
+    .map((h) => ({ role: h.role, content: h.content }));
+}
+
+function selectModel(intent, userMessage, reasoningActive) {
+  if (reasoningActive && (ADVANCED_MODEL || process.env.OPENAI_MODEL)) {
+    return ADVANCED_MODEL || process.env.OPENAI_MODEL;
+  }
+  if (process.env.OPENAI_MODEL) return process.env.OPENAI_MODEL;
+  if (intent === 'devops') return 'gpt-5.1';
+
+  const trimmed = String(userMessage || '').trim();
+  if (!trimmed) return 'gpt-4.1-mini';
+  if (trimmed.length < 120) return 'gpt-4.1-mini';
+
+  return 'gpt-4.1';
+}
+
+async function callOpenAI(messages, model) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OpenAI API key not configured.');
+
+  const fetchImpl = globalThis.fetch;
+  if (typeof fetchImpl !== 'function') {
+    throw new Error('Global fetch is not available in this runtime.');
+  }
+
+  const response = await fetchImpl('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      max_tokens: DEFAULT_MAX_TOKENS,
+      temperature: 0.3,
+    }),
+  });
+
+  const payload = await response.json();
+  if (!response.ok) {
+    const message = payload.error?.message || 'OpenAI request failed';
+    throw new Error(message);
+  }
+  return payload.choices?.[0]?.message?.content?.trim() || '';
+}
+
+function buildMockPayload(userMessage) {
+  const preview = userMessage
+    ? `You said: "${userMessage.slice(0, 200)}".`
+    : 'Looking forward to the details.';
+  const body = `${preview}\n${MOCK_ACK}`;
+  return {
+    model: MOCK_MODEL_NAME,
+    reply: appendClean(body),
+  };
+}
+
+export async function handleChat(req, res) {
+  try {
+    const userMessage = String(req.body?.message || '').trim();
+    const history = sanitizeHistory(req.body?.history);
+    const language = detectLanguage(req);
+
+    const classification = classifyMessage(userMessage);
+    const { intent, redirectMessage, systemPrompt } = classification;
+
+    const levelContext = buildLevelContext(req, {
+      tier: req.body?.tier || 'guest',
+      historySize: history.length,
+      lastIntent: intent,
+    });
+
+    const levelDecision = levelEngine.detect(levelContext);
+    const capabilities = levelEngine.getChatInterface(levelDecision.level);
+    const reasoning = levelEngine.getReasoningStatus(levelContext.visitorId);
+
+    const sharedResponse = {
+      visitorId: levelContext.visitorId,
+      level: levelDecision.level,
+      capabilities,
+      unlocks: levelEngine.getMockUnlocks(levelDecision.level),
+      onboarding: {
+        shouldPrompt: levelEngine.shouldTriggerOnboarding({
+          level: levelDecision.level,
+          sharedEmail: levelContext.sharedEmail,
+        }),
+      },
+      reasoning,
+    };
+
+    const respond = (payload) => res.json({ ...sharedResponse, ...payload });
+
+    if (intent === 'out-of-scope') {
+      return respond({ intent, reply: GUARDRAIL_RESPONSE });
+    }
+
+    if (intent === 'smalltalk-safe') {
+      const suggestions = getSuggestions(language);
+      return respond({
+        intent,
+        reply: `Hi there! You can explore:\n${suggestions
+          .map((t, idx) => `${idx + 1}. ${t}`)
+          .join('\n')}`,
+        suggestions,
+      });
+    }
+
+    if (intent === 'about-us') {
+      const message =
+        redirectMessage || 'CoolBits.ai is an independent AI development studio.';
+      return respond({
+        intent,
+        reply: appendClean(message),
+        suggestions: getSuggestions(language),
+      });
+    }
+
+    if (!USE_REAL_LLM) {
+      return respond({ intent, ...buildMockPayload(userMessage) });
+    }
+
+    const model = selectModel(intent, userMessage, Boolean(reasoning?.active));
+
+    const messages = [
+      { role: 'system', content: systemPrompt || '' },
+      ...history,
+      { role: 'user', content: userMessage || 'Hi' },
+    ];
+
+    const aiContent = await callOpenAI(messages, model);
+
+    return respond({
+      intent,
+      model,
+      reply: appendClean(aiContent),
+    });
+  } catch (error) {
+    logError(error);
+    return res.status(500).json({ error: 'Internal error' });
+  }
+}
+

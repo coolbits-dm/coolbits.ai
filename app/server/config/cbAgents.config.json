@@ -1,0 +1,389 @@
+{
+  "cbAgent-B-001-ceo": {
+    "label": "CEO",
+    "role": "Strategic owner",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "briefs.read",
+      "briefs.write",
+      "analytics.summary.read",
+      "devops.status.read"
+    ],
+    "shortTag": "/B/CEO",
+    "canApplyChanges": false,
+    "enabled": true,
+    "artifacts": ["briefs", "kpi_targets"],
+    "maxAutonomy": "L1",
+    "defaultAutonomy": "L1"
+  },
+  "cbAgent-B-002-cto": {
+    "label": "CTO",
+    "role": "Architecture & policies",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "tech_plan.read",
+      "tech_plan.write",
+      "agent_policies.write",
+      "infra.meta.read"
+    ],
+    "shortTag": "/B/CTO",
+    "canApplyChanges": false,
+    "enabled": true,
+    "artifacts": ["tech_plans", "agent_policies", "data_sources"],
+    "maxAutonomy": "L1",
+    "defaultAutonomy": "L1"
+  },
+  "cbAgent-B-003-cfo": {
+    "label": "CFO",
+    "role": "Pricing & budgets",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "analytics.summary.read",
+      "stripe.read",
+      "cost.read",
+      "budget_allocations.read",
+      "budget_allocations.write",
+      "pricing_models.read",
+      "pricing_models.write"
+    ],
+    "shortTag": "/B/CFO",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["pricing_models", "budget_allocations"]
+  },
+  "cbAgent-B-004-coo": {
+    "label": "COO",
+    "role": "Operations & processes",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "processes.read",
+      "processes.write",
+      "service_catalog.read",
+      "service_catalog.write",
+      "devops.status.read",
+      "incidents.write"
+    ],
+    "shortTag": "/B/COO",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["processes", "service_catalog", "incidents"]
+  },
+  "cbAgent-B-005-legal": {
+    "label": "Legal",
+    "role": "Compliance & policy",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "policies.read",
+      "policies.write",
+      "compliance_rules.read",
+      "compliance_rules.write",
+      "brand_rules.read",
+      "brand_rules.write"
+    ],
+    "shortTag": "/B/Legal",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["policies", "compliance_rules", "brand_rules"]
+  },
+  "cbAgent-B-006-product": {
+    "label": "Product",
+    "role": "Offers & product strategy",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "offers.read",
+      "offers.write",
+      "funnels.read",
+      "funnels.write",
+      "experiments.read",
+      "experiments.write",
+      "analytics.summary.read"
+    ],
+    "shortTag": "/B/Product",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["offers", "funnels", "experiments"]
+  },
+  "cbAgent-A-001-ppc": {
+    "label": "PPC Lead",
+    "role": "Campaign structure & changes",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "google_ads.read",
+      "google_ads.write.proposal",
+      "ga4.read",
+      "bq.read",
+      "ppc_plan.write",
+      "ppc_changes.write",
+      "brand_rules.read"
+    ],
+    "shortTag": "/A/PPC",
+    "canApplyChanges": false,
+    "enabled": true,
+    "artifacts": ["ppc_plans", "ppc_change_proposals"],
+    "maxAutonomy": "L1",
+    "defaultAutonomy": "L1"
+  },
+  "cbAgent-A-002-analytics": {
+    "label": "Analytics",
+    "role": "Metrics & insights",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "google_ads.read",
+      "ga4.read",
+      "bq.read",
+      "stripe.read",
+      "analytics.snapshots.write",
+      "insights.write",
+      "analytics.summary.read"
+    ],
+    "shortTag": "/A/Analytics",
+    "canApplyChanges": false,
+    "enabled": true,
+    "artifacts": ["metric_snapshots", "insights"],
+    "maxAutonomy": "L1",
+    "defaultAutonomy": "L1"
+  },
+  "cbAgent-A-003-creative": {
+    "label": "Creative Director",
+    "role": "Copy & assets",
+    "model": "vertex-gemini-2.5-pro",
+    "imageModel": "vertex-imagen-3",
+    "videoModel": "vertex-veo-3",
+    "tools": [
+      "copy.generate",
+      "image.generate",
+      "video.generate",
+      "asset_library.write",
+      "brand_rules.read",
+      "creative_packages.read",
+      "creative_packages.write"
+    ],
+    "shortTag": "/A/Creative",
+    "canApplyChanges": false,
+    "enabled": true,
+    "artifacts": ["creative_packages", "asset_library", "brand_rules"],
+    "maxAutonomy": "L1",
+    "defaultAutonomy": "L1"
+  },
+  "cbAgent-A-004-seo": {
+    "label": "SEO",
+    "role": "Search structure & recommendations",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "seo_site_map.read",
+      "seo_site_map.write",
+      "seo_recommendations.read",
+      "seo_recommendations.write",
+      "content_briefs.read",
+      "content_briefs.write",
+      "bq.read",
+      "brand_rules.read"
+    ],
+    "shortTag": "/A/SEO",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["seo_site_map", "seo_recommendations", "content_briefs"]
+  },
+  "cbAgent-A-005-content": {
+    "label": "Content",
+    "role": "Long-form & LP content",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "content_briefs.read",
+      "content_items.read",
+      "content_items.write",
+      "brand_rules.read",
+      "copy.generate"
+    ],
+    "shortTag": "/A/Content",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["content_items", "content_briefs"]
+  },
+  "cbAgent-A-006-social": {
+    "label": "Social",
+    "role": "Social & community",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "social_calendars.read",
+      "social_calendars.write",
+      "social_assets.read",
+      "social_assets.write",
+      "brand_rules.read",
+      "creative_packages.read",
+      "copy.generate",
+      "image.generate"
+    ],
+    "shortTag": "/A/Social",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["social_calendars", "social_assets"]
+  },
+  "cbAgent-A-007-crm": {
+    "label": "CRM",
+    "role": "Email & lifecycle flows",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "crm_flows.read",
+      "crm_flows.write",
+      "email_sequences.read",
+      "email_sequences.write",
+      "journeys.read",
+      "journeys.write",
+      "analytics.summary.read"
+    ],
+    "shortTag": "/A/CRM",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["crm_flows", "email_sequences", "journeys"]
+  },
+  "cbAgent-D-001-devops": {
+    "label": "DevOps",
+    "role": "Reliability & cost guardrails",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "infra.status.read",
+      "infra.change.propose",
+      "cost.read",
+      "llm_usage.read",
+      "incidents.write",
+      "google_ads.write.apply",
+      "devops.status.read"
+    ],
+    "shortTag": "/D/DevOps",
+    "canApplyChanges": true,
+    "enabled": true,
+    "artifacts": ["infra_services", "deployments", "incidents", "cost_snapshots"],
+    "maxAutonomy": "L2",
+    "defaultAutonomy": "L1"
+  },
+  "cbAgent-D-002-backend": {
+    "label": "Backend",
+    "role": "APIs & data models",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "tech_plan.read",
+      "schemas.read",
+      "schemas.write",
+      "api_specs.read",
+      "api_specs.write",
+      "tickets.read",
+      "tickets.write"
+    ],
+    "shortTag": "/D/Backend",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["api_specs", "schemas", "tickets"]
+  },
+  "cbAgent-D-003-frontend": {
+    "label": "Frontend",
+    "role": "UI & component maps",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "ui_specs.read",
+      "ui_specs.write",
+      "component_maps.read",
+      "component_maps.write",
+      "brand_rules.read",
+      "creative_packages.read"
+    ],
+    "shortTag": "/D/Frontend",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["ui_specs", "component_maps"]
+  },
+  "cbAgent-D-004-data": {
+    "label": "Data",
+    "role": "ETL & warehouse",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "schemas.read",
+      "schemas.write",
+      "data_sources.read",
+      "data_sources.write",
+      "etl_jobs.read",
+      "etl_jobs.write",
+      "bq.read",
+      "ga4.read",
+      "google_ads.read"
+    ],
+    "shortTag": "/D/Data",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["schemas", "data_sources", "etl_jobs"]
+  },
+  "cbAgent-D-005-security": {
+    "label": "Security",
+    "role": "Security posture & access",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "security_policies.read",
+      "security_policies.write",
+      "access_controls.read",
+      "access_controls.write",
+      "data_classification.read",
+      "data_classification.write",
+      "infra.status.read",
+      "incidents.write"
+    ],
+    "shortTag": "/D/Security",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["security_policies", "access_controls", "data_classification", "incidents"]
+  },
+  "cbAgent-D-006-qa": {
+    "label": "QA",
+    "role": "Test plans & regression",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "test_plans.read",
+      "test_plans.write",
+      "test_cases.read",
+      "test_cases.write",
+      "qa_reports.read",
+      "qa_reports.write",
+      "devops.status.read",
+      "incidents.write"
+    ],
+    "shortTag": "/D/QA",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["test_plans", "test_cases", "qa_reports", "incidents"]
+  },
+  "cbAgent-D-007-docs": {
+    "label": "Docs",
+    "role": "Internal & user documentation",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "runbooks.read",
+      "runbooks.write",
+      "dev_docs.read",
+      "dev_docs.write",
+      "user_docs.read",
+      "user_docs.write",
+      "processes.read",
+      "policies.read"
+    ],
+    "shortTag": "/D/Docs",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["runbooks", "dev_docs", "user_docs", "processes", "policies"]
+  },
+  "cbAgent-X-001-custom": {
+    "label": "Custom Agent",
+    "role": "User-defined scoped agent",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "briefs.read",
+      "briefs.write",
+      "creative_packages.read",
+      "creative_packages.write",
+      "copy.generate",
+      "brand_rules.read"
+    ],
+    "shortTag": "/X/Custom",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["briefs", "creative_packages", "brand_rules"]
+  }
+}
