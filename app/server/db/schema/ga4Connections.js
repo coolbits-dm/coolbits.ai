@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, index } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const ga4Connections = pgTable(
   'ga4_connections',
@@ -13,6 +13,6 @@ export const ga4Connections = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
   },
   (table) => ({
-    workspaceUserIdx: index('idx_ga4_conn_workspace_user').on(table.workspaceId, table.userId),
+    workspaceUserUniqueIdx: uniqueIndex('uidx_ga4_conn_workspace_user').on(table.workspaceId, table.userId),
   }),
 );

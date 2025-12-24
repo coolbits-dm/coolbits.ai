@@ -2,6 +2,7 @@ import express from 'express';
 import { requireUser } from '../middleware/auth.js';
 import { getUserByEmail } from '../userStore.js';
 import { logError } from '../logger.js';
+import { handlePublicContact } from '../services/publicContactService.js';
 
 const router = express.Router();
 
@@ -42,18 +43,13 @@ router.post('/enterprise', requireUser, async (req, res) => {
 
   try {
     const user = await getUserByEmail(req.userEmail);
-    const logEntry = {
-      tag: '[ENTERPRISE_CONTACT_REQUEST]',
-      userId: user?.id || 'unknown',
-      userEmail: req.userEmail || payload.email || 'unknown',
-      planCode: payload.planCode || user?.planId || 'unknown',
-      ip: req.ip || req.socket?.remoteAddress || 'unknown',
-      ts: new Date().toISOString(),
-      payload,
-    };
-    console.log(
-      `${logEntry.tag} userId=${logEntry.userId} email=${logEntry.userEmail} planCode=${logEntry.planCode} ip=${logEntry.ip} ts=${logEntry.ts} payload=${JSON.stringify(payload)}`,
-    );
+    const requestId =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `enterprise-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const userId = user?.id || 'unknown';
+    const planCode = payload.planCode || user?.planId || 'unknown';
+    console.log(`[ENTERPRISE_CONTACT] reqId=${requestId} userId=${userId} planCode=${planCode}`);
 
     return res.json({ ok: true });
   } catch (err) {
@@ -61,5 +57,7 @@ router.post('/enterprise', requireUser, async (req, res) => {
     return res.status(500).json({ error: 'Internal error' });
   }
 });
+
+router.post('/', handlePublicContact);
 
 export default router;

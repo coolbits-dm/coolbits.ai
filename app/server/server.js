@@ -5,12 +5,8 @@ import router from './router/index.js';
 import metricsRouter from './routers/metrics-router.js';
 import { logRequest, logError } from './logger.js';
 import stripeWebhookRouter from './router/stripe-webhook-router.js';
-import { fileURLToPath } from 'url';
-import path from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-console.log('[COOLBITS_BOOT]', __filename);
+console.log('[COOLBITS_BOOT]', import.meta.url);
 
 const app = express();
 app.use(

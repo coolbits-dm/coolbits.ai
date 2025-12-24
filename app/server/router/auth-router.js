@@ -154,10 +154,13 @@ router.get('/google/callback', async (req, res) => {
     const payloadToSend = { token, user: safeUser, returnTo };
     // Also set a cookie so /auth/me works without explicit Authorization header.
     const isSecure = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https';
+    const cookieDomain = process.env.AUTH_COOKIE_DOMAIN || null;
     res.cookie('cb_token', token, {
       httpOnly: true,
-      sameSite: 'none',
-      secure: true,
+      secure: isSecure,
+      sameSite: 'lax',
+      path: '/',
+      ...(cookieDomain ? { domain: cookieDomain } : {}),
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
     const payloadJson = JSON.stringify(payloadToSend)

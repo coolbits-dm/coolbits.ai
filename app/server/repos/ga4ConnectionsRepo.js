@@ -24,6 +24,21 @@ export async function getConnectionByWorkspace(workspaceId, userId) {
 
 export async function upsertConnection({ workspaceId, userId, propertyId, refreshToken, status, connectedAt }) {
   const now = new Date();
+  if (!workspaceId) return;
+  if (!refreshToken) {
+    throw new Error('refresh_token_missing');
+  }
+  const updateSet = {
+    status,
+    connectedAt: connectedAt || now,
+    updatedAt: now,
+  };
+  if (typeof propertyId !== 'undefined') {
+    updateSet.propertyId = propertyId || null;
+  }
+  if (typeof refreshToken !== 'undefined' && refreshToken) {
+    updateSet.refreshToken = refreshToken;
+  }
   await db
     .insert(ga4Connections)
     .values({
@@ -38,11 +53,7 @@ export async function upsertConnection({ workspaceId, userId, propertyId, refres
     .onConflictDoUpdate({
       target: [ga4Connections.workspaceId, ga4Connections.userId],
       set: {
-        propertyId: propertyId || null,
-        refreshToken,
-        status,
-        connectedAt: connectedAt || now,
-        updatedAt: now,
+        ...updateSet,
       },
     });
 }

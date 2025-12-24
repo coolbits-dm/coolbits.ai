@@ -4,13 +4,171 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cool Bits</title>
-  <meta http-equiv="refresh" content="0; url=/chat" />
-  <link rel="stylesheet" href="./assets/style.css?v=council-pill-v3" />
+  <link rel="stylesheet" href="/assets/style.css?v=council-pill-v11" />
   <link rel="icon" href="/favicon.ico" />
+  <style>
+    body {
+      overflow: auto;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #111827, #020203);
+      color: rgba(226, 232, 240, 0.92);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .cb-landing-shell {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 80px 22px 56px;
+      display: grid;
+      place-items: center;
+      flex: 1;
+      width: 100%;
+    }
+
+    .cb-landing-hero {
+      width: min(860px, 100%);
+      text-align: center;
+    }
+
+    .cb-landing-logo {
+      width: 96px;
+      height: 96px;
+      margin: 0 auto 18px;
+      display: block;
+      opacity: 0.92;
+      filter: drop-shadow(0 18px 42px rgba(0, 0, 0, 0.35));
+    }
+
+    .cb-landing-title {
+      font-size: 3rem;
+      font-weight: 750;
+      margin: 0;
+      letter-spacing: -0.03em;
+    }
+
+    .cb-landing-subtitle {
+      margin: 10px 0 0;
+      color: rgba(226, 232, 240, 0.75);
+      font-size: 1.05rem;
+    }
+
+    .cb-landing-form {
+      margin-top: 32px;
+    }
+
+    .cb-landing-composer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      background: rgba(15, 23, 42, 0.55);
+      box-shadow: 0 18px 55px rgba(0, 0, 0, 0.42);
+    }
+
+    .cb-landing-input {
+      width: 100%;
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: rgba(226, 232, 240, 0.92);
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .cb-landing-input::placeholder {
+      color: rgba(226, 232, 240, 0.55);
+    }
+
+    .cb-landing-send {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: none;
+      background: transparent;
+      color: rgba(226, 232, 240, 0.9);
+      font-weight: 650;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .cb-landing-send:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(226, 232, 240, 0.98);
+    }
+
+    .cb-landing-composer:focus-within {
+      border-color: rgba(95, 225, 207, 0.55);
+      box-shadow: 0 0 0 4px rgba(95, 225, 207, 0.06), 0 18px 55px rgba(0, 0, 0, 0.42);
+    }
+
+    @media (max-width: 720px) {
+      .cb-landing-shell {
+        padding: 64px 18px 44px;
+      }
+
+      .cb-landing-title {
+        font-size: 2.4rem;
+      }
+
+      .cb-landing-logo {
+        width: 84px;
+        height: 84px;
+      }
+    }
+  </style>
 </head>
 <body>
+  <main class="cb-landing-shell">
+    <section class="cb-landing-hero">
+      <img class="cb-landing-logo" src="/assets/coolbits-logo.svg" alt="Cool Bits" />
+      <h1 class="cb-landing-title">Cool Bits</h1>
+      <p class="cb-landing-subtitle">AI-driven digital agency</p>
+
+      <form class="cb-landing-form" id="cb-landing-form" autocomplete="off">
+        <label for="cb-landing-prompt" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;">
+          Prompt
+        </label>
+        <div class="cb-landing-composer">
+          <input
+            class="cb-landing-input"
+            id="cb-landing-prompt"
+            name="prompt"
+            type="text"
+            inputmode="text"
+            placeholder="Ask anything..."
+            maxlength="2000"
+            autofocus
+          />
+          <button class="cb-landing-send" type="submit">Send</button>
+        </div>
+      </form>
+    </section>
+  </main>
+  <footer data-cb-footer></footer>
+  <script src="/assets/site-footer.js"></script>
   <script>
-    window.location.replace('/chat');
+    (() => {
+      const form = document.getElementById("cb-landing-form");
+      const input = document.getElementById("cb-landing-prompt");
+      if (!form || !input) return;
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const trimmed = (input.value || "").toString().trim();
+        const destination = new URL("/chat", window.location.origin);
+        if (trimmed) {
+          destination.searchParams.set("first", trimmed);
+        }
+        window.location.href = `${destination.pathname}${destination.search}`;
+      });
+    })();
   </script>
 </body>
 </html>
