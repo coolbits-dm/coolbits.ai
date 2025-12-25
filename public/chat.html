@@ -723,7 +723,7 @@
       <div id="chat-header" class="chat-header cb-smart-header" aria-live="polite">
         <div class="cb-smart-toolbar">
           <div class="cb-smart-tile cb-smart-tile--agent" id="cb-active-agent-tile" title="No agents selected. Open Council to add agents.">
-            <div class="cb-smart-label">Active agent</div>
+            <div class="cb-smart-label">Active Context</div>
             <div class="cb-smart-value" id="cb-active-agent-name">Solo chat</div>
             <div class="cb-smart-meta" id="cb-active-agent-meta">Council off</div>
           </div>
@@ -762,9 +762,14 @@
       <div id="chat-composer" class="chat-composer" data-chat-composer>
         <div id="cb-council-active" class="cb-council-active" hidden></div>
         <div class="cb-active-context-bar" id="cb-active-context-bar" role="status" aria-live="polite">
-          <span class="cb-active-context-label">Active Agent</span>
-          <span class="cb-active-context-led" id="cb-active-context-led" data-status="idle" aria-hidden="true"></span>
-          <span class="cb-active-context-name" id="cb-active-context-name">Not active</span>
+          <div class="cb-active-context-header">
+            <span class="cb-active-context-label">Active Context</span>
+            <span class="cb-active-context-led" id="cb-active-context-led" data-status="idle" aria-hidden="true"></span>
+          </div>
+          <div class="cb-active-context-line" id="cb-active-context-mode">Solo</div>
+          <div class="cb-active-context-line" id="cb-active-context-primary">Agent: -</div>
+          <div class="cb-active-context-chips" id="cb-active-context-chips"></div>
+          <div class="cb-active-context-detail" id="cb-active-context-detail"></div>
         </div>
         <form id="cb-composer" class="cb-composer" data-chat-form autocomplete="off">
               <textarea

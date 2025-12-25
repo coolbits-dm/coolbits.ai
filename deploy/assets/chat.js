@@ -1,5 +1,5 @@
 import { marked } from "./vendor/marked.esm.js";
-console.log("[CB_CHAT_BUILD]", "council-pill-v3");
+console.log("[CB_CHAT_BUILD]", "ui-canon", new Date().toISOString());
 // [CB_BASELINE] cb136
 
 // --- CoolBits auth debug wrapper ---
@@ -62,6 +62,9 @@ const API_BILLING_DOWNGRADE = `${API_BASE}/billing/downgrade`;
 const API_BILLING_SUMMARY = `${API_BASE}/billing/summary`;
 const API_AGENTS_REGISTRY = `${API_BASE}/agents/registry`;
 const API_AGENTS_RUN = `${API_BASE}/agents/run`;
+const API_CONTEXT_ACTIVE = `${API_BASE}/context/active`;
+const API_CONTEXT_ACTIVATE = `${API_BASE}/context/activate`;
+const PUBLIC_AGENTS_REGISTRY_URL = "/api/public/agents-registry";
 const API_AUTH_GOOGLE_START = `${API_BASE}/auth/google/start`;
 const API_PROJECTS = `${API_BASE}/projects`;
 
@@ -129,12 +132,53 @@ const PLAN_DEFINITIONS = {
 const PLAN_CODES = Object.keys(PLAN_DEFINITIONS);
 
 const CONNECTOR_CATEGORIES = [
+  { id: "personal", label: "Personal connectors" },
   { id: "business", label: "Business connectors" },
   { id: "agency", label: "Agency connectors" },
   { id: "dev", label: "Developer connectors" },
 ];
 
 const CONNECTORS_CONFIG = [
+  {
+    key: "google_docs",
+    label: "Google Docs",
+    category: "personal",
+    status: "coming_soon",
+    description: "Capture docs, notes, and meeting summaries from Google Docs.",
+    icon: "docs",
+  },
+  {
+    key: "gmail",
+    label: "Gmail",
+    category: "personal",
+    status: "coming_soon",
+    description: "Sync inbox signals and follow-ups from Gmail.",
+    icon: "gmail",
+  },
+  {
+    key: "google_calendar",
+    label: "Google Calendar",
+    category: "personal",
+    status: "coming_soon",
+    description: "Track schedule focus blocks, meetings, and habit cadence.",
+    icon: "gcal",
+  },
+  {
+    key: "notion",
+    label: "Notion",
+    category: "personal",
+    status: "coming_soon",
+    description: "Pull personal knowledge base, tasks, and daily notes from Notion.",
+    icon: "notion",
+  },
+  {
+    key: "todoist",
+    label: "Todoist",
+    category: "personal",
+    status: "coming_soon",
+    description: "Measure task completion velocity and planning rhythm from Todoist.",
+    icon: "todoist",
+  },
   {
     key: "googleads",
     label: "Google Ads",
@@ -148,7 +192,7 @@ const CONNECTORS_CONFIG = [
   },
   {
     key: "ga4",
-    label: "GA4",
+    label: "Google Analytics 4",
     category: "business",
     status: "unknown",
     description: "Pull conversion events and funnel metrics from GA4 properties.",
@@ -293,13 +337,39 @@ const cbConnectorState = {
     customerId: null,
     lastSyncAt: null,
     lastError: null,
+    customerName: null,
   },
   ga4: {
     status: "unknown",
     propertyId: null,
     lastSyncAt: null,
     lastError: null,
+    properties: [],
   },
+};
+
+const cbCouncilPerformanceState = {
+  loaded: false,
+  loading: false,
+  error: null,
+  summary: null,
+  range: "billing_period",
+};
+
+const cbPromptMeterState = {
+  tokensBase: 0,
+  tokensEffective: 0,
+  pctOfPlan: 0,
+  pctAfterSend: 0,
+  sizeClass: "xs",
+  outcomeHint: "General reasoning",
+};
+
+const cbPublicAgentsRegistryState = {
+  loaded: false,
+  loading: false,
+  items: [],
+  byId: new Map(),
 };
 
 const cbNormalizeAgentWorkspace = (workspaceId) => {
@@ -307,6 +377,125 @@ const cbNormalizeAgentWorkspace = (workspaceId) => {
   const key = workspaceId.toString().toLowerCase();
   if (key === "dev" || key === "developer") return "developer";
   return key;
+};
+
+const cbSlugifyText = (value) =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const cbNormalizeAgentLabel = (label) => {
+  const raw = String(label || "");
+  const trimmed = raw.split(" – ")[0].split(" - ")[0];
+  return trimmed.trim();
+};
+
+const cbEncodeAgentNameSegment = (value) =>
+  encodeURIComponent(String(value || "").trim().replace(/\s+/g, "-"));
+
+const cbRegistryWorkspacePrefix = (workspaceId) => {
+  const normalized = cbNormalizeAgentWorkspace(workspaceId);
+  if (normalized === "business") return "-B-";
+  if (normalized === "agency") return "-A-";
+  if (normalized === "developer") return "-D-";
+  if (normalized === "personal") return "-P-";
+  return "";
+};
+
+const cbEnsurePublicAgentsRegistry = async () => {
+  if (cbPublicAgentsRegistryState.loading || cbPublicAgentsRegistryState.loaded) {
+    return cbPublicAgentsRegistryState;
+  }
+  cbPublicAgentsRegistryState.loading = true;
+  try {
+    const res = await fetch(PUBLIC_AGENTS_REGISTRY_URL, { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error("registry_unavailable");
+    }
+    const data = await res.json().catch(() => ({}));
+    const list = Array.isArray(data?.agents) ? data.agents : [];
+    cbPublicAgentsRegistryState.items = list;
+    cbPublicAgentsRegistryState.byId = new Map(list.map((agent) => [agent.id, agent]));
+    cbPublicAgentsRegistryState.loaded = true;
+  } catch (error) {
+    cbPublicAgentsRegistryState.loaded = false;
+    cbPublicAgentsRegistryState.items = [];
+    cbPublicAgentsRegistryState.byId = new Map();
+  } finally {
+    cbPublicAgentsRegistryState.loading = false;
+  }
+  return cbPublicAgentsRegistryState;
+};
+
+const cbResolvePublicRegistryAgent = (agent) => {
+  if (!cbPublicAgentsRegistryState.loaded) {
+    return null;
+  }
+  if (agent?.cbAgentId && cbPublicAgentsRegistryState.byId.has(agent.cbAgentId)) {
+    return cbPublicAgentsRegistryState.byId.get(agent.cbAgentId) || null;
+  }
+  const label = cbNormalizeAgentLabel(agent?.label || agent?.key);
+  if (!label) return null;
+  const slugLabel = cbSlugifyText(label);
+  const prefix = cbRegistryWorkspacePrefix(agent?.workspace);
+  return (
+    cbPublicAgentsRegistryState.items.find((item) => {
+      if (!item || !item.id || !item.label) return false;
+      if (prefix && !item.id.includes(prefix)) return false;
+      return cbSlugifyText(item.label) === slugLabel;
+    }) || null
+  );
+};
+
+const cbBuildCouncilAgentProfile = (agent, registryAgent = null) => {
+  const registry = registryAgent || cbResolvePublicRegistryAgent(agent);
+  const workspaceSlug = cbNormalizeAgentWorkspace(agent?.workspace);
+  const label = cbNormalizeAgentLabel(registry?.label || agent?.label || agent?.key || "Agent");
+  const roleSlug = cbSlugifyText(registry?.label || label);
+  const agentId = registry?.id || agent?.cbAgentId || null;
+  return {
+    agentId,
+    workspaceSlug,
+    roleSlug,
+    defaultName: label,
+    summary: registry?.role || agent?.shortDescription || "",
+  };
+};
+
+const CB_COUNCIL_PREVIEW_SAMPLES = {
+  business: [
+    "Review quarterly KPIs and flag risks.",
+    "Outline growth experiments for next month.",
+    "Summarize priorities for the next 30 days.",
+  ],
+  agency: [
+    "Audit paid media performance and next steps.",
+    "Draft a cross-channel optimization plan.",
+    "Identify GA4 tracking gaps and fixes.",
+  ],
+  developer: [
+    "Assess infra risks before a release.",
+    "Outline an API integration plan.",
+    "Summarize reliability guardrails.",
+  ],
+};
+
+const cbBuildCouncilHoverPreview = (agent, registryAgent = null) => {
+  const workspace = cbNormalizeAgentWorkspace(agent?.workspace);
+  const summary =
+    (registryAgent && registryAgent.role) || agent?.shortDescription || "";
+  const samples = CB_COUNCIL_PREVIEW_SAMPLES[workspace] || [];
+  if (!summary && !samples.length) return "";
+  const lines = [];
+  if (summary) lines.push(summary);
+  if (samples.length) {
+    lines.push("Samples:");
+    samples.slice(0, 3).forEach((sample) => {
+      lines.push(`- ${sample}`);
+    });
+  }
+  return lines.join("\n");
 };
 
 const cbGetWorkspaceLabel = (workspaceId) => {
@@ -373,6 +562,7 @@ const AGENTS_CONFIG = [
     workspace: "business",
     key: "ceo",
     label: "CEO \u2013 Strategy",
+    cbAgentId: "cbAgent-B-001-ceo",
     shortDescription: "Executive view on priorities, ROI, and trade-offs.",
     connectors: [],
     showInCouncil: true,
@@ -381,6 +571,7 @@ const AGENTS_CONFIG = [
     workspace: "business",
     key: "cmo",
     label: "CMO \u2013 Growth",
+    cbAgentId: "cbAgent-B-007-cmo",
     shortDescription: "Acquisition, paid media, and performance marketing (Google Ads, Meta, etc.).",
     connectors: ["googleads", "meta_ads", "tiktok_ads", "linkedin_ads", "ga4", "tracking_debugger"],
     showInCouncil: true,
@@ -389,6 +580,7 @@ const AGENTS_CONFIG = [
     workspace: "business",
     key: "cfo",
     label: "CFO \u2013 Finance",
+    cbAgentId: "cbAgent-B-003-cfo",
     shortDescription: "Budgets, forecasts, and performance guardrails.",
     connectors: ["stripe", "googleads"],
     showInCouncil: true,
@@ -397,6 +589,7 @@ const AGENTS_CONFIG = [
     workspace: "business",
     key: "coo",
     label: "COO \u2013 Ops",
+    cbAgentId: "cbAgent-B-004-coo",
     shortDescription: "Execution, processes, and cross-team alignment.",
     connectors: ["ga4", "google_ads_mcc"],
     showInCouncil: true,
@@ -405,6 +598,7 @@ const AGENTS_CONFIG = [
     workspace: "business",
     key: "cto",
     label: "CTO \u2013 Tech",
+    cbAgentId: "cbAgent-B-002-cto",
     shortDescription: "Architecture, delivery, and technical risk.",
     connectors: ["git", "google_cloud", "error_event_stream"],
     showInCouncil: true,
@@ -530,6 +724,7 @@ function syncCouncilStateFromUi() {
   cbSyncLegacyCouncilFromState();
 
   console.log("[CB_COUNCIL] sync", { ...cbCouncilState });
+  cbQueueActivateContextFromUi("council-selection-sync");
 }
 
 const cbGetCouncilSummaryLabel = () => {
@@ -748,6 +943,7 @@ function cbUpdateCouncilPill() {
     classes: wrapper.className,
     computed: window.getComputedStyle(wrapper).background
   });
+  cbUpdateChatHeader();
 }
 
 // --- Council compatibility shim (older callers expect this) ---
@@ -855,20 +1051,6 @@ let cbLastBillingSummaryAt = 0;
 let cbPendingBillingSuccessMessage = false;
 let cbBillingToastTimeout = null;
 const CB_BILLING_SUMMARY_TTL = 60 * 1000;
-const cbBillingSummaryState = {
-  loading: false,
-  error: null,
-};
-
-// Prompt meter state (pre-send estimator)
-const cbPromptMeterState = {
-  tokensBase: 0,
-  tokensEffective: 0,
-  pctOfPlan: 0,
-  pctAfterSend: 0,
-  sizeClass: "xs",
-  outcomeHint: "",
-};
 const cbEnterpriseFormState = {
   loading: false,
   errors: {},
@@ -903,43 +1085,45 @@ const cbFormatTokenShortText = (remaining) => {
   return `${Math.max(0, remaining)} tokens left`;
 };
 
-const cbFormatNumber = (value) => {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "—";
-  return n.toLocaleString(undefined);
-};
-
-const cbFormatPercentText = (value) => {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "—";
-  return `${n.toFixed(1)}%`;
-};
-
-const cbFormatDateRange = (startIso, endIso) => {
-  if (!startIso || !endIso) return "—";
+const cbFormatPeriodRange = (startIso, endIso) => {
+  if (!startIso || !endIso) return "";
   const start = new Date(startIso);
   const end = new Date(endIso);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "";
   const opts = { day: "numeric", month: "short" };
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "—";
-  return `${start.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(
-    undefined,
-    opts
-  )}`;
+  return `${start.toLocaleDateString(undefined, opts)} – ${end.toLocaleDateString(undefined, opts)}`;
 };
 
 const cbDeriveUsageMetrics = (summary) => {
+  const planNode = summary?.plan || {};
+  const usageNode = summary?.usage || {};
+  const limitsNode = summary?.limits || {};
+
   const tokensIncluded =
-    typeof summary?.limits?.tokensPerMonth === "number"
-      ? summary.limits.tokensPerMonth
+    typeof limitsNode.tokensPerMonth === "number"
+      ? limitsNode.tokensPerMonth
+      : typeof planNode.tokensPerMonth === "number"
+      ? planNode.tokensPerMonth
+      : typeof planNode.monthlyTokens === "number"
+      ? planNode.monthlyTokens
       : null;
+
   let tokensRemaining =
-    typeof summary?.usage?.tokensRemaining === "number"
-      ? summary.usage.tokensRemaining
+    typeof usageNode.tokensRemaining === "number"
+      ? usageNode.tokensRemaining
+      : typeof usageNode.remainingTokens === "number"
+      ? usageNode.remainingTokens
       : null;
+
   let tokensUsed =
-    typeof summary?.usage?.tokensUsedThisPeriod === "number"
-      ? summary.usage.tokensUsedThisPeriod
+    typeof usageNode.tokensUsedThisPeriod === "number"
+      ? usageNode.tokensUsedThisPeriod
+      : typeof usageNode.usedTokens === "number"
+      ? usageNode.usedTokens
+      : typeof usageNode.used === "number"
+      ? usageNode.used
       : null;
+
   const stripeStatus = (
     summary?.stripe?.status ||
     summary?.stripe?.subscription_status ||
@@ -983,7 +1167,7 @@ const cbDeriveUsageMetrics = (summary) => {
       ? Math.min(1, Math.max(0, tokensUsed / tokensIncluded))
       : 0;
   const lowTokenThreshold =
-    typeof tokensIncluded === "number" ? 0.25 * tokensIncluded : null;
+    typeof tokensIncluded === "number" ? 0.2 * tokensIncluded : null;
   const showLowTokens =
     typeof tokensRemaining === "number" &&
     lowTokenThreshold !== null &&
@@ -995,142 +1179,9 @@ const cbDeriveUsageMetrics = (summary) => {
     progressRatio,
     showLowTokens,
     noUsageYet,
+    periodStart: usageNode.periodStart || usageNode.period_start || usageNode.start || null,
+    periodEnd: usageNode.periodEnd || usageNode.period_end || usageNode.end || null,
   };
-};
-
-// --- Prompt Meter Helpers ---
-const cbEstimatePromptTokens = (text) => {
-  if (!text || typeof text !== "string") return 0;
-  const chars = text.trim().length;
-  if (!chars) return 0;
-  return Math.ceil(chars / 4);
-};
-
-const cbGetPromptContext = () => {
-  const councilArmed =
-    (typeof cbShouldUseCouncil === "function" && cbShouldUseCouncil()) ||
-    Boolean(cbCouncilState?.armed) ||
-    (cbCouncilSelectedIds instanceof Set && cbCouncilSelectedIds.size > 0);
-  const usesConnectors =
-    (cbConnectorState.googleads?.status === "connected" && !!cbConnectorState.googleads.customerId) ||
-    (cbConnectorState.ga4?.status === "connected" && !!cbConnectorState.ga4.propertyId);
-  return { councilArmed, usesConnectors };
-};
-
-const cbEstimateEffectiveTokens = (baseTokens, ctx = {}) => {
-  let t = Math.max(0, Number(baseTokens) || 0);
-  if (ctx.councilArmed) t *= 1.5;
-  if (ctx.usesConnectors) t *= 1.2;
-  return Math.ceil(t);
-};
-
-const cbClassifyPromptSize = (tokens) => {
-  const n = Number(tokens) || 0;
-  if (n > 8192) return "xl";
-  if (n > 4096) return "l";
-  if (n > 1024) return "m";
-  if (n > 256) return "s";
-  return "xs";
-};
-
-const cbClassifyOutcomeHint = (text, ctx = {}) => {
-  const t = (text || "").trim();
-  const len = t.length;
-  const hasQuestion = t.includes("?");
-  const hasAds = /google ads|pmax|campaign|cpc|ctr|impressions/i.test(t);
-  const hasGa4 = /ga4|analytics|session|bounce|events/i.test(t);
-
-  if (len < 40 && hasQuestion) return "Quick Q&A";
-  if (ctx.councilArmed && (hasAds || hasGa4)) return "Multi-agent analysis";
-  if (len > 2000 && !hasQuestion) return "Long narrative · consider tightening";
-  if (hasAds || hasGa4) return "Performance insight";
-  return "General reasoning";
-};
-
-const cbRenderPromptMeter = () => {
-  const el = document.getElementById("cb-prompt-meter");
-  if (!el) return;
-  const s = cbPromptMeterState;
-  if (!s.tokensBase || !s.tokensEffective) {
-    el.innerHTML = "";
-    return;
-  }
-
-  const labelMap = {
-    xs: "XS · very light",
-    s: "S · light",
-    m: "M · medium",
-    l: "L · heavy",
-    xl: "XL · very heavy",
-  };
-  const sizeLabel = labelMap[s.sizeClass] || "—";
-  const planAvailable = cbLatestBillingSummary && cbLatestBillingSummary?.usage;
-
-  el.innerHTML = `
-    <div class=\"cb-card cb-prompt-meter\">
-      <div class=\"cb-prompt-meter-left\">
-        <div class=\"cb-prompt-meter-title\">Prompt payload</div>
-        <div class=\"cb-prompt-meter-bar\">
-          <div class=\"cb-prompt-meter-fill cb-prompt-meter-fill--${s.sizeClass}\"></div>
-        </div>
-        <div class=\"cb-prompt-meter-meta\">${sizeLabel} · ~${cbFormatNumber(s.tokensEffective)} tokens</div>
-      </div>
-      <div class=\"cb-prompt-meter-middle\">
-        <div class=\"cb-prompt-meter-label\">Estimated impact</div>
-        ${
-          planAvailable
-            ? `<div class=\"cb-prompt-meter-meta\">~${cbFormatPercentText(
-                s.pctOfPlan
-              )} of this period · after send: ~${cbFormatPercentText(s.pctAfterSend)}</div>`
-            : `<div class=\"cb-prompt-meter-meta\">Billing summary unavailable · showing tokens only</div>`
-        }
-      </div>
-      <div class=\"cb-prompt-meter-right\">
-        <div class=\"cb-prompt-meter-label\">Outcome</div>
-        <div class=\"cb-badge cb-badge--soft\">${s.outcomeHint || "General reasoning"}</div>
-      </div>
-    </div>
-  `;
-};
-
-const cbUpdatePromptMeter = () => {
-  const input = cbGetComposerInput();
-  const text = input?.value || "";
-  const baseTokens = cbEstimatePromptTokens(text);
-  const ctx = cbGetPromptContext();
-  const effectiveTokens = cbEstimateEffectiveTokens(baseTokens, ctx);
-
-  let pctOfPlan = 0;
-  let pctAfter = 0;
-  const summary = cbLatestBillingSummary;
-  if (summary) {
-    const usage = cbDeriveUsageMetrics(summary);
-    const monthlyTokens = usage.tokensIncluded || 0;
-    const usedTokens = usage.tokensUsed || 0;
-    if (monthlyTokens > 0) {
-      pctOfPlan = (effectiveTokens / monthlyTokens) * 100;
-      pctAfter = ((usedTokens + effectiveTokens) / monthlyTokens) * 100;
-    }
-  }
-
-  cbPromptMeterState.tokensBase = baseTokens;
-  cbPromptMeterState.tokensEffective = effectiveTokens;
-  cbPromptMeterState.pctOfPlan = pctOfPlan;
-  cbPromptMeterState.pctAfterSend = pctAfter;
-  cbPromptMeterState.sizeClass = cbClassifyPromptSize(effectiveTokens);
-  cbPromptMeterState.outcomeHint = cbClassifyOutcomeHint(text, ctx);
-
-  cbRenderPromptMeter();
-};
-
-const cbResetPromptMeter = () => {
-  cbPromptMeterState.tokensBase = 0;
-  cbPromptMeterState.tokensEffective = 0;
-  cbPromptMeterState.pctOfPlan = 0;
-  cbPromptMeterState.pctAfterSend = 0;
-  cbPromptMeterState.sizeClass = "xs";
-  cbPromptMeterState.outcomeHint = "";
-  cbRenderPromptMeter();
 };
 
 const cbNormalizePlanCode = (planValue) => {
@@ -1215,10 +1266,11 @@ const cbSetBillingSummary = (summary) => {
   window.cbCouncilAxisState = cbCouncilAxisState;
   cbRenderPlanAndUsageFromSummary(cbLatestBillingSummary);
   cbSyncCouncilUI();
-  cbUpdatePromptMeter();
   if (cbIsAccountBillingOpen()) {
     cbRenderAccountBilling(cbLatestBillingSummary);
   }
+  cbUpdatePromptMeter();
+  cbUpdateChatHeader();
 };
 
 const cbRenderPlanAndUsageFromSummary = (summary) => {
@@ -1264,6 +1316,204 @@ const cbRenderPlanAndUsageFromSummary = (summary) => {
     cbRenderPlansModal();
   }
 };
+
+const cbGetChatHeaderElements = () => {
+  const modelValue = document.getElementById("cb-active-model");
+  const contextValue = document.getElementById("cb-active-context");
+  const usageValue = document.getElementById("cb-active-usage");
+  return {
+    agentTile: document.getElementById("cb-active-agent-tile"),
+    agentName: document.getElementById("cb-active-agent-name"),
+    agentMeta: document.getElementById("cb-active-agent-meta"),
+    modelTile: modelValue ? modelValue.closest(".cb-smart-tile") : null,
+    modelValue,
+    modelMeta: document.getElementById("cb-active-model-meta"),
+    contextTile: contextValue ? contextValue.closest(".cb-smart-tile") : null,
+    contextValue,
+    contextMeta: document.getElementById("cb-active-context-meta"),
+    usageTile: usageValue ? usageValue.closest(".cb-smart-tile") : null,
+    usageValue,
+    usageMeta: document.getElementById("cb-active-usage-meta"),
+  };
+};
+
+const cbResolveCouncilSelections = () => {
+  cbSyncCouncilStateFromLegacy();
+  const selected =
+    Array.isArray(cbCouncilState?.selectedKeys) && cbCouncilState.selectedKeys.length
+      ? cbCouncilState.selectedKeys.slice()
+      : [];
+  if (!selected.length && cbCouncilSelectedIds && cbCouncilSelectedIds.size) {
+    return Array.from(cbCouncilSelectedIds);
+  }
+  return selected;
+};
+
+const cbResolveCouncilAgentProfile = (agentId) => {
+  const agent =
+    cbFindAgentByKey(agentId, cbCurrentWorkspaceId) || cbFindAgentByKey(agentId);
+  if (agent) {
+    return {
+      label: agent.label || agent.key || agentId,
+      description: agent.shortDescription || "",
+    };
+  }
+  const legacy = CB_COUNCIL_MEMBERS.find((member) => member.id === agentId);
+  if (legacy) {
+    return {
+      label: legacy.label || legacy.shortLabel || legacy.id,
+      description: legacy.description || "",
+    };
+  }
+  const fallback = String(agentId || "Agent").replace(/[_-]+/g, " ").trim();
+  return { label: fallback || "Agent", description: "" };
+};
+
+const cbBuildActiveAgentSummary = () => {
+  if (cbActiveContextState.context) {
+    const label = cbFormatActiveAgentName(cbActiveContextState.context);
+    const status =
+      cbActiveContextState.status === "active"
+        ? "Active"
+        : cbActiveContextState.status === "pending"
+          ? "Pending"
+          : cbActiveContextState.status === "error"
+            ? "Error"
+            : "Idle";
+    const tooltip = `Active context: ${label}\n${cbBuildActiveContextTooltip(cbActiveContextState.context)}`;
+    return { label, meta: status, tooltip };
+  }
+  const selected = cbResolveCouncilSelections();
+  if (!selected.length) {
+    return {
+      label: "Solo chat",
+      meta: "Council off",
+      tooltip: "Active context: Solo chat\nCouncil off\nNo agents selected. Open Council to add agents.",
+    };
+  }
+  const resolved = selected.map((id) => cbResolveCouncilAgentProfile(id));
+  const primary = resolved[0];
+  const extraCount = Math.max(0, resolved.length - 1);
+  const label = extraCount ? `${primary.label} +${extraCount}` : primary.label;
+  const meta = `Council on - ${resolved.length} agent${resolved.length === 1 ? "" : "s"}`;
+  const detailLines = resolved
+    .map((item) => (item.description ? `${item.label}: ${item.description}` : item.label))
+    .join("\n");
+  const tooltip = `Active context: ${label}\n${meta}${detailLines ? `\n${detailLines}` : ""}`;
+  return { label, meta, tooltip };
+};
+
+const cbBuildModelSummary = () => {
+  if (cbActiveContextState.context) {
+    const providerLabel = cbFormatProviderLabel(cbActiveContextState.context.provider || "auto");
+    const modelLabel = cbFormatModelLabel(cbActiveContextState.context.model || "");
+    const meta = modelLabel ? `Model: ${modelLabel}` : "Model: auto";
+    return { label: providerLabel, meta };
+  }
+  const providerSelect = document.getElementById("cb-model-selector");
+  const searchInput = document.getElementById("cb-model-search");
+  const providerValue = providerSelect?.value || "auto";
+  const providerLabel =
+    providerSelect?.selectedOptions?.[0]?.textContent || providerValue || "Auto";
+  const modelHint = searchInput?.value ? searchInput.value.trim() : "";
+  let meta = "";
+  if (providerValue === "auto") {
+    meta = modelHint ? `Model hint: ${modelHint}` : "Routing: auto";
+  } else {
+    meta = modelHint ? `Model hint: ${modelHint}` : "Model hint: none";
+  }
+  return { label: providerLabel, meta };
+};
+
+const cbBuildContextSummary = () => {
+  const workspace =
+    cbWorkspaces.find((item) => item.id === cbCurrentWorkspaceId) || cbWorkspaces[0];
+  const activeProject =
+    cbCurrentProjectId && cbProjects.find((proj) => proj && proj.id === cbCurrentProjectId);
+  const value = `${workspace?.label || "Workspace"} / ${activeProject?.name || "All projects"}`;
+  const connected = Object.keys(cbConnectorState || {})
+    .filter((key) => (cbConnectorState[key]?.status || "").toLowerCase() === "connected")
+    .map((key) => cbResolveConnectorByKey(key))
+    .filter(Boolean)
+    .map((connector) => connector.label || connector.key);
+  const connectorLabel = connected.length
+    ? `Connectors: ${connected.join(", ")}`
+    : "Connectors: none";
+  const councilState = cbResolveCouncilSelections().length ? "Council on" : "Council off";
+  return { value, meta: `${councilState} | ${connectorLabel}` };
+};
+
+const cbBuildUsageSummary = () => {
+  const summary = cbLatestBillingSummary || null;
+  const usageMetrics = summary ? cbDeriveUsageMetrics(summary) : null;
+  const tokensLine = usageMetrics
+    ? cbFormatTokenShortText(usageMetrics.tokensRemaining)
+    : "Tokens: n/a";
+  const promptTokens = Math.max(0, Math.round(cbPromptMeterState.tokensEffective || 0));
+  const size = cbPromptMeterState.sizeClass
+    ? cbPromptMeterState.sizeClass.toUpperCase()
+    : "";
+  const outcome = cbPromptMeterState.outcomeHint || "";
+  const promptMeta = promptTokens
+    ? `Prompt: ${promptTokens.toLocaleString()} tokens${size ? ` (${size})` : ""}${
+        outcome ? ` - ${outcome}` : ""
+      }`
+    : "Prompt: empty";
+  return { value: tokensLine, meta: promptMeta };
+};
+
+const cbUpdateChatHeader = () => {
+  const elements = cbGetChatHeaderElements();
+  if (!elements.agentName && !elements.modelValue && !elements.contextValue) {
+    return;
+  }
+
+  const agentSummary = cbBuildActiveAgentSummary();
+  if (elements.agentName) {
+    elements.agentName.textContent = agentSummary.label;
+  }
+  if (elements.agentMeta) {
+    elements.agentMeta.textContent = agentSummary.meta;
+  }
+  if (elements.agentTile) {
+    elements.agentTile.title = agentSummary.tooltip;
+  }
+
+  const modelSummary = cbBuildModelSummary();
+  if (elements.modelValue) {
+    elements.modelValue.textContent = modelSummary.label;
+  }
+  if (elements.modelMeta) {
+    elements.modelMeta.textContent = modelSummary.meta;
+  }
+  if (elements.modelTile) {
+    elements.modelTile.title = `Model: ${modelSummary.label}\n${modelSummary.meta}`;
+  }
+
+  const contextSummary = cbBuildContextSummary();
+  if (elements.contextValue) {
+    elements.contextValue.textContent = contextSummary.value;
+  }
+  if (elements.contextMeta) {
+    elements.contextMeta.textContent = contextSummary.meta;
+  }
+  if (elements.contextTile) {
+    elements.contextTile.title = `Context: ${contextSummary.value}\n${contextSummary.meta}`;
+  }
+
+  const usageSummary = cbBuildUsageSummary();
+  if (elements.usageValue) {
+    elements.usageValue.textContent = usageSummary.value;
+  }
+  if (elements.usageMeta) {
+    elements.usageMeta.textContent = usageSummary.meta;
+  }
+  if (elements.usageTile) {
+    elements.usageTile.title = `Usage: ${usageSummary.value}\n${usageSummary.meta}`;
+  }
+};
+
+window.cbUpdateChatHeader = cbUpdateChatHeader;
 
 const cbGetAgentsElements = () => ({
   view: document.getElementById("cb-agents-view"),
@@ -1818,6 +2068,8 @@ const renderMarkdown = (value) => {
 
 const elements = {
   messages: document.querySelector("[data-chat-messages]"),
+  chatBody: document.querySelector(".chat-body"),
+  chatContainer: document.getElementById("chat-scroll"),
   suggestions: document.querySelector("[data-chat-suggestions]"),
   suggestionsHeading: document.querySelector("[data-suggestions-heading]"),
   form: document.querySelector("[data-chat-form]"),
@@ -1844,11 +2096,15 @@ const shellElements = {
   sidebarClose: document.querySelector("[data-sidebar-close]"),
   sidebarBackdrop: document.querySelector("[data-sidebar-backdrop]"),
   newChatButton: document.querySelector("[data-sidebar-new-chat]"),
+  agentsButton: document.querySelector("[data-sidebar-agents]"),
   chatsList: document.querySelector("[data-sidebar-chat-list]"),
   featureButtons: Array.from(document.querySelectorAll("[data-sidebar-feature]")),
   accountViewButtons: Array.from(document.querySelectorAll("[data-account-view-btn]")),
   accountViews: Array.from(document.querySelectorAll("[data-account-view]")),
   connectorsCategories: document.getElementById("cb-connectors-categories"),
+  connectorsSection: document.querySelector("[data-sidebar-connectors]"),
+  connectorsToggle: document.getElementById("cb-connectors-toggle"),
+  connectorsMenu: document.getElementById("cb-connectors-menu"),
   userSlot: document.getElementById("cb-sidebar-user-slot"),
   topBarRight: document.querySelector(".top-bar-right"),
   projectSection: document.querySelector("[data-projects-section]"),
@@ -1877,6 +2133,7 @@ const shellElements = {
   composerForm: document.getElementById("cb-composer"),
   chatInput: document.getElementById("chat-input"),
   councilButton: document.getElementById("cb-council-pill"),
+  councilAgentsButton: document.getElementById("cb-council-agents-btn"),
   councilActive: document.getElementById("cb-council-active"),
   councilPopover: document.getElementById("cb-council-popover"),
   councilList: document.getElementById("cb-council-list"),
@@ -1980,6 +2237,15 @@ let cbChatsUnsupported = false;
 let cbCurrentProjectId = null;
 let cbProjectMenuOpen = false;
 let cbSidebarMenuOutsideBound = false;
+const cbActiveContextState = {
+  status: "idle",
+  context: null,
+  error: null,
+  pendingReason: null,
+};
+let cbActiveContextRequestId = 0;
+let cbActiveContextDebounce = null;
+let cbSuppressContextActivation = false;
 const WORKSPACE_STORAGE_KEY = "coolbits:workspace";
 const cbWorkspaces = [
   { id: "business", label: "Business" },
@@ -1988,6 +2254,7 @@ const cbWorkspaces = [
 ];
 let cbCurrentWorkspaceId = "business";
 let cbWorkspaceMenuOpen = false;
+let cbConnectorsMenuOpen = false;
 let cbPendingDeleteChatId = null;
 let cbPendingRenameChatId = null;
 const cbManualChatTitles = new Set();
@@ -2006,6 +2273,387 @@ const cbNormalizeWorkspaceId = (workspaceId) => {
     return workspaceId;
   }
   return "business";
+};
+
+const CB_PROVIDER_API_MAP = {
+  auto: "auto",
+  chatgpt: "openai",
+  claude: "anthropic",
+  gemini: "google",
+  grok: "xai",
+  copilot: "openai",
+  openai: "openai",
+  anthropic: "anthropic",
+  google: "google",
+  xai: "xai",
+  deepseek: "deepseek",
+};
+
+const CB_PROVIDER_UI_MAP = {
+  openai: "chatgpt",
+  anthropic: "claude",
+  google: "gemini",
+  xai: "grok",
+  deepseek: "auto",
+  auto: "auto",
+};
+
+const CB_PROVIDER_LABELS = {
+  auto: "Auto",
+  chatgpt: "ChatGPT",
+  claude: "Claude",
+  gemini: "Gemini",
+  grok: "Grok",
+  copilot: "Copilot",
+  openai: "ChatGPT",
+  anthropic: "Claude",
+  google: "Gemini",
+  xai: "Grok",
+  deepseek: "DeepSeek",
+};
+
+const cbNormalizeProviderForApi = (value) => {
+  if (!value) return "auto";
+  const key = String(value).trim().toLowerCase();
+  return CB_PROVIDER_API_MAP[key] || "auto";
+};
+
+const cbNormalizeProviderForUi = (value) => {
+  if (!value) return "auto";
+  const key = String(value).trim().toLowerCase();
+  return CB_PROVIDER_UI_MAP[key] || (CB_PROVIDER_API_MAP[key] ? key : "auto");
+};
+
+const cbFormatProviderLabel = (value) => {
+  if (!value) return "Auto";
+  const key = String(value).trim().toLowerCase();
+  return CB_PROVIDER_LABELS[key] || value;
+};
+
+const cbFormatModelLabel = (value) => {
+  if (!value) return "Auto";
+  const trimmed = String(value).trim();
+  return trimmed.replace(/^vertex-/, "").replace(/^openai-/, "");
+};
+
+const cbGetActiveContextElements = () => ({
+  bar: document.getElementById("cb-active-context-bar"),
+  led: document.getElementById("cb-active-context-led"),
+  mode: document.getElementById("cb-active-context-mode"),
+  primary: document.getElementById("cb-active-context-primary"),
+  chips: document.getElementById("cb-active-context-chips"),
+  detail: document.getElementById("cb-active-context-detail"),
+});
+
+const cbUpdateComposerSendState = () => {
+  const sendButton = elements.button;
+  if (!sendButton) return;
+  const shouldDisable = isSending || cbActiveContextState.status !== "active";
+  if (shouldDisable) {
+    sendButton.setAttribute("disabled", "true");
+  } else {
+    sendButton.removeAttribute("disabled");
+  }
+};
+
+const cbFormatActiveAgentName = (context) => {
+  if (!context) return "Not active";
+  const name = context.customName || context.defaultName || context.role || context.agentId || "Agent";
+  const role = context.role && context.role !== name ? context.role : "";
+  return role ? `${role} · ${name}` : name;
+};
+
+const cbBuildShortAgentLabel = (label) => {
+  const raw = String(label || "").trim();
+  if (!raw) return "";
+  const normalized = cbNormalizeAgentLabel(raw) || raw;
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (words.length > 1) {
+    const first = words[0];
+    if (/^[A-Z0-9]{2,5}$/.test(first)) {
+      return first;
+    }
+    const acronym = words.map((word) => word[0]).join("").toUpperCase();
+    if (acronym.length >= 2 && acronym.length <= 5) {
+      return acronym;
+    }
+  }
+  return normalized;
+};
+
+const cbResolveCouncilDisplayAgent = (agentKey) => {
+  if (!agentKey) return null;
+  const agent =
+    cbFindAgentByKey(agentKey, cbCurrentWorkspaceId) || cbFindAgentByKey(agentKey);
+  const registry = cbResolvePublicRegistryAgent(agent);
+  const legacy = CB_COUNCIL_MEMBERS.find((member) => member.id === agentKey);
+  const fullLabel =
+    registry?.label || agent?.label || legacy?.label || legacy?.shortLabel || agentKey;
+  const shortSource =
+    registry?.shortLabel ||
+    registry?.role ||
+    registry?.label ||
+    agent?.label ||
+    legacy?.shortLabel ||
+    legacy?.label ||
+    agentKey;
+  const shortLabel = cbBuildShortAgentLabel(shortSource || fullLabel);
+  return {
+    key: agentKey,
+    shortLabel: shortLabel || String(fullLabel || agentKey),
+    fullLabel: String(fullLabel || shortLabel || agentKey),
+  };
+};
+
+const cbBuildActiveContextTooltip = (context, extraLines = []) => {
+  const lines = Array.isArray(extraLines) ? extraLines.filter(Boolean) : [];
+  if (!context) {
+    return lines.length ? lines.join("\n") : "Active context not confirmed yet.";
+  }
+  const providerLabel = cbFormatProviderLabel(context.provider || "auto");
+  const modelLabel = cbFormatModelLabel(context.model || "auto");
+  const billingLabel = context.billingSource === "byok" ? "BYOK" : "CoolBits";
+  lines.push(`Provider: ${providerLabel}`);
+  lines.push(`Model: ${modelLabel}`);
+  lines.push(`Billing: ${billingLabel}`);
+  return lines.join("\n");
+};
+
+const cbUpdateActiveContextBar = () => {
+  const { bar, led, mode, primary, chips, detail } = cbGetActiveContextElements();
+  if (!bar || !led) return;
+  const status = cbActiveContextState.status || "idle";
+  const context = cbActiveContextState.context;
+  const confirmed = status === "active" && context?.contextId;
+  const ledStatus =
+    status === "error" ? "error" : status === "pending" ? "pending" : confirmed ? "active" : "idle";
+  led.setAttribute("data-status", ledStatus);
+
+  const selected = cbResolveCouncilSelections();
+  const councilArmed = !!cbCouncilState?.armed;
+  const councilEnabled = selected.length > 0 || councilArmed;
+  const agents = selected.map((key) => cbResolveCouncilDisplayAgent(key)).filter(Boolean);
+  const primaryAgent = agents[0] || null;
+
+  if (mode) {
+    mode.textContent = councilEnabled
+      ? agents.length
+        ? "Council mode"
+        : "Council (no agents selected)"
+      : "Solo mode";
+  }
+
+  if (primary) {
+    if (councilEnabled) {
+      primary.textContent = primaryAgent ? `Primary: ${primaryAgent.shortLabel}` : "Primary: -";
+      primary.title = primaryAgent?.fullLabel || "";
+    } else {
+      const activeName = context ? cbFormatActiveAgentName(context) : "-";
+      primary.textContent = `Agent: ${activeName}`;
+      primary.title = activeName === "-" ? "" : activeName;
+    }
+  }
+
+  if (chips) {
+    chips.textContent = "";
+    if (agents.length) {
+      const visible = agents.slice(0, 4);
+      visible.forEach((agent) => {
+        const chip = document.createElement("span");
+        chip.className = "cb-active-context-chip";
+        chip.textContent = agent.shortLabel;
+        chip.title = agent.fullLabel || agent.shortLabel;
+        chips.appendChild(chip);
+      });
+      const remaining = agents.length - visible.length;
+      if (remaining > 0) {
+        const more = document.createElement("span");
+        more.className = "cb-active-context-chip cb-active-context-chip--more";
+        more.textContent = `+${remaining}`;
+        more.title = `${remaining} more`;
+        chips.appendChild(more);
+      }
+      chips.hidden = false;
+    } else {
+      chips.hidden = true;
+    }
+  }
+
+  let detailLine = "";
+  if (agents.length) {
+    detailLine = agents
+      .map((agent) => agent.fullLabel || agent.shortLabel)
+      .filter(Boolean)
+      .join(", ");
+  }
+  if (detail) {
+    detail.textContent = detailLine;
+    detail.hidden = !detailLine;
+  }
+
+  const tooltipLines = [];
+  if (councilEnabled) {
+    tooltipLines.push(
+      agents.length ? `Council: ${detailLine}` : "Council: no agents selected"
+    );
+  }
+  bar.title = cbBuildActiveContextTooltip(context, tooltipLines);
+};
+
+const cbApplyActiveContextToUi = (context) => {
+  if (!context) return;
+  const providerSelect = document.getElementById("cb-model-selector");
+  const searchInput = document.getElementById("cb-model-search");
+  const listEl = document.getElementById("cb-model-search-list");
+  if (!providerSelect && !searchInput) return;
+  cbSuppressContextActivation = true;
+  const uiProvider = cbNormalizeProviderForUi(context.provider);
+  if (providerSelect && uiProvider && providerSelect.value !== uiProvider) {
+    providerSelect.value = uiProvider;
+  }
+  if (searchInput) {
+    const label = cbFormatModelLabel(context.model || "");
+    if (label && searchInput.value !== label) {
+      searchInput.value = label;
+    }
+  }
+  if (providerSelect && searchInput && listEl) {
+    cbUpdateModelSearch(providerSelect.value || "auto", searchInput, listEl);
+  }
+  cbSuppressContextActivation = false;
+};
+
+const cbSetActiveContextState = ({ status, context = null, error = null, reason = null } = {}) => {
+  if (status) cbActiveContextState.status = status;
+  cbActiveContextState.context = context;
+  cbActiveContextState.error = error;
+  cbActiveContextState.pendingReason = reason;
+  if (context) {
+    cbApplyActiveContextToUi(context);
+  }
+  cbUpdateActiveContextBar();
+  cbUpdateChatHeader();
+  cbUpdateComposerSendState();
+};
+
+const cbBuildActiveContextRequestFromUi = (overrides = {}) => {
+  const selected = cbResolveCouncilSelections();
+  const primaryKey = selected.length ? selected[0] : null;
+  const agentProfile = primaryKey ? cbFindAgentByKey(primaryKey, cbCurrentWorkspaceId) : null;
+  const agentId = agentProfile?.cbAgentId || agentProfile?.agentId || null;
+  const providerSelect = document.getElementById("cb-model-selector");
+  const searchInput = document.getElementById("cb-model-search");
+  const providerValue = providerSelect?.value || "auto";
+  const provider = cbNormalizeProviderForApi(providerValue);
+  const modelHint = searchInput?.value ? searchInput.value.trim() : "";
+  const model = modelHint || "auto";
+
+  return {
+    workspace: cbNormalizeWorkspaceId(cbCurrentWorkspaceId),
+    agentId,
+    provider,
+    model,
+    billingSource: "coolbits",
+    ...overrides,
+  };
+};
+
+const cbActivateContext = async (requested = {}, { reason = null } = {}) => {
+  if (!cbIsAuthenticated()) {
+    return null;
+  }
+  const requestId = ++cbActiveContextRequestId;
+  cbSetActiveContextState({ status: "pending", context: cbActiveContextState.context, error: null, reason });
+  const { ok, status, json } = await cbFetchJson(API_CONTEXT_ACTIVATE, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(requested || {}),
+  });
+  if (requestId !== cbActiveContextRequestId) {
+    return null;
+  }
+  if (!ok || !json?.ok) {
+    const message = json?.error?.message || json?.error || "Unable to activate context.";
+    cbSetActiveContextState({
+      status: "error",
+      context: cbActiveContextState.context,
+      error: json?.error || { message },
+      reason,
+    });
+    showComposerError(message);
+    return null;
+  }
+  cbSetActiveContextState({ status: "active", context: json.context, error: null, reason });
+  clearComposerError();
+  return json.context;
+};
+
+const cbActivateContextFromUi = (reason) => {
+  if (cbSuppressContextActivation) return;
+  const payload = cbBuildActiveContextRequestFromUi();
+  return cbActivateContext(payload, { reason });
+};
+
+const cbQueueActivateContextFromUi = (reason, delay = 350) => {
+  if (cbSuppressContextActivation) return;
+  if (cbActiveContextDebounce) {
+    clearTimeout(cbActiveContextDebounce);
+  }
+  cbActiveContextDebounce = setTimeout(() => {
+    cbActivateContextFromUi(reason);
+  }, delay);
+};
+
+const cbLoadActiveContext = async () => {
+  if (!cbIsAuthenticated()) {
+    cbSetActiveContextState({ status: "idle", context: null, error: null });
+    return null;
+  }
+  const { ok, json } = await cbFetchJson(API_CONTEXT_ACTIVE, { method: "GET" });
+  if (ok && json?.context) {
+    cbSetActiveContextState({ status: json.context.status || "active", context: json.context, error: null });
+    return json.context;
+  }
+  cbSetActiveContextState({ status: "idle", context: null, error: null });
+  cbActivateContextFromUi("context-bootstrap");
+  return null;
+};
+
+window.cbActivateContext = cbActivateContext;
+window.cbActiveContextState = cbActiveContextState;
+
+const CB_AGENTS_WORKSPACE_PARAM = {
+  business: "cbB",
+  agency: "cbA",
+  developer: "cbD",
+  personal: "cbP",
+};
+
+const cbBuildAgentsDirectoryUrl = ({ includeWorkspace = false, workspaceId = null } = {}) => {
+  const base = "/agents/";
+  if (!includeWorkspace) {
+    return base;
+  }
+  const resolved = cbNormalizeWorkspaceId(workspaceId || cbCurrentWorkspaceId);
+  const param = CB_AGENTS_WORKSPACE_PARAM[resolved];
+  if (!param) {
+    return base;
+  }
+  const params = new URLSearchParams({ workspace: param });
+  return `${base}?${params.toString()}`;
+};
+
+const cbBuildAgentProfileUrl = (profile, { fromCouncil = false } = {}) => {
+  if (!profile || !profile.agentId) {
+    return cbBuildAgentsDirectoryUrl({ includeWorkspace: true, workspaceId: profile?.workspaceSlug });
+  }
+  const nameSegment = cbEncodeAgentNameSegment(profile.defaultName);
+  const base = `/agents/${profile.workspaceSlug}/${profile.roleSlug}/${profile.agentId}/${nameSegment}`;
+  if (!fromCouncil) {
+    return base;
+  }
+  const params = new URLSearchParams({ fromCouncil: "true" });
+  return `${base}?${params.toString()}`;
 };
 
 const cbSyncCurrentWorkspaceChatsCache = () => {
@@ -2130,6 +2778,7 @@ const cbApplyAuthPayload = (data, { persist = true } = {}) => {
     cbFetchAgentsRegistry();
   }
   closeOnboardingModal();
+  cbLoadActiveContext().catch((error) => console.warn("[ACTIVE_CONTEXT] load failed", error));
 };
 
 async function cbFetchAndApplyAuthMe() {
@@ -2388,7 +3037,13 @@ const cbUpdateGuestHint = () => {
   if (!hint) {
     return;
   }
-  hint.hidden = cbIsAuthenticated();
+  const hasUser = Boolean(cbCurrentUser && cbCurrentUser.email);
+  const badgeEmail = document
+    .querySelector(".cb-user-badge-email")
+    ?.textContent?.trim()
+    .toLowerCase();
+  const hasBadgeUser = Boolean(badgeEmail && badgeEmail !== "guest");
+  hint.hidden = cbIsAuthenticated() || hasUser || hasBadgeUser;
 };
 
 const cbMaybeSendPendingSeed = () => {
@@ -2607,10 +3262,84 @@ const saveHistory = () => {
   }
 };
 
+let cbChatForceScrollToBottom = false;
+
+const cbGetChatScrollContainer = () =>
+  (elements.chatBody && elements.chatBody instanceof HTMLElement
+    ? elements.chatBody
+    : document.querySelector(".chat-body")) ||
+  (elements.messages && elements.messages instanceof HTMLElement ? elements.messages : null);
+
+const cbIsChatNearBottom = (container, threshold = 120) => {
+  if (!container) return true;
+  const maxScrollTop = container.scrollHeight - container.clientHeight;
+  const current = container.scrollTop;
+  return maxScrollTop - current <= threshold;
+};
+
+const cbEnsureChatScrollToBottomButton = () => {
+  const host =
+    (elements.chatContainer && elements.chatContainer instanceof HTMLElement
+      ? elements.chatContainer
+      : document.getElementById("chat-scroll")) ||
+    null;
+  if (!host) return null;
+
+  const existing = document.getElementById("cb-scroll-to-bottom");
+  if (existing) return existing;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.id = "cb-scroll-to-bottom";
+  button.className = "cb-scroll-to-bottom";
+  button.setAttribute("aria-label", "Scroll to bottom");
+  button.setAttribute("aria-hidden", "true");
+  button.tabIndex = -1;
+  button.innerHTML = `
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 10l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `;
+  button.addEventListener("click", () => {
+    cbChatForceScrollToBottom = true;
+    scrollToBottom();
+  });
+  host.appendChild(button);
+  return button;
+};
+
+const cbUpdateChatScrollToBottomButton = () => {
+  const container = cbGetChatScrollContainer();
+  const button = cbEnsureChatScrollToBottomButton();
+  if (!container || !button) return;
+  const shouldShow = !cbIsChatNearBottom(container, 140);
+  button.classList.toggle("is-visible", shouldShow);
+  button.setAttribute("aria-hidden", shouldShow ? "false" : "true");
+  button.tabIndex = shouldShow ? 0 : -1;
+};
+
+const cbBindChatScrollToBottomButton = () => {
+  cbEnsureChatScrollToBottomButton();
+  const container = cbGetChatScrollContainer();
+  if (!container) return;
+  if (container.dataset.cbScrollBottomBound === "true") return;
+  container.addEventListener(
+    "scroll",
+    debounce(() => cbUpdateChatScrollToBottomButton(), 60),
+    { passive: true }
+  );
+  container.dataset.cbScrollBottomBound = "true";
+};
+
 const scrollToBottom = () => {
-  if (!elements.messages) return;
+  const container = cbGetChatScrollContainer();
+  if (!container) return;
   requestAnimationFrame(() => {
-    elements.messages.scrollTop = elements.messages.scrollHeight;
+    container.scrollTop = container.scrollHeight;
+    requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+      cbUpdateChatScrollToBottomButton();
+    });
   });
 };
 
@@ -3295,6 +4024,7 @@ const updateUserBadge = () => {
     usageLine,
   });
   cbSetTokenLimitBannerVisible(cbIsTokenExhaustedFromSummary());
+  cbUpdateGuestHint();
 };
 
 const loadSidebarCollapsedFromStorage = () => {
@@ -3474,6 +4204,179 @@ const cbGetComposerInput = () => {
   return elements.input || document.getElementById("chat-input");
 };
 
+const cbEstimatePromptTokens = (text) => {
+  if (!text) return 0;
+  const chars = text.trim().length;
+  if (!chars) return 0;
+  return Math.max(0, Math.ceil(chars / 4));
+};
+
+const cbGetPromptContext = () => {
+  const councilSelected = Array.isArray(cbCouncilState?.selectedKeys)
+    ? cbCouncilState.selectedKeys.length > 0
+    : false;
+  const councilArmed = !!(cbCouncilState?.armed || councilSelected);
+  const googleAdsConnected = (cbConnectorState?.googleads?.status || "").toLowerCase() === "connected";
+  const ga4Connected = (cbConnectorState?.ga4?.status || "").toLowerCase() === "connected";
+  return {
+    councilArmed,
+    usesConnectors: googleAdsConnected || ga4Connected,
+  };
+};
+
+const cbEstimateEffectiveTokens = (baseTokens, ctx = {}) => {
+  let estimate = Math.max(0, baseTokens || 0);
+  if (!estimate) return 0;
+  if (ctx.councilArmed) {
+    estimate *= 1.5;
+  }
+  if (ctx.usesConnectors) {
+    estimate *= 1.2;
+  }
+  return Math.ceil(estimate);
+};
+
+const cbClassifyPromptSize = (tokensEffective) => {
+  const t = Math.max(0, tokensEffective || 0);
+  if (t <= 120) return "xs";
+  if (t <= 300) return "s";
+  if (t <= 700) return "m";
+  if (t <= 1500) return "l";
+  return "xl";
+};
+
+const cbClassifyOutcomeHint = (text, ctx = {}) => {
+  const length = text ? text.trim().length : 0;
+  if (!length) return "General reasoning";
+  if (length < 140) return "Quick Q&A";
+  if (length < 320) return ctx.councilArmed ? "Council tap-in" : "Focused answer";
+  if (length < 640) return ctx.usesConnectors ? "Data-aware summary" : "Multi-point summary";
+  if (length < 1200) return ctx.councilArmed ? "Multi-agent analysis" : "Long narrative";
+  return "Deep dive / long form";
+};
+
+const cbRenderPromptMeter = () => {
+  const el = document.getElementById("cb-prompt-meter");
+  if (!el) return;
+  const s = cbPromptMeterState;
+  if (!s.tokensBase) {
+    el.innerHTML = "";
+    return;
+  }
+
+  const labelMap = {
+    xs: "XS · very light",
+    s: "S · light",
+    m: "M · medium",
+    l: "L · heavy",
+    xl: "XL · very heavy",
+  };
+  const payloadLabel = labelMap[s.sizeClass] || "—";
+  const summary = cbLatestBillingSummary || null;
+  const planNode = summary?.plan || {};
+  const usageNode = summary?.usage || {};
+  const monthlyTokens = Number(
+    planNode.monthlyTokens ??
+    planNode.tokensPerMonth ??
+    usageNode.tokensAllowance ??
+    usageNode.tokensPerMonth ??
+    0
+  );
+  const usedTokens = Number(
+    usageNode.usedTokens ??
+    usageNode.tokensUsedThisPeriod ??
+    usageNode.tokensUsed ??
+    usageNode.totalUsed ??
+    0
+  );
+  const hasBilling = Number.isFinite(monthlyTokens) && monthlyTokens > 0;
+
+  const impactHtml = hasBilling
+    ? `<div class="cb-prompt-meter-meta">
+         ~${s.pctOfPlan.toFixed(2)}% of your monthly cbT · after send: ~${s.pctAfterSend.toFixed(2)}%
+       </div>`
+    : `<div class="cb-prompt-meter-meta">
+         Billing summary unavailable · showing tokens only
+       </div>`;
+
+  el.innerHTML = `
+    <div class="cb-card cb-prompt-meter">
+      <div class="cb-prompt-meter-left">
+        <div class="cb-prompt-meter-title">Prompt payload</div>
+        <div class="cb-prompt-meter-bar">
+          <div class="cb-prompt-meter-fill cb-prompt-meter-fill--${s.sizeClass}"></div>
+        </div>
+        <div class="cb-prompt-meter-meta">
+          ${payloadLabel} · ~${s.tokensEffective.toLocaleString()} tokens
+        </div>
+      </div>
+      <div class="cb-prompt-meter-middle">
+        <div class="cb-prompt-meter-label">Estimated impact</div>
+        ${impactHtml}
+        ${hasBilling ? `<div class="cb-prompt-meter-meta">Plan tokens: ${monthlyTokens.toLocaleString()} · Used: ${usedTokens.toLocaleString()}</div>` : ""}
+      </div>
+      <div class="cb-prompt-meter-right">
+        <div class="cb-prompt-meter-label">Outcome</div>
+        <div class="cb-badge cb-badge--soft">${s.outcomeHint}</div>
+      </div>
+    </div>
+  `;
+};
+
+const cbUpdatePromptMeter = () => {
+  const input = cbGetComposerInput();
+  const text = input?.value || "";
+  const baseTokens = cbEstimatePromptTokens(text);
+  if (!baseTokens) {
+    cbPromptMeterState.tokensBase = 0;
+    cbPromptMeterState.tokensEffective = 0;
+    cbPromptMeterState.pctOfPlan = 0;
+    cbPromptMeterState.pctAfterSend = 0;
+    cbPromptMeterState.sizeClass = "xs";
+    cbPromptMeterState.outcomeHint = "General reasoning";
+    cbRenderPromptMeter();
+    cbUpdateChatHeader();
+    return;
+  }
+
+  const ctx = cbGetPromptContext();
+  const effectiveTokens = cbEstimateEffectiveTokens(baseTokens, ctx);
+
+  const summary = cbLatestBillingSummary || null;
+  const planNode = summary?.plan || {};
+  const usageNode = summary?.usage || {};
+  const monthlyTokens = Number(
+    planNode.monthlyTokens ??
+    planNode.tokensPerMonth ??
+    usageNode.tokensAllowance ??
+    usageNode.tokensPerMonth ??
+    0
+  );
+  const usedTokens = Number(
+    usageNode.usedTokens ??
+    usageNode.tokensUsedThisPeriod ??
+    usageNode.tokensUsed ??
+    usageNode.totalUsed ??
+    0
+  );
+
+  let pctOfPlan = 0;
+  let pctAfterSend = 0;
+  if (monthlyTokens > 0 && Number.isFinite(monthlyTokens)) {
+    pctOfPlan = (effectiveTokens / monthlyTokens) * 100;
+    pctAfterSend = ((usedTokens + effectiveTokens) / monthlyTokens) * 100;
+  }
+
+  cbPromptMeterState.tokensBase = baseTokens;
+  cbPromptMeterState.tokensEffective = effectiveTokens;
+  cbPromptMeterState.pctOfPlan = pctOfPlan;
+  cbPromptMeterState.pctAfterSend = pctAfterSend;
+  cbPromptMeterState.sizeClass = cbClassifyPromptSize(effectiveTokens);
+  cbPromptMeterState.outcomeHint = cbClassifyOutcomeHint(text, ctx);
+  cbRenderPromptMeter();
+  cbUpdateChatHeader();
+};
+
 const cbResizeComposerInput = () => {
   const input = cbGetComposerInput();
   if (!input) {
@@ -3501,6 +4404,7 @@ const cbResizeComposerInput = () => {
   const targetHeight = Math.max(minHeight, Math.min(maxHeight, rawTarget));
   input.style.height = `${Math.round(targetHeight)}px`;
   input.style.overflowY = rawTarget > maxHeight ? "auto" : "hidden";
+  cbUpdatePromptMeter();
 };
 
 const cbHandleComposerKeydown = (event) => {
@@ -3524,24 +4428,30 @@ const cbSetupComposerInput = () => {
     return;
   }
   if (!input.dataset.composerEnhanced) {
-    input.addEventListener("input", () => {
-      cbResizeComposerInput();
-      cbUpdatePromptMeter();
-    });
+    input.addEventListener("input", cbResizeComposerInput);
     input.addEventListener("keydown", cbHandleComposerKeydown);
     input.dataset.composerEnhanced = "true";
   }
   cbResizeComposerInput();
-  cbUpdatePromptMeter();
 };
 
 const cbRepositionSidebarMenus = () => {
-  const { projectMenu, projectSelector, workspaceMenu, workspaceSelector } = shellElements;
+  const {
+    projectMenu,
+    projectSelector,
+    workspaceMenu,
+    workspaceSelector,
+    connectorsMenu,
+    connectorsToggle,
+  } = shellElements;
   if (cbProjectMenuOpen && projectMenu && projectSelector && !projectMenu.hidden) {
     cbPositionSidebarMenu(projectMenu, projectSelector);
   }
   if (cbWorkspaceMenuOpen && workspaceMenu && workspaceSelector && !workspaceMenu.hidden) {
     cbPositionSidebarMenu(workspaceMenu, workspaceSelector);
+  }
+  if (cbConnectorsMenuOpen && connectorsMenu && connectorsToggle && !connectorsMenu.hidden) {
+    cbPositionSidebarMenu(connectorsMenu, connectorsToggle);
   }
   if (userMenuOpen) {
     cbPositionUserMenu();
@@ -3594,14 +4504,40 @@ const cbToggleWorkspaceMenu = (open) => {
   }
 };
 
+const cbToggleConnectorsMenu = (open) => {
+  if (typeof open === "boolean") {
+    cbConnectorsMenuOpen = open;
+  } else {
+    cbConnectorsMenuOpen = !cbConnectorsMenuOpen;
+  }
+  const { connectorsMenu, connectorsToggle } = shellElements;
+  if (connectorsMenu) {
+    connectorsMenu.hidden = !cbConnectorsMenuOpen;
+    if (cbConnectorsMenuOpen) {
+      if (connectorsToggle) {
+        cbPositionSidebarMenu(connectorsMenu, connectorsToggle);
+      }
+    } else {
+      cbResetFloatingMenuStyles(connectorsMenu);
+    }
+  }
+  if (connectorsToggle) {
+    connectorsToggle.setAttribute("aria-expanded", cbConnectorsMenuOpen ? "true" : "false");
+    connectorsToggle.setAttribute("data-open", cbConnectorsMenuOpen ? "true" : "false");
+  }
+};
+
 const cbHandleSidebarMenuOutside = (event) => {
   const target = event.target;
-  const { projectSection, workspaceSection } = shellElements;
+  const { projectSection, workspaceSection, connectorsSection } = shellElements;
   if (cbProjectMenuOpen && projectSection && !projectSection.contains(target)) {
     cbToggleProjectMenu(false);
   }
   if (cbWorkspaceMenuOpen && workspaceSection && !workspaceSection.contains(target)) {
     cbToggleWorkspaceMenu(false);
+  }
+  if (cbConnectorsMenuOpen && connectorsSection && !connectorsSection.contains(target)) {
+    cbToggleConnectorsMenu(false);
   }
 };
 
@@ -3697,6 +4633,7 @@ const cbRenderProjects = () => {
   if (cbProjectMenuOpen && !projectMenu.hidden && projectSelector) {
     cbPositionSidebarMenu(projectMenu, projectSelector);
   }
+  cbUpdateChatHeader();
 };
 
 const cbApplyChatTitleLocally = (chatId, title) => {
@@ -3766,6 +4703,7 @@ const cbRenderWorkspaces = () => {
   } else if (workspaceSelector && cbWorkspaceMenuOpen) {
     cbPositionSidebarMenu(workspaceMenu, workspaceSelector);
   }
+  cbUpdateChatHeader();
 };
 
 const cbRenderCouncilActive = () => {
@@ -3840,6 +4778,13 @@ const cbRenderCouncilList = () => {
       toggle.appendChild(role);
       toggle.appendChild(desc);
 
+      const registryAgent = cbResolvePublicRegistryAgent(agent);
+      const profile = cbBuildCouncilAgentProfile(agent, registryAgent);
+      const preview = cbBuildCouncilHoverPreview(agent, registryAgent);
+      if (preview) {
+        toggle.title = preview;
+      }
+
       const detailsBtn = document.createElement("button");
       detailsBtn.type = "button";
       detailsBtn.className = "cb-council-detail-btn";
@@ -3847,7 +4792,11 @@ const cbRenderCouncilList = () => {
       detailsBtn.addEventListener("click", (event) => {
         event?.preventDefault?.();
         event?.stopPropagation?.();
-        cbOpenAgentDetail(agent.workspace, agent.key);
+        const url = cbBuildAgentProfileUrl(profile, { fromCouncil: true });
+        if (typeof cbOnCouncilModalClose === "function") {
+          cbOnCouncilModalClose();
+        }
+        window.location.href = url;
       });
 
       row.appendChild(toggle);
@@ -4268,6 +5217,7 @@ let cbMobileSidebarOpen = false;
 const cbCloseMobileSidebarMenus = () => {
   cbToggleProjectMenu(false);
   cbToggleWorkspaceMenu(false);
+  cbToggleConnectorsMenu(false);
   hideUserMenu();
 };
 
@@ -4596,6 +5546,7 @@ const cbSetActiveChatMessages = (messageList = []) => {
     }
   });
   saveHistory();
+  cbChatForceScrollToBottom = true;
   renderMessages();
 };
 
@@ -4687,6 +5638,7 @@ function cbRenderChatsList() {
 
 const cbHandleFeatureButtonClick = (key) => {
   if (key === "connectors") {
+    cbToggleConnectorsMenu(false);
     cbSetAccountView("connectors");
     cbRenderConnectorsPanel();
     cbOpenAccountBilling({ view: "connectors" });
@@ -4739,6 +5691,7 @@ const setupProjectControls = () => {
     projectCancelButton,
     projectNameInput,
     workspaceSelector,
+    connectorsToggle,
   } = shellElements;
   if (projectSelector && !projectSelector.dataset.projectSelectorBound) {
     projectSelector.addEventListener("click", (event) => {
@@ -4786,6 +5739,13 @@ const setupProjectControls = () => {
       cbToggleWorkspaceMenu();
     });
     workspaceSelector.dataset.workspaceSelectorBound = "true";
+  }
+  if (connectorsToggle && !connectorsToggle.dataset.connectorsToggleBound) {
+    connectorsToggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      cbToggleConnectorsMenu();
+    });
+    connectorsToggle.dataset.connectorsToggleBound = "true";
   }
   cbRenderProjects();
   cbRenderWorkspaces();
@@ -4909,6 +5869,10 @@ async function cbOpenChat(chatId, { userInitiated = false } = {}) {
   }
   if (userInitiated) {
     cbHasManualChatSelection = true;
+    const params = new URLSearchParams(window.location.search || "");
+    if (params.get("view")) {
+      cbSetDashboardView("chat");
+    }
   }
   try {
     const response = await fetch(`${API_CHATS}/${encodeURIComponent(chatId)}`, {
@@ -5147,6 +6111,7 @@ const clearAuthState = ({ showOnboarding = false } = {}) => {
   if (showOnboarding) {
     openOnboardingModal();
   }
+  cbSetActiveContextState({ status: "idle", context: null, error: null });
 };
 
 const loadAuthFromStorage = () => {
@@ -5203,6 +6168,16 @@ const focusChatInput = () => {
   }
 };
 
+const cbIsChatShellPage = () =>
+  !!document.querySelector("[data-chat-form]") ||
+  !!document.querySelector("[data-chat-messages]");
+
+const cbNavigateToChatView = (view) => {
+  const target = view && view !== "chat" ? view : "";
+  const query = target ? `?view=${encodeURIComponent(target)}` : "";
+  window.location.href = `/chat${query}`;
+};
+
 const setupSidebarInteractions = () => {
   const {
     sidebar,
@@ -5212,6 +6187,7 @@ const setupSidebarInteractions = () => {
     sidebarClose,
     sidebarBackdrop,
     newChatButton,
+    agentsButton,
   } = shellElements;
   if (!sidebar) {
     return;
@@ -5262,13 +6238,48 @@ const setupSidebarInteractions = () => {
   if (newChatButton) {
     newChatButton.addEventListener("click", (event) => {
       event.preventDefault();
+      if (!cbIsChatShellPage()) {
+        cbNavigateToChatView("chat");
+        return;
+      }
       if (!cbRequireAuthForChat("new-chat")) {
         return;
+      }
+      const params = new URLSearchParams(window.location.search || "");
+      if (params.get("view")) {
+        cbSetDashboardView("chat");
       }
       cbHandleStartNewChat();
       closeMobileSidebar();
     });
   }
+
+  if (agentsButton && agentsButton.dataset.sidebarAgentsBound !== "true") {
+    agentsButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      const url = cbBuildAgentsDirectoryUrl();
+      closeMobileSidebar();
+      window.location.href = url;
+    });
+    agentsButton.dataset.sidebarAgentsBound = "true";
+  }
+
+  const dashboardButtons = document.querySelectorAll("[data-sidebar-view]");
+  dashboardButtons.forEach((button) => {
+    if (!button || button.dataset.sidebarViewBound === "true") return;
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      const target = button.dataset.sidebarView;
+      if (!cbIsChatShellPage()) {
+        cbNavigateToChatView(target);
+        return;
+      }
+      cbToggleConnectorsMenu(false);
+      cbSetDashboardView(target);
+      closeMobileSidebar();
+    });
+    button.dataset.sidebarViewBound = "true";
+  });
   setupProjectControls();
   cbApplyFeatureFlags();
   cbApplyResponsiveSidebarState();
@@ -5308,6 +6319,7 @@ const MODAL_IDS = [
   "cb-settings-modal",
   "cb-project-modal",
   "cb-delete-modal",
+  "cb-council-share-modal",
   "cb-council-popover",
 ];
 let activeModalId = null;
@@ -5775,6 +6787,14 @@ const cbSetAccountView = (view = "overview") => {
   cbAccountActiveView = targetView;
   if (targetView === "connectors") {
     cbRefreshConnectorStatuses();
+    if (!cbCouncilPerformanceState.loaded && !cbCouncilPerformanceState.loading) {
+      cbCouncilPerformanceState.loading = true;
+      cbCouncilPerformanceState.error = null;
+      cbRenderCouncilPerformanceCard();
+      cbFetchCouncilPerformanceSummary(cbCouncilPerformanceState.range);
+    } else {
+      cbRenderCouncilPerformanceCard();
+    }
   }
 };
 
@@ -5801,8 +6821,20 @@ const cbGetConnectorStatusLabel = (status) =>
 const cbUpdateConnectorState = (key, partial = {}) => {
   if (!key) return;
   const current = cbConnectorState[key] || {};
-  cbConnectorState[key] = { status: "unknown", customerId: null, propertyId: null, lastSyncAt: null, lastError: null, ...current, ...partial };
+  cbConnectorState[key] = {
+    status: "unknown",
+    customerId: null,
+    loginCustomerId: null,
+    customerName: null,
+    propertyId: null,
+    lastSyncAt: null,
+    lastError: null,
+    properties: [],
+    ...current,
+    ...partial,
+  };
   cbRenderConnectorsPanel();
+  cbUpdateChatHeader();
   if (cbConnectorDetailState.connector && cbConnectorDetailState.connector.key === key) {
     cbRenderConnectorDetail(cbConnectorDetailState.connector);
   }
@@ -5812,15 +6844,26 @@ const cbFetchConnectorStatusGoogleAds = async () => {
   const connector = CONNECTORS_CONFIG.find((c) => c.key === "googleads");
   if (!connector || !connector.apiBase) return;
   const { ok, status, json } = await cbFetchJson(`${connector.apiBase}/status`);
-  if (ok && json) {
-    cbUpdateConnectorState("googleads", {
-      status: json.connected ? "connected" : "disconnected",
-      customerId: json.customerId || null,
-      lastSyncAt: json.lastSyncAt || null,
-      lastError: null,
-    });
-    return;
-  }
+	  if (ok && json) {
+	    const customerId = json.customerId || json.customer_id || null;
+	    const loginCustomerId = json.loginCustomerId || json.login_customer_id || null;
+	    const customerName = json.customerName || json.customer_name || null;
+	    const lastSync =
+	      json.lastSyncAt || json.last_sync_at || json.lastSync || null;
+	    cbUpdateConnectorState("googleads", {
+      status: json.connected
+        ? "connected"
+        : (json.status || "").toLowerCase() === "error"
+        ? "error"
+        : "disconnected",
+	      customerId,
+	      loginCustomerId,
+	      customerName,
+	      lastSyncAt: lastSync,
+	      lastError: json.error ? String(json.error) : null,
+	    });
+	    return;
+	  }
   let lastError = "Unable to fetch status.";
   if (status === 401) {
     lastError = "Please sign in to view Google Ads status.";
@@ -5833,17 +6876,34 @@ const cbFetchConnectorStatusGoogleAds = async () => {
 const cbFetchConnectorStatusGa4 = async () => {
   const connector = CONNECTORS_CONFIG.find((c) => c.key === "ga4");
   if (!connector || !connector.apiBase) return;
-  const { ok, status, json } = await cbFetchJson(`${connector.apiBase}/status`);
+  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  const params = new URLSearchParams();
+  if (ws) params.set("workspaceId", ws);
+  const { ok, status, json } = await cbFetchJson(
+    `${connector.apiBase}/status${params.toString() ? `?${params.toString()}` : ""}`
+  );
   if (ok && json) {
+    const connected =
+      typeof json.connected === "boolean"
+        ? json.connected
+        : (json.status || "").toLowerCase() === "connected";
+    const propertyId = json.propertyId || json.property_id || null;
+    const lastSync =
+      json.lastSyncAt || json.last_sync_at || json.lastSync || null;
+    const lastError = json.error ? String(json.error) : null;
     cbUpdateConnectorState("ga4", {
-      status: json.connected ? "connected" : "disconnected",
-      propertyId: json.propertyId || json.property_id || null,
-      lastSyncAt: json.lastSyncAt || json.last_sync_at || null,
-      lastError: null,
+      status: connected
+        ? "connected"
+        : (json.status || "").toLowerCase() === "error"
+        ? "error"
+        : "disconnected",
+      propertyId,
+      lastSyncAt: lastSync,
+      lastError: connected ? null : lastError,
     });
     return;
   }
-  let lastError = "Unable to fetch status.";
+  let lastError = "Unable to fetch GA4 status.";
   if (status === 401) {
     lastError = "Please sign in to view GA4 status.";
   } else if (status === 404) {
@@ -5856,6 +6916,2742 @@ const cbRefreshConnectorStatuses = async () => {
   await cbFetchConnectorStatusGoogleAds();
   await cbFetchConnectorStatusGa4();
 };
+
+const cbFetchCouncilPerformanceSummary = async (range) => {
+  const nextRange = range || cbCouncilPerformanceState.range || "billing_period";
+  cbCouncilPerformanceState.loading = true;
+  cbCouncilPerformanceState.error = null;
+  cbCouncilPerformanceState.range = nextRange;
+  cbRenderCouncilPerformanceCard();
+  try {
+    const params = new URLSearchParams({ range: cbCouncilPerformanceState.range });
+    const { ok, json, status } = await cbFetchJson(
+      `/api/council/performance/summary?${params.toString()}`
+    );
+    if (ok && json) {
+      cbCouncilPerformanceState.summary = json;
+      cbCouncilPerformanceState.error = null;
+    } else {
+      const errMessage =
+        status === 401
+          ? "Please sign in to view council performance."
+          : json?.error || "Unable to load council performance.";
+      cbCouncilPerformanceState.summary = null;
+      cbCouncilPerformanceState.error = errMessage;
+    }
+  } catch (error) {
+    console.error("[COUNCIL_PERFORMANCE] fetch failed", error);
+    cbCouncilPerformanceState.summary = null;
+    cbCouncilPerformanceState.error = "Unable to load council performance.";
+  } finally {
+    cbCouncilPerformanceState.loaded = true;
+    cbCouncilPerformanceState.loading = false;
+    cbRenderCouncilPerformanceCard();
+  }
+};
+
+const cbFetchGoogleAdsSummary = async (workspaceId) => {
+  if (!workspaceId) return { error: "workspace_missing" };
+  const params = new URLSearchParams({
+    workspaceId: workspaceId,
+    dateRange: "last_7_days",
+  });
+  const { ok, json, status } = await cbFetchJson(
+    `/api/connectors/googleads/summary?${params.toString()}`
+  );
+  if (ok && json) {
+    return json;
+  }
+  const errorCode = (json && (json.error || json.code)) || "summary_failed";
+  return { error: errorCode, status: status || null };
+};
+
+const cbFetchGa4Summary = async (workspaceId) => {
+  if (!workspaceId) return { error: "workspace_missing" };
+  const params = new URLSearchParams({
+    workspaceId: workspaceId,
+    dateRange: "last_7_days",
+  });
+  const { ok, json, status } = await cbFetchJson(
+    `/api/connectors/ga4/summary?${params.toString()}`
+  );
+  if (ok && json) {
+    return json;
+  }
+  const errorCode = (json && (json.error || json.code)) || "summary_failed";
+  return { error: errorCode, status: status || null, message: json?.message || null };
+};
+
+// --- Dashboards (GA4 + Google Ads placeholder) ---
+const CB_GA4_REPORT_BLOCKS_DEFAULT = ["overview", "series", "pages", "sources", "events"];
+const CB_GA4_REPORT_BLOCKS_OPTIONAL = ["geo", "device"];
+const CB_GA4_REPORT_BLOCKS_ALL = [
+  ...CB_GA4_REPORT_BLOCKS_DEFAULT,
+  ...CB_GA4_REPORT_BLOCKS_OPTIONAL,
+];
+
+const cbNormalizeGa4ReportBlocks = (blocks) => {
+  const raw = Array.isArray(blocks) ? blocks : [];
+  const normalized = raw
+    .map((b) => (b == null ? "" : String(b)).trim().toLowerCase())
+    .filter(Boolean)
+    .filter((b) => CB_GA4_REPORT_BLOCKS_ALL.includes(b));
+  const unique = Array.from(new Set(normalized));
+  return unique.length ? unique : CB_GA4_REPORT_BLOCKS_DEFAULT.slice();
+};
+
+const cbGa4BlocksStorageKey = (workspaceId) => {
+  const ws = cbNormalizeWorkspaceId(workspaceId);
+  return `coolbits:ga4_blocks:${ws}`;
+};
+
+const cbLoadGa4BlocksFromStorage = (workspaceId) => {
+  try {
+    const raw = window.localStorage.getItem(cbGa4BlocksStorageKey(workspaceId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return cbNormalizeGa4ReportBlocks(parsed);
+  } catch (_err) {
+    return null;
+  }
+};
+
+const cbPersistGa4BlocksToStorage = (workspaceId, blocks) => {
+  try {
+    const normalized = cbNormalizeGa4ReportBlocks(blocks);
+    window.localStorage.setItem(cbGa4BlocksStorageKey(workspaceId), JSON.stringify(normalized));
+  } catch (_err) {
+    // ignore
+  }
+};
+
+const cbGa4DashboardState = {
+  initialized: false,
+  blocksWorkspaceId: null,
+  preset: "last_7_days",
+  from: null,
+  to: null,
+  selectedBlocks: new Set(CB_GA4_REPORT_BLOCKS_DEFAULT),
+  compareEnabled: false,
+  compareMode: "previous_period",
+  compareFrom: null,
+  compareTo: null,
+  loading: false,
+  error: null,
+  report: null,
+  lastSuccessfulFingerprint: null,
+  snapshotsLoading: false,
+  snapshotsError: null,
+  snapshots: [],
+  selectedSnapshotId: "",
+  snapshotLabel: "",
+};
+
+const CB_COUNCIL_SHARE_QUESTION_DEFAULT = "Explain what changed, likely drivers, and next actions.";
+
+const cbCouncilShareState = {
+  source: "ga4",
+  snapshotId: null,
+  mode: "compact",
+  includeBlocks: new Set(CB_GA4_REPORT_BLOCKS_DEFAULT),
+  topN: 10,
+  question: CB_COUNCIL_SHARE_QUESTION_DEFAULT,
+  previewPrompt: "",
+  previewMeta: null,
+  briefId: null,
+  loading: false,
+  error: null,
+};
+
+const cbCouncilShareModeOptions = [
+  { value: "compact", label: "Compact" },
+  { value: "standard", label: "Standard" },
+  { value: "full", label: "Full" },
+];
+
+const cbNormalizeCouncilShareMode = (mode) => {
+  const raw = (mode || "").toString().trim().toLowerCase();
+  if (raw === "standard") return "standard";
+  if (raw === "full") return "full";
+  return "compact";
+};
+
+const cbCouncilShareTopNCap = (mode) => {
+  const m = cbNormalizeCouncilShareMode(mode);
+  if (m === "compact") return 5;
+  if (m === "standard") return 10;
+  return 20;
+};
+
+const cbCreateCouncilBrief = async ({ snapshotId, mode, includeBlocks, topN, question }) => {
+  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  return cbFetchJson("/api/council/briefs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      workspaceId: ws,
+      source: "ga4",
+      snapshotId,
+      mode: cbNormalizeCouncilShareMode(mode),
+      includeBlocks: cbNormalizeGa4ReportBlocks(includeBlocks),
+      topN,
+      question: (question || "").toString(),
+    }),
+  });
+};
+
+const cbGetGa4SnapshotMeta = (snapshotId) => {
+  const id = (snapshotId || "").toString();
+  return (cbGa4DashboardState.snapshots || []).find((s) => s && String(s.id) === id) || null;
+};
+
+const cbSetCouncilShareSnapshot = (snapshotId) => {
+  cbCouncilShareState.source = "ga4";
+  cbCouncilShareState.snapshotId = snapshotId ? String(snapshotId) : null;
+  cbCouncilShareState.mode = "compact";
+  cbCouncilShareState.topN = 10;
+  cbCouncilShareState.question = CB_COUNCIL_SHARE_QUESTION_DEFAULT;
+  cbCouncilShareState.previewPrompt = "";
+  cbCouncilShareState.previewMeta = null;
+  cbCouncilShareState.briefId = null;
+  cbCouncilShareState.loading = false;
+  cbCouncilShareState.error = null;
+
+  const meta = cbGetGa4SnapshotMeta(snapshotId);
+  const blocksFromSnapshot = Array.isArray(meta?.blocks) ? meta.blocks : null;
+  const fallbackBlocks = cbGetGa4DashboardSelectedBlocks();
+  cbCouncilShareState.includeBlocks = new Set(cbNormalizeGa4ReportBlocks(blocksFromSnapshot || fallbackBlocks));
+};
+
+const cbRenderCouncilShareModal = () => {
+  const body = document.getElementById("cb-council-share-body");
+  const actions = document.getElementById("cb-council-share-actions");
+  if (!body || !actions) return;
+  body.innerHTML = "";
+  actions.innerHTML = "";
+
+  if (!cbIsAuthenticated()) {
+    const err = document.createElement("p");
+    err.className = "cb-form-error";
+    err.textContent = "Sign in required to share with Council.";
+    body.appendChild(err);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn btn-primary";
+    btn.textContent = "Continue with Google";
+    btn.addEventListener("click", () => startGoogleLogin());
+    actions.appendChild(btn);
+    return;
+  }
+
+  const snapshotId = cbCouncilShareState.snapshotId;
+  if (!snapshotId) {
+    const err = document.createElement("p");
+    err.className = "cb-form-error";
+    err.textContent = "Select a snapshot first.";
+    body.appendChild(err);
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "btn btn-secondary";
+    closeBtn.textContent = "Close";
+    closeBtn.addEventListener("click", () => closeModal("cb-council-share-modal"));
+    actions.appendChild(closeBtn);
+    return;
+  }
+
+  const meta = cbGetGa4SnapshotMeta(snapshotId);
+  const headline = document.createElement("div");
+  headline.className = "cb-dashboard-banner";
+  const label = meta?.label || (meta?.from && meta?.to ? `${meta.from} → ${meta.to}` : `Snapshot ${snapshotId}`);
+  headline.innerHTML = `<strong>GA4 snapshot</strong><div class="cb-dashboard-muted">${label}</div>`;
+  body.appendChild(headline);
+
+  const controls = document.createElement("div");
+  controls.className = "cb-dashboard-controls";
+
+  const modeField = document.createElement("div");
+  modeField.className = "cb-dashboard-field";
+  const modeLabel = document.createElement("label");
+  modeLabel.textContent = "Mode";
+  const modeSelect = document.createElement("select");
+  modeSelect.className = "cb-dashboard-input";
+  modeSelect.innerHTML = cbCouncilShareModeOptions
+    .map((opt) => `<option value="${opt.value}">${opt.label}</option>`)
+    .join("");
+  modeSelect.value = cbNormalizeCouncilShareMode(cbCouncilShareState.mode);
+  modeSelect.disabled = cbCouncilShareState.loading;
+  modeSelect.addEventListener("change", () => {
+    cbCouncilShareState.mode = modeSelect.value;
+    const cap = cbCouncilShareTopNCap(cbCouncilShareState.mode);
+    if (cbCouncilShareState.topN > cap) cbCouncilShareState.topN = cap;
+    cbRenderCouncilShareModal();
+  });
+  modeField.appendChild(modeLabel);
+  modeField.appendChild(modeSelect);
+  controls.appendChild(modeField);
+
+  const topNField = document.createElement("div");
+  topNField.className = "cb-dashboard-field";
+  const topNLabel = document.createElement("label");
+  topNLabel.textContent = "Top N";
+  const topNSelect = document.createElement("select");
+  topNSelect.className = "cb-dashboard-input";
+  const cap = cbCouncilShareTopNCap(cbCouncilShareState.mode);
+  const options = [5, 10, 20].map((n) => ({ n, disabled: n > cap }));
+  topNSelect.innerHTML = options
+    .map((o) => `<option value="${o.n}" ${o.disabled ? "disabled" : ""}>${o.n}</option>`)
+    .join("");
+  topNSelect.value = String(Math.min(cbCouncilShareState.topN || 10, cap));
+  topNSelect.disabled = cbCouncilShareState.loading;
+  topNSelect.addEventListener("change", () => {
+    cbCouncilShareState.topN = Number(topNSelect.value) || 10;
+    cbRenderCouncilShareModal();
+  });
+  topNField.appendChild(topNLabel);
+  topNField.appendChild(topNSelect);
+  controls.appendChild(topNField);
+
+  body.appendChild(controls);
+
+  const blocksPanel = document.createElement("div");
+  blocksPanel.className = "cb-dashboard-panel cb-ga4-blocks-panel";
+  const blocksTitle = document.createElement("h3");
+  blocksTitle.className = "cb-dashboard-panel-title";
+  blocksTitle.textContent = "Include blocks";
+  blocksPanel.appendChild(blocksTitle);
+
+  const blocksGrid = document.createElement("div");
+  blocksGrid.className = "cb-ga4-blocks-grid";
+  const blockLabels = {
+    overview: "Overview",
+    series: "Series",
+    pages: "Pages",
+    sources: "Sources",
+    events: "Events",
+    geo: "Geo",
+    device: "Device",
+  };
+  const selected = new Set(cbNormalizeGa4ReportBlocks(Array.from(cbCouncilShareState.includeBlocks || [])));
+  CB_GA4_REPORT_BLOCKS_ALL.forEach((key) => {
+    const wrap = document.createElement("label");
+    wrap.className = "cb-dashboard-toggle cb-ga4-block-toggle";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = selected.has(key);
+    input.disabled = cbCouncilShareState.loading;
+    input.addEventListener("change", () => {
+      if (input.checked) {
+        selected.add(key);
+      } else {
+        selected.delete(key);
+      }
+      if (!selected.size) {
+        input.checked = true;
+        selected.add(key);
+      }
+      cbCouncilShareState.includeBlocks = new Set(cbNormalizeGa4ReportBlocks(Array.from(selected)));
+      cbCouncilShareState.previewPrompt = "";
+      cbCouncilShareState.previewMeta = null;
+      cbCouncilShareState.briefId = null;
+      cbRenderCouncilShareModal();
+    });
+    const labelEl = document.createElement("span");
+    labelEl.textContent = blockLabels[key] || key;
+    wrap.appendChild(input);
+    wrap.appendChild(labelEl);
+    blocksGrid.appendChild(wrap);
+  });
+  blocksPanel.appendChild(blocksGrid);
+  body.appendChild(blocksPanel);
+
+  const questionField = document.createElement("div");
+  questionField.className = "cb-dashboard-field";
+  const questionLabel = document.createElement("label");
+  questionLabel.textContent = "Question";
+  const questionInput = document.createElement("textarea");
+  questionInput.className = "cb-dashboard-input";
+  questionInput.rows = 4;
+  questionInput.value = cbCouncilShareState.question || "";
+  questionInput.disabled = cbCouncilShareState.loading;
+  questionInput.addEventListener("input", () => {
+    cbCouncilShareState.question = questionInput.value;
+  });
+  questionField.appendChild(questionLabel);
+  questionField.appendChild(questionInput);
+  body.appendChild(questionField);
+
+  const preview = document.createElement("details");
+  preview.className = "cb-council-share-preview";
+  if (cbCouncilShareState.previewPrompt) {
+    preview.open = true;
+  }
+  const previewSummary = document.createElement("summary");
+  previewSummary.textContent = "Preview";
+  preview.appendChild(previewSummary);
+  const previewContent = document.createElement("pre");
+  previewContent.className = "cb-council-share-preview__content";
+  previewContent.textContent = cbCouncilShareState.previewPrompt || "Generate preview to see the brief.";
+  preview.appendChild(previewContent);
+  if (cbCouncilShareState.previewMeta) {
+    const metaEl = document.createElement("div");
+    metaEl.className = "cb-dashboard-muted";
+    const tokens = cbCouncilShareState.previewMeta.estimatedTokens;
+    const truncated = cbCouncilShareState.previewMeta.truncated;
+    metaEl.textContent = `Estimated tokens: ${tokens || "—"}${truncated ? " · truncated" : ""}`;
+    preview.appendChild(metaEl);
+  }
+  body.appendChild(preview);
+
+  if (cbCouncilShareState.error) {
+    const err = document.createElement("p");
+    err.className = "cb-form-error";
+    err.textContent = cbCouncilShareState.error;
+    body.appendChild(err);
+  }
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.className = "btn btn-secondary";
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.addEventListener("click", () => closeModal("cb-council-share-modal"));
+  actions.appendChild(cancelBtn);
+
+  const previewBtn = document.createElement("button");
+  previewBtn.type = "button";
+  previewBtn.className = "btn btn-secondary";
+  previewBtn.textContent = cbCouncilShareState.loading ? "Generating..." : "Generate preview";
+  previewBtn.disabled = cbCouncilShareState.loading;
+  previewBtn.addEventListener("click", async () => {
+    cbCouncilShareState.loading = true;
+    cbCouncilShareState.error = null;
+    cbRenderCouncilShareModal();
+    const includeBlocks = cbNormalizeGa4ReportBlocks(Array.from(cbCouncilShareState.includeBlocks || []));
+    const { ok, json, status } = await cbCreateCouncilBrief({
+      snapshotId: Number(snapshotId),
+      mode: cbCouncilShareState.mode,
+      includeBlocks,
+      topN: cbCouncilShareState.topN,
+      question: cbCouncilShareState.question,
+    });
+    if (ok && json && json.prompt) {
+      cbCouncilShareState.previewPrompt = json.prompt;
+      cbCouncilShareState.previewMeta = json.meta || null;
+      cbCouncilShareState.briefId = json.briefId || null;
+      cbCouncilShareState.error = null;
+    } else {
+      const message =
+        (json && (json.message || json.error)) ||
+        (status === 401 ? "Please sign in to create a council brief." : "Could not generate preview.");
+      cbCouncilShareState.previewPrompt = "";
+      cbCouncilShareState.previewMeta = null;
+      cbCouncilShareState.briefId = null;
+      cbCouncilShareState.error = message;
+    }
+    cbCouncilShareState.loading = false;
+    cbRenderCouncilShareModal();
+  });
+  actions.appendChild(previewBtn);
+
+  const sendBtn = document.createElement("button");
+  sendBtn.type = "button";
+  sendBtn.className = "btn btn-primary";
+  sendBtn.textContent = "Send";
+  sendBtn.disabled = cbCouncilShareState.loading || !cbCouncilShareState.previewPrompt;
+  sendBtn.addEventListener("click", () => {
+    if (!cbCouncilShareState.previewPrompt) {
+      cbShowBillingToast("cancel", "Generate preview first.");
+      return;
+    }
+    const prompt = cbCouncilShareState.previewPrompt;
+    closeModal("cb-council-share-modal", { silentFocus: true });
+    if (typeof cbSetDashboardView === "function") {
+      cbSetDashboardView("chat");
+    }
+    const input = cbGetComposerInput();
+    if (input) {
+      input.value = prompt;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.focus();
+      if (typeof input.setSelectionRange === "function") {
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+    }
+    if (typeof cbOpenCouncilModal === "function") {
+      cbOpenCouncilModal();
+    } else if (typeof window.cbOpenCouncilModal === "function") {
+      window.cbOpenCouncilModal();
+    }
+  });
+  actions.appendChild(sendBtn);
+};
+
+const cbOpenCouncilShareModalForGa4Snapshot = (snapshotId) => {
+  cbSetCouncilShareSnapshot(snapshotId);
+  cbRenderCouncilShareModal();
+  openModal("cb-council-share-modal");
+};
+
+const cbFormatLocalYmd = (date) => {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const cbParseLocalYmd = (value) => {
+  const raw = (value || "").toString().trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  const d = new Date(`${raw}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const cbAddLocalDays = (date, days) => {
+  const d = new Date(date.getTime());
+  d.setDate(d.getDate() + days);
+  return d;
+};
+
+const cbComputePresetRange = (preset) => {
+  const today = new Date();
+  const todayYmd = cbFormatLocalYmd(today);
+  const yesterday = cbAddLocalDays(today, -1);
+  const yesterdayYmd = cbFormatLocalYmd(yesterday);
+  const now = new Date();
+  const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+  const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+  switch ((preset || "").toString().toLowerCase()) {
+    case "today":
+      return { from: todayYmd, to: todayYmd };
+    case "yesterday":
+      return { from: yesterdayYmd, to: yesterdayYmd };
+    case "last_7_days": {
+      const from = cbFormatLocalYmd(cbAddLocalDays(yesterday, -6));
+      return { from, to: yesterdayYmd };
+    }
+    case "last_30_days": {
+      const from = cbFormatLocalYmd(cbAddLocalDays(yesterday, -29));
+      return { from, to: yesterdayYmd };
+    }
+    case "this_month":
+      return { from: cbFormatLocalYmd(firstOfThisMonth), to: todayYmd };
+    case "last_month":
+      return { from: cbFormatLocalYmd(firstOfLastMonth), to: cbFormatLocalYmd(lastOfLastMonth) };
+    default:
+      return null;
+  }
+};
+
+const cbGetGa4DashboardRange = () => {
+  if (cbGa4DashboardState.preset === "custom") {
+    return {
+      from: cbGa4DashboardState.from,
+      to: cbGa4DashboardState.to,
+    };
+  }
+  const computed = cbComputePresetRange(cbGa4DashboardState.preset);
+  return computed || { from: cbGa4DashboardState.from, to: cbGa4DashboardState.to };
+};
+
+const CB_GA4_COMPARE_MODES = [
+  { value: "previous_period", label: "Previous period" },
+  { value: "previous_year", label: "Previous year" },
+  { value: "custom", label: "Custom" },
+];
+
+const cbNormalizeGa4CompareMode = (mode) => {
+  const raw = (mode || "").toString().trim().toLowerCase();
+  if (raw === "previous_period") return "previous_period";
+  if (raw === "previous_year") return "previous_year";
+  if (raw === "custom") return "custom";
+  return "previous_period";
+};
+
+const cbGetGa4DashboardSelectedBlocks = () =>
+  cbNormalizeGa4ReportBlocks(Array.from(cbGa4DashboardState.selectedBlocks || []));
+
+const cbSetGa4DashboardSelectedBlocks = (blocks, { persist = true } = {}) => {
+  const normalized = cbNormalizeGa4ReportBlocks(blocks);
+  cbGa4DashboardState.selectedBlocks = new Set(normalized);
+  if (persist) {
+    cbPersistGa4BlocksToStorage(cbCurrentWorkspaceId, normalized);
+  }
+};
+
+const cbGetGa4DashboardSelection = () => {
+  const range = cbGetGa4DashboardRange();
+  const blocks = cbGetGa4DashboardSelectedBlocks();
+  const compareEnabled = !!cbGa4DashboardState.compareEnabled;
+  if (!compareEnabled) {
+    return {
+      from: range.from,
+      to: range.to,
+      blocks,
+      compareMode: "none",
+      compareFrom: null,
+      compareTo: null,
+    };
+  }
+  const compareMode = cbNormalizeGa4CompareMode(cbGa4DashboardState.compareMode);
+  const compareFrom =
+    compareMode === "custom" ? (cbGa4DashboardState.compareFrom || "").toString().trim() : null;
+  const compareTo =
+    compareMode === "custom" ? (cbGa4DashboardState.compareTo || "").toString().trim() : null;
+  return { from: range.from, to: range.to, blocks, compareMode, compareFrom, compareTo };
+};
+
+const cbBuildGa4ReportFingerprint = (selection) => {
+  const blocks = cbNormalizeGa4ReportBlocks(selection?.blocks);
+  const compareMode = (selection?.compareMode || "none").toString().trim().toLowerCase() || "none";
+  const base = {
+    from: selection?.from || "",
+    to: selection?.to || "",
+    blocks: blocks.join(","),
+    compareMode,
+  };
+  if (compareMode === "custom") {
+    base.compareFrom = selection?.compareFrom || "";
+    base.compareTo = selection?.compareTo || "";
+  }
+  return JSON.stringify(base);
+};
+
+const cbValidateGa4DashboardSelection = (selection) => {
+  const fromDate = cbParseLocalYmd(selection?.from);
+  const toDate = cbParseLocalYmd(selection?.to);
+  if (!fromDate || !toDate || fromDate.getTime() > toDate.getTime()) return "invalid_range";
+  const blocks = cbNormalizeGa4ReportBlocks(selection?.blocks);
+  if (!blocks.length) return "no_blocks";
+  if ((selection?.compareMode || "none") === "custom") {
+    const compareFromDate = cbParseLocalYmd(selection?.compareFrom);
+    const compareToDate = cbParseLocalYmd(selection?.compareTo);
+    if (!compareFromDate || !compareToDate || compareFromDate.getTime() > compareToDate.getTime()) {
+      return "invalid_compare_range";
+    }
+  }
+  return null;
+};
+
+const cbNormalizeGa4ReportPayload = (payload) => {
+  if (!payload || typeof payload !== "object") return payload;
+  if (payload.data && payload.blocks) return payload;
+  if (payload.totals || payload.series || payload.tables) {
+    return {
+      range: payload.range || { from: null, to: null },
+      compare: payload.compareRange
+        ? { mode: "previous_period", from: payload.compareRange.from, to: payload.compareRange.to }
+        : null,
+      blocks: CB_GA4_REPORT_BLOCKS_DEFAULT.slice(),
+      data: {
+        overview: payload.totals || {},
+        series: payload.series || { daily: [] },
+        pages: { rows: payload.tables?.pages || [] },
+        sources: { rows: payload.tables?.sourceMedium || [] },
+        events: { rows: payload.tables?.events || [] },
+      },
+    };
+  }
+  return payload;
+};
+
+const cbFetchGa4DashboardReport = async ({
+  from,
+  to,
+  blocks,
+  compareMode,
+  compareFrom,
+  compareTo,
+}) => {
+  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  const params = new URLSearchParams({
+    workspaceId: ws,
+    from,
+    to,
+    blocks: Array.isArray(blocks) ? blocks.join(",") : "",
+    compareMode: compareMode || "none",
+  });
+  if ((compareMode || "").toLowerCase() === "custom") {
+    if (compareFrom) params.set("compareFrom", compareFrom);
+    if (compareTo) params.set("compareTo", compareTo);
+  }
+  return cbFetchJson(`/api/connectors/ga4/report?${params.toString()}`);
+};
+
+const cbFetchGa4DashboardSnapshots = async (limit = 20) => {
+  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  const params = new URLSearchParams({ workspaceId: ws, limit: String(limit) });
+  return cbFetchJson(`/api/connectors/ga4/snapshots?${params.toString()}`);
+};
+
+const cbFetchGa4DashboardSnapshotById = async (snapshotId) => {
+  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  const params = new URLSearchParams({ workspaceId: ws });
+  return cbFetchJson(`/api/connectors/ga4/snapshots/${encodeURIComponent(snapshotId)}?${params.toString()}`);
+};
+
+const cbRestoreGa4DashboardSnapshot = async (snapshotId) => {
+  const nextId = (snapshotId || "").toString().trim();
+  if (!nextId) return;
+
+  cbGa4DashboardState.snapshotsLoading = true;
+  cbGa4DashboardState.error = null;
+  cbRenderGa4Dashboard();
+  const { ok, json, status } = await cbFetchGa4DashboardSnapshotById(nextId);
+  const snapshot = json?.snapshot;
+  if (ok && snapshot && snapshot.payload) {
+    cbGa4DashboardState.selectedSnapshotId = String(snapshot.id || nextId);
+    cbGa4DashboardState.preset = "custom";
+    cbGa4DashboardState.from = snapshot.from;
+    cbGa4DashboardState.to = snapshot.to;
+    const restoredBlocks = cbNormalizeGa4ReportBlocks(snapshot.blocks);
+    cbSetGa4DashboardSelectedBlocks(restoredBlocks, { persist: true });
+
+    const compareModeRaw = (snapshot.compareMode || "").toString().trim();
+    const hasCompareRange = !!(snapshot.compareFrom && snapshot.compareTo);
+    cbGa4DashboardState.compareEnabled = !!(compareModeRaw || hasCompareRange);
+    cbGa4DashboardState.compareMode = compareModeRaw
+      ? cbNormalizeGa4CompareMode(compareModeRaw)
+      : hasCompareRange
+      ? "custom"
+      : "previous_period";
+    cbGa4DashboardState.compareFrom = snapshot.compareFrom || null;
+    cbGa4DashboardState.compareTo = snapshot.compareTo || null;
+
+    const payload = cbNormalizeGa4ReportPayload(snapshot.payload);
+    cbGa4DashboardState.report = payload;
+    cbGa4DashboardState.lastSuccessfulFingerprint = cbBuildGa4ReportFingerprint({
+      from: snapshot.from,
+      to: snapshot.to,
+      blocks: restoredBlocks,
+      compareMode: cbGa4DashboardState.compareEnabled
+        ? cbNormalizeGa4CompareMode(cbGa4DashboardState.compareMode)
+        : "none",
+      compareFrom: cbGa4DashboardState.compareMode === "custom" ? cbGa4DashboardState.compareFrom : null,
+      compareTo: cbGa4DashboardState.compareMode === "custom" ? cbGa4DashboardState.compareTo : null,
+    });
+    cbGa4DashboardState.error = null;
+  } else {
+    cbGa4DashboardState.report = null;
+    cbGa4DashboardState.error = cbDescribeGa4Error(
+      status,
+      json?.error || "snapshot_get_failed",
+      json?.message || "Could not load snapshot."
+    );
+  }
+  cbGa4DashboardState.snapshotsLoading = false;
+  cbRenderGa4Dashboard();
+};
+
+const cbCreateGa4DashboardSnapshot = async ({
+  from,
+  to,
+  blocks,
+  compareMode,
+  compareFrom,
+  compareTo,
+  label,
+}) => {
+  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  return cbFetchJson(`/api/connectors/ga4/snapshots`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      workspaceId: ws,
+      from,
+      to,
+      blocks: Array.isArray(blocks) ? blocks : [],
+      compareMode: compareMode || "none",
+      compareFrom: compareFrom || "",
+      compareTo: compareTo || "",
+      label: label || "",
+    }),
+  });
+};
+
+const cbLoadGa4DashboardSnapshots = async () => {
+  cbGa4DashboardState.snapshotsLoading = true;
+  cbGa4DashboardState.snapshotsError = null;
+  cbRenderGa4Dashboard();
+  const { ok, json, status } = await cbFetchGa4DashboardSnapshots(20);
+  if (ok && json && Array.isArray(json.snapshots)) {
+    cbGa4DashboardState.snapshots = json.snapshots;
+    cbGa4DashboardState.snapshotsError = null;
+  } else {
+    cbGa4DashboardState.snapshots = [];
+    cbGa4DashboardState.snapshotsError = cbDescribeGa4Error(
+      status,
+      json?.error,
+      json?.message || json?.error || "Unable to load GA4 snapshots."
+    );
+  }
+  cbGa4DashboardState.snapshotsLoading = false;
+  cbRenderGa4Dashboard();
+};
+
+const cbRunGa4DashboardReport = async () => {
+  const ga4State = cbConnectorState.ga4 || {};
+  if (ga4State.status !== "connected") {
+    cbGa4DashboardState.error = "Connect GA4 first (not_connected).";
+    cbRenderGa4Dashboard();
+    return;
+  }
+  if (!ga4State.propertyId) {
+    cbGa4DashboardState.error = "Select a GA4 property first (property_not_set).";
+    cbRenderGa4Dashboard();
+    return;
+  }
+  const selection = cbGetGa4DashboardSelection();
+  const selectionError = cbValidateGa4DashboardSelection(selection);
+  if (selectionError) {
+    cbGa4DashboardState.error =
+      selectionError === "invalid_compare_range"
+        ? "Select a valid compare range (invalid_compare_range)."
+        : selectionError === "no_blocks"
+        ? "Select at least one report block (no_blocks)."
+        : "Select a valid date range (invalid_range).";
+    cbRenderGa4Dashboard();
+    return;
+  }
+
+  const fingerprint = cbBuildGa4ReportFingerprint(selection);
+  cbGa4DashboardState.loading = true;
+  cbGa4DashboardState.error = null;
+  cbRenderGa4Dashboard();
+  const { ok, json, status } = await cbFetchGa4DashboardReport({
+    from: selection.from,
+    to: selection.to,
+    blocks: selection.blocks,
+    compareMode: selection.compareMode,
+    compareFrom: selection.compareFrom,
+    compareTo: selection.compareTo,
+  });
+  if (ok && json && !json.error) {
+    cbGa4DashboardState.report = cbNormalizeGa4ReportPayload(json);
+    cbGa4DashboardState.error = null;
+    cbGa4DashboardState.lastSuccessfulFingerprint = fingerprint;
+  } else {
+    cbGa4DashboardState.error = cbDescribeGa4Error(
+      status,
+      json?.error,
+      json?.message || json?.error || "GA4 report failed."
+    );
+  }
+  cbGa4DashboardState.loading = false;
+  cbRenderGa4Dashboard();
+};
+
+const cbFormatNumber = (value) => {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return "—";
+  try {
+    return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(n);
+  } catch (_err) {
+    return String(n);
+  }
+};
+
+const cbFormatMoney = (value) => {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return "—";
+  try {
+    return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(n);
+  } catch (_err) {
+    return String(n);
+  }
+};
+
+const cbBuildGa4LineChartSvg = (daily = [], compareDaily = null) => {
+  const points = Array.isArray(daily) ? daily : [];
+  if (points.length < 2) {
+    return '<p class="cb-modal-note">Not enough data to plot a chart.</p>';
+  }
+  const comparePoints = Array.isArray(compareDaily) ? compareDaily : null;
+  const width = 720;
+  const height = 220;
+  const padding = { left: 34, right: 10, top: 12, bottom: 24 };
+  const innerW = width - padding.left - padding.right;
+  const innerH = height - padding.top - padding.bottom;
+  const values = points
+    .map((p) => (typeof p.sessions === "number" ? p.sessions : Number(p.sessions) || 0))
+    .concat(
+      comparePoints
+        ? comparePoints.map((p) => (typeof p.sessions === "number" ? p.sessions : Number(p.sessions) || 0))
+        : []
+    );
+  const maxY = Math.max(1, ...values);
+  const stepX = points.length > 1 ? innerW / (points.length - 1) : innerW;
+  const toX = (idx) => padding.left + idx * stepX;
+  const toY = (val) => padding.top + innerH - (val / maxY) * innerH;
+  const sessionsPath = points
+    .map((p, idx) => `${toX(idx).toFixed(1)},${toY(Number(p.sessions) || 0).toFixed(1)}`)
+    .join(" ");
+  const shouldPlotCompare =
+    Array.isArray(comparePoints) && comparePoints.length === points.length && comparePoints.length >= 2;
+  const comparePath = shouldPlotCompare
+    ? comparePoints
+        .map((p, idx) => `${toX(idx).toFixed(1)},${toY(Number(p.sessions) || 0).toFixed(1)}`)
+        .join(" ")
+    : "";
+
+  const lastLabel = points[points.length - 1]?.date || "";
+  const firstLabel = points[0]?.date || "";
+
+  return `
+    <svg class="cb-dashboard-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Sessions per day">
+      <rect x="0" y="0" width="${width}" height="${height}" fill="rgba(15,23,42,0.45)" rx="14"></rect>
+      <line x1="${padding.left}" y1="${padding.top + innerH}" x2="${padding.left + innerW}" y2="${padding.top + innerH}" stroke="rgba(255,255,255,0.12)" stroke-width="1"></line>
+      <polyline points="${sessionsPath}" fill="none" stroke="rgba(95,225,207,0.95)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+      ${
+        shouldPlotCompare
+          ? `<polyline points="${comparePath}" fill="none" stroke="rgba(147, 197, 253, 0.75)" stroke-width="2" stroke-dasharray="6 6" stroke-linecap="round" stroke-linejoin="round"></polyline>`
+          : ""
+      }
+      <text x="${padding.left}" y="${height - 8}" fill="rgba(226,232,240,0.65)" font-size="10">${firstLabel}</text>
+      <text x="${padding.left + innerW}" y="${height - 8}" fill="rgba(226,232,240,0.65)" font-size="10" text-anchor="end">${lastLabel}</text>
+      <text x="${padding.left}" y="${padding.top + 10}" fill="rgba(226,232,240,0.65)" font-size="10">${cbFormatNumber(maxY)}</text>
+    </svg>
+  `;
+};
+
+const cbRenderGa4Dashboard = () => {
+  const root = document.getElementById("cb-ga4-dashboard-root");
+  if (!root) return;
+  root.innerHTML = "";
+
+  if (!cbIsAuthenticated()) {
+    const banner = document.createElement("div");
+    banner.className = "cb-dashboard-banner";
+    banner.innerHTML = `
+      <strong>Sign in required.</strong>
+      <div class="cb-dashboard-muted">Connect your account to view GA4 dashboards.</div>
+    `;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn btn-primary";
+    btn.textContent = "Continue with Google";
+    btn.addEventListener("click", () => startGoogleLogin());
+    banner.appendChild(btn);
+    root.appendChild(banner);
+    return;
+  }
+
+  if (!cbGa4DashboardState.initialized) {
+    const defaults = cbComputePresetRange(cbGa4DashboardState.preset) || cbComputePresetRange("last_7_days");
+    if (defaults) {
+      cbGa4DashboardState.from = defaults.from;
+      cbGa4DashboardState.to = defaults.to;
+    }
+    cbGa4DashboardState.initialized = true;
+  }
+
+  const ga4State = cbConnectorState.ga4 || {};
+  const connected = ga4State.status === "connected";
+  const hasProperty = !!ga4State.propertyId;
+  if (!connected || !hasProperty) {
+    const banner = document.createElement("div");
+    banner.className = "cb-dashboard-banner";
+    banner.innerHTML = connected
+      ? `<strong>Select a GA4 property.</strong><div class="cb-dashboard-muted">Open the connector settings to choose a property.</div>`
+      : `<strong>GA4 is not connected.</strong><div class="cb-dashboard-muted">Connect GA4 to unlock dashboard reporting.</div>`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn btn-primary";
+    btn.textContent = connected ? "Choose property" : "Connect GA4";
+    btn.addEventListener("click", () => cbOpenConnectorDetail("ga4"));
+    banner.appendChild(btn);
+    root.appendChild(banner);
+    return;
+  }
+
+  const currentWorkspaceKey = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  if (cbGa4DashboardState.blocksWorkspaceId !== currentWorkspaceKey) {
+    cbGa4DashboardState.blocksWorkspaceId = currentWorkspaceKey;
+    const storedBlocks = cbLoadGa4BlocksFromStorage(currentWorkspaceKey);
+    cbSetGa4DashboardSelectedBlocks(storedBlocks || CB_GA4_REPORT_BLOCKS_DEFAULT, { persist: false });
+    cbGa4DashboardState.selectedSnapshotId = "";
+    cbGa4DashboardState.snapshotLabel = "";
+    cbGa4DashboardState.report = null;
+    cbGa4DashboardState.error = null;
+    cbGa4DashboardState.lastSuccessfulFingerprint = null;
+    cbLoadGa4DashboardSnapshots();
+  }
+
+  const selection = cbGetGa4DashboardSelection();
+  const selectionError = cbValidateGa4DashboardSelection(selection);
+  const fingerprint = cbBuildGa4ReportFingerprint(selection);
+
+  const controls = document.createElement("div");
+  controls.className = "cb-dashboard-controls";
+
+  const presetField = document.createElement("div");
+  presetField.className = "cb-dashboard-field";
+  const presetLabel = document.createElement("label");
+  presetLabel.textContent = "Time range";
+  const presetSelect = document.createElement("select");
+  presetSelect.className = "cb-dashboard-input";
+  presetSelect.innerHTML = `
+    <option value="today">Today</option>
+    <option value="yesterday">Yesterday</option>
+    <option value="last_7_days">Last 7 days</option>
+    <option value="last_30_days">Last 30 days</option>
+    <option value="this_month">This month</option>
+    <option value="last_month">Last month</option>
+    <option value="custom">Custom</option>
+  `;
+  presetSelect.value = cbGa4DashboardState.preset;
+  presetSelect.disabled = cbGa4DashboardState.loading;
+  presetSelect.addEventListener("change", () => {
+    cbGa4DashboardState.preset = presetSelect.value;
+    const next = cbComputePresetRange(cbGa4DashboardState.preset);
+    if (next) {
+      cbGa4DashboardState.from = next.from;
+      cbGa4DashboardState.to = next.to;
+    }
+    cbRenderGa4Dashboard();
+  });
+  presetField.appendChild(presetLabel);
+  presetField.appendChild(presetSelect);
+  controls.appendChild(presetField);
+
+  const fromField = document.createElement("div");
+  fromField.className = "cb-dashboard-field";
+  const fromLabel = document.createElement("label");
+  fromLabel.textContent = "From";
+  const fromInput = document.createElement("input");
+  fromInput.type = "date";
+  fromInput.className = "cb-dashboard-input";
+  fromInput.value = cbGa4DashboardState.from || "";
+  fromInput.disabled = cbGa4DashboardState.loading || cbGa4DashboardState.preset !== "custom";
+  fromInput.addEventListener("change", () => {
+    cbGa4DashboardState.from = fromInput.value;
+    cbRenderGa4Dashboard();
+  });
+  fromField.appendChild(fromLabel);
+  fromField.appendChild(fromInput);
+  controls.appendChild(fromField);
+
+  const toField = document.createElement("div");
+  toField.className = "cb-dashboard-field";
+  const toLabel = document.createElement("label");
+  toLabel.textContent = "To";
+  const toInput = document.createElement("input");
+  toInput.type = "date";
+  toInput.className = "cb-dashboard-input";
+  toInput.value = cbGa4DashboardState.to || "";
+  toInput.disabled = cbGa4DashboardState.loading || cbGa4DashboardState.preset !== "custom";
+  toInput.addEventListener("change", () => {
+    cbGa4DashboardState.to = toInput.value;
+    cbRenderGa4Dashboard();
+  });
+  toField.appendChild(toLabel);
+  toField.appendChild(toInput);
+  controls.appendChild(toField);
+
+  const compareWrap = document.createElement("label");
+  compareWrap.className = "cb-dashboard-toggle";
+  const compareInput = document.createElement("input");
+  compareInput.type = "checkbox";
+  compareInput.checked = !!cbGa4DashboardState.compareEnabled;
+  compareInput.disabled = cbGa4DashboardState.loading;
+  compareInput.addEventListener("change", () => {
+    cbGa4DashboardState.compareEnabled = compareInput.checked;
+    cbRenderGa4Dashboard();
+  });
+  const compareText = document.createElement("span");
+  compareText.textContent = "Compare";
+  compareWrap.appendChild(compareInput);
+  compareWrap.appendChild(compareText);
+  controls.appendChild(compareWrap);
+
+  if (cbGa4DashboardState.compareEnabled) {
+    const modeField = document.createElement("div");
+    modeField.className = "cb-dashboard-field";
+    const modeLabel = document.createElement("label");
+    modeLabel.textContent = "Compare mode";
+    const modeSelect = document.createElement("select");
+    modeSelect.className = "cb-dashboard-input";
+    modeSelect.innerHTML = CB_GA4_COMPARE_MODES.map(
+      (opt) => `<option value="${opt.value}">${opt.label}</option>`
+    ).join("");
+    modeSelect.value = cbNormalizeGa4CompareMode(cbGa4DashboardState.compareMode);
+    modeSelect.disabled = cbGa4DashboardState.loading;
+    modeSelect.addEventListener("change", () => {
+      cbGa4DashboardState.compareMode = modeSelect.value;
+      cbRenderGa4Dashboard();
+    });
+    modeField.appendChild(modeLabel);
+    modeField.appendChild(modeSelect);
+    controls.appendChild(modeField);
+
+    if (cbNormalizeGa4CompareMode(cbGa4DashboardState.compareMode) === "custom") {
+      const compareFromField = document.createElement("div");
+      compareFromField.className = "cb-dashboard-field";
+      const compareFromLabel = document.createElement("label");
+      compareFromLabel.textContent = "Compare from";
+      const compareFromInput = document.createElement("input");
+      compareFromInput.type = "date";
+      compareFromInput.className = "cb-dashboard-input";
+      compareFromInput.value = cbGa4DashboardState.compareFrom || "";
+      compareFromInput.disabled = cbGa4DashboardState.loading;
+      compareFromInput.addEventListener("change", () => {
+        cbGa4DashboardState.compareFrom = compareFromInput.value;
+        cbRenderGa4Dashboard();
+      });
+      compareFromField.appendChild(compareFromLabel);
+      compareFromField.appendChild(compareFromInput);
+      controls.appendChild(compareFromField);
+
+      const compareToField = document.createElement("div");
+      compareToField.className = "cb-dashboard-field";
+      const compareToLabel = document.createElement("label");
+      compareToLabel.textContent = "Compare to";
+      const compareToInput = document.createElement("input");
+      compareToInput.type = "date";
+      compareToInput.className = "cb-dashboard-input";
+      compareToInput.value = cbGa4DashboardState.compareTo || "";
+      compareToInput.disabled = cbGa4DashboardState.loading;
+      compareToInput.addEventListener("change", () => {
+        cbGa4DashboardState.compareTo = compareToInput.value;
+        cbRenderGa4Dashboard();
+      });
+      compareToField.appendChild(compareToLabel);
+      compareToField.appendChild(compareToInput);
+      controls.appendChild(compareToField);
+    }
+  }
+
+  const runBtn = document.createElement("button");
+  runBtn.type = "button";
+  runBtn.className = "btn btn-primary";
+  runBtn.textContent = cbGa4DashboardState.loading ? "Running..." : "Run report";
+  runBtn.disabled = cbGa4DashboardState.loading || !!selectionError;
+  runBtn.addEventListener("click", () => cbRunGa4DashboardReport());
+  controls.appendChild(runBtn);
+
+  root.appendChild(controls);
+
+  if (selectionError === "invalid_compare_range") {
+    const inlineErr = document.createElement("p");
+    inlineErr.className = "cb-form-error";
+    inlineErr.textContent = "Compare range is invalid. Set Compare from/to.";
+    root.appendChild(inlineErr);
+  } else if (selectionError === "no_blocks") {
+    const inlineErr = document.createElement("p");
+    inlineErr.className = "cb-form-error";
+    inlineErr.textContent = "Select at least one block to run the report.";
+    root.appendChild(inlineErr);
+  }
+
+  const blocksPanel = document.createElement("div");
+  blocksPanel.className = "cb-dashboard-panel cb-ga4-blocks-panel";
+  const blocksTitle = document.createElement("h3");
+  blocksTitle.className = "cb-dashboard-panel-title";
+  blocksTitle.textContent = "Blocks";
+  blocksPanel.appendChild(blocksTitle);
+  const blocksGrid = document.createElement("div");
+  blocksGrid.className = "cb-ga4-blocks-grid";
+  const blocksConfig = [
+    { key: "overview", label: "Overview" },
+    { key: "series", label: "Series" },
+    { key: "pages", label: "Pages" },
+    { key: "sources", label: "Sources" },
+    { key: "events", label: "Events" },
+    { key: "geo", label: "Geo" },
+    { key: "device", label: "Device" },
+  ];
+  const selectedBlocks = cbGetGa4DashboardSelectedBlocks();
+  blocksConfig.forEach((block) => {
+    const wrap = document.createElement("label");
+    wrap.className = "cb-dashboard-toggle cb-ga4-block-toggle";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = selectedBlocks.includes(block.key);
+    input.disabled = cbGa4DashboardState.loading;
+    input.addEventListener("change", () => {
+      const next = new Set(cbGetGa4DashboardSelectedBlocks());
+      if (input.checked) {
+        next.add(block.key);
+      } else {
+        next.delete(block.key);
+      }
+      if (!next.size) {
+        input.checked = true;
+        return;
+      }
+      cbSetGa4DashboardSelectedBlocks(Array.from(next), { persist: true });
+      cbRenderGa4Dashboard();
+    });
+    const label = document.createElement("span");
+    label.textContent = block.label;
+    wrap.appendChild(input);
+    wrap.appendChild(label);
+    blocksGrid.appendChild(wrap);
+  });
+  blocksPanel.appendChild(blocksGrid);
+  root.appendChild(blocksPanel);
+
+  const snapshotControls = document.createElement("div");
+  snapshotControls.className = "cb-dashboard-controls";
+
+  const labelField = document.createElement("div");
+  labelField.className = "cb-dashboard-field";
+  const labelLbl = document.createElement("label");
+  labelLbl.textContent = "Snapshot label (optional)";
+  const labelInput = document.createElement("input");
+  labelInput.type = "text";
+  labelInput.className = "cb-dashboard-input";
+  labelInput.value = cbGa4DashboardState.snapshotLabel || "";
+  labelInput.placeholder = "e.g. Weekly baseline";
+  labelInput.disabled = cbGa4DashboardState.loading || cbGa4DashboardState.snapshotsLoading;
+  labelInput.addEventListener("input", () => {
+    cbGa4DashboardState.snapshotLabel = labelInput.value;
+  });
+  labelField.appendChild(labelLbl);
+  labelField.appendChild(labelInput);
+  snapshotControls.appendChild(labelField);
+
+  const canSaveSnapshot =
+    !!cbGa4DashboardState.lastSuccessfulFingerprint &&
+    cbGa4DashboardState.lastSuccessfulFingerprint === fingerprint &&
+    !!cbGa4DashboardState.report &&
+    !cbGa4DashboardState.report?.error;
+
+  const saveBtn = document.createElement("button");
+  saveBtn.type = "button";
+  saveBtn.className = "btn btn-secondary";
+  saveBtn.textContent = cbGa4DashboardState.snapshotsLoading ? "Saving..." : "Save snapshot";
+  saveBtn.disabled = cbGa4DashboardState.loading || cbGa4DashboardState.snapshotsLoading || !canSaveSnapshot;
+  saveBtn.addEventListener("click", async () => {
+    if (!canSaveSnapshot) {
+      cbShowBillingToast("cancel", "Run the report successfully before saving a snapshot.");
+      return;
+    }
+    const snapshotSelection = cbGetGa4DashboardSelection();
+    const { ok, json, status } = await cbCreateGa4DashboardSnapshot({
+      from: snapshotSelection.from,
+      to: snapshotSelection.to,
+      blocks: snapshotSelection.blocks,
+      compareMode: snapshotSelection.compareMode,
+      compareFrom: snapshotSelection.compareFrom,
+      compareTo: snapshotSelection.compareTo,
+      label: cbGa4DashboardState.snapshotLabel,
+    });
+	    if (ok && json && json.snapshotId) {
+	      cbShowBillingToast("success", "GA4 snapshot saved.");
+	      cbGa4DashboardState.snapshotLabel = "";
+	      cbGa4DashboardState.selectedSnapshotId = String(json.snapshotId);
+	      await cbLoadGa4DashboardSnapshots();
+	      cbRenderGa4Dashboard();
+	    } else {
+	      const errMsg = cbDescribeGa4Error(
+	        status,
+        json?.error,
+        json?.message || json?.error || "Snapshot save failed."
+      );
+      cbShowBillingToast("cancel", errMsg);
+    }
+	  });
+	  snapshotControls.appendChild(saveBtn);
+
+	  const shareBtn = document.createElement("button");
+	  shareBtn.type = "button";
+	  shareBtn.className = "btn btn-primary";
+	  shareBtn.textContent = "Send snapshot to Council";
+	  shareBtn.disabled =
+	    cbGa4DashboardState.loading ||
+	    cbGa4DashboardState.snapshotsLoading ||
+	    !cbGa4DashboardState.selectedSnapshotId;
+	  shareBtn.addEventListener("click", () => {
+	    const snapshotId = cbGa4DashboardState.selectedSnapshotId;
+	    if (!snapshotId) {
+	      cbShowBillingToast("cancel", "Select a snapshot first.");
+	      return;
+	    }
+	    cbOpenCouncilShareModalForGa4Snapshot(snapshotId);
+	  });
+	  snapshotControls.appendChild(shareBtn);
+
+  const snapshotsField = document.createElement("div");
+  snapshotsField.className = "cb-dashboard-field";
+  const snapsLbl = document.createElement("label");
+  snapsLbl.textContent = "Restore snapshot";
+  const snapshotsSelect = document.createElement("select");
+  snapshotsSelect.className = "cb-dashboard-input";
+  snapshotsSelect.disabled = cbGa4DashboardState.snapshotsLoading;
+  const defaultOpt = document.createElement("option");
+  defaultOpt.value = "";
+  defaultOpt.textContent = cbGa4DashboardState.snapshotsLoading ? "Loading..." : "Select a snapshot";
+  snapshotsSelect.appendChild(defaultOpt);
+  (cbGa4DashboardState.snapshots || []).forEach((snap) => {
+    const opt = document.createElement("option");
+    opt.value = snap.id;
+    const label = snap.label || `${snap.from} → ${snap.to}`;
+    opt.textContent = `${label} (${snap.id})`;
+    snapshotsSelect.appendChild(opt);
+  });
+	  snapshotsSelect.value = cbGa4DashboardState.selectedSnapshotId || "";
+	  snapshotsSelect.addEventListener("change", () => {
+	    cbGa4DashboardState.selectedSnapshotId = snapshotsSelect.value || "";
+	    cbRenderGa4Dashboard();
+	  });
+	  snapshotsField.appendChild(snapsLbl);
+	  snapshotsField.appendChild(snapshotsSelect);
+	  snapshotControls.appendChild(snapshotsField);
+
+	  const restoreBtn = document.createElement("button");
+	  restoreBtn.type = "button";
+	  restoreBtn.className = "btn btn-secondary";
+	  restoreBtn.textContent = cbGa4DashboardState.snapshotsLoading ? "Restoring..." : "Restore";
+	  restoreBtn.disabled =
+	    cbGa4DashboardState.loading ||
+	    cbGa4DashboardState.snapshotsLoading ||
+	    !cbGa4DashboardState.selectedSnapshotId;
+	  restoreBtn.addEventListener("click", () => {
+	    const nextId = cbGa4DashboardState.selectedSnapshotId;
+	    if (!nextId) {
+	      cbShowBillingToast("cancel", "Select a snapshot first.");
+	      return;
+	    }
+	    cbRestoreGa4DashboardSnapshot(nextId);
+	  });
+	  snapshotControls.appendChild(restoreBtn);
+
+	  const quickShareBtn = document.createElement("button");
+	  quickShareBtn.type = "button";
+	  quickShareBtn.className = "btn btn-secondary";
+	  quickShareBtn.textContent = "Send";
+	  quickShareBtn.title = "Send selected snapshot to Council";
+	  quickShareBtn.disabled =
+	    cbGa4DashboardState.loading ||
+	    cbGa4DashboardState.snapshotsLoading ||
+	    !cbGa4DashboardState.selectedSnapshotId;
+	  quickShareBtn.addEventListener("click", () => {
+	    const snapshotId = cbGa4DashboardState.selectedSnapshotId;
+	    if (!snapshotId) {
+	      cbShowBillingToast("cancel", "Select a snapshot first.");
+	      return;
+	    }
+	    cbOpenCouncilShareModalForGa4Snapshot(snapshotId);
+	  });
+	  snapshotControls.appendChild(quickShareBtn);
+
+	  root.appendChild(snapshotControls);
+
+  if (cbGa4DashboardState.snapshotsError) {
+    const err = document.createElement("p");
+    err.className = "cb-form-error";
+    err.textContent = cbGa4DashboardState.snapshotsError;
+    root.appendChild(err);
+  }
+
+  if (cbGa4DashboardState.loading) {
+    const note = document.createElement("p");
+    note.className = "cb-modal-note";
+    note.textContent = "Running GA4 report...";
+    root.appendChild(note);
+    return;
+  }
+
+  if (cbGa4DashboardState.error) {
+    const err = document.createElement("p");
+    err.className = "cb-form-error";
+    err.textContent = cbGa4DashboardState.error;
+    root.appendChild(err);
+  }
+
+  const normalizedReport = cbNormalizeGa4ReportPayload(cbGa4DashboardState.report);
+  if (!normalizedReport || normalizedReport.error) {
+    const hint = document.createElement("p");
+    hint.className = "cb-modal-note";
+    hint.textContent = "Run a report to see results.";
+    root.appendChild(hint);
+    return;
+  }
+
+  const activeBlocks = cbGetGa4DashboardSelectedBlocks();
+  const reportData = normalizedReport.data || {};
+
+  if (activeBlocks.includes("overview")) {
+    const cards = document.createElement("div");
+    cards.className = "cb-dashboard-cards";
+    const totals = reportData.overview || {};
+    const deltas = totals.deltas || null;
+    const formatDelta = (pct) => {
+      if (pct == null) return "—";
+      const n = Number(pct);
+      if (!Number.isFinite(n)) return "—";
+      const sign = n > 0 ? "+" : "";
+      return `${sign}${n}%`;
+    };
+    const cardItems = [
+      { title: "Users", value: cbFormatNumber(totals.users), delta: deltas ? formatDelta(deltas.users) : null },
+      {
+        title: "Sessions",
+        value: cbFormatNumber(totals.sessions),
+        delta: deltas ? formatDelta(deltas.sessions) : null,
+      },
+      {
+        title: "Conversions",
+        value: totals.conversions == null ? "—" : cbFormatNumber(totals.conversions),
+        delta: deltas ? formatDelta(deltas.conversions) : null,
+      },
+      {
+        title: "Revenue",
+        value: totals.revenue == null ? "—" : cbFormatMoney(totals.revenue),
+        delta: deltas ? formatDelta(deltas.revenue) : null,
+      },
+    ];
+    cardItems.forEach((item) => {
+      const card = document.createElement("div");
+      card.className = "cb-dashboard-panel";
+      const t = document.createElement("p");
+      t.className = "cb-dashboard-card-title";
+      t.textContent = item.title;
+      const v = document.createElement("p");
+      v.className = "cb-dashboard-card-value";
+      v.textContent = item.value;
+      card.appendChild(t);
+      card.appendChild(v);
+      if (item.delta != null && normalizedReport.compare) {
+        const d = document.createElement("p");
+        d.className = "cb-dashboard-card-delta";
+        d.textContent = item.delta;
+        card.appendChild(d);
+      }
+      cards.appendChild(card);
+    });
+    root.appendChild(cards);
+  }
+
+  const rangePanel = document.createElement("div");
+  rangePanel.className = "cb-dashboard-panel";
+  const rangeTitle = document.createElement("h3");
+  rangeTitle.className = "cb-dashboard-panel-title";
+  rangeTitle.textContent = "Range";
+  rangePanel.appendChild(rangeTitle);
+  const rangeNote = document.createElement("p");
+  rangeNote.className = "cb-modal-note";
+  rangeNote.textContent = `${normalizedReport.range?.from || "—"} → ${normalizedReport.range?.to || "—"}`;
+  rangePanel.appendChild(rangeNote);
+  if (normalizedReport.compare) {
+    const compNote = document.createElement("p");
+    compNote.className = "cb-modal-note";
+    const modeLabel =
+      normalizedReport.compare.mode === "previous_year"
+        ? "Previous year"
+        : normalizedReport.compare.mode === "custom"
+        ? "Custom"
+        : "Previous period";
+    compNote.textContent = `Compare (${modeLabel}): ${normalizedReport.compare.from} → ${normalizedReport.compare.to}`;
+    rangePanel.appendChild(compNote);
+  }
+
+  if (activeBlocks.includes("series")) {
+    const grid = document.createElement("div");
+    grid.className = "cb-dashboard-grid";
+
+    const chartPanel = document.createElement("div");
+    chartPanel.className = "cb-dashboard-panel";
+    const chartTitle = document.createElement("h3");
+    chartTitle.className = "cb-dashboard-panel-title";
+    chartTitle.textContent = "Sessions per day";
+    chartPanel.appendChild(chartTitle);
+    const chartHtml = document.createElement("div");
+    chartHtml.innerHTML = cbBuildGa4LineChartSvg(
+      reportData.series?.daily || [],
+      reportData.series?.compareDaily || null
+    );
+    chartPanel.appendChild(chartHtml);
+    grid.appendChild(chartPanel);
+
+    grid.appendChild(rangePanel);
+    root.appendChild(grid);
+  } else {
+    root.appendChild(rangePanel);
+  }
+
+  const tablesWrap = document.createElement("div");
+  tablesWrap.className = "cb-dashboard-tables";
+
+  const renderTable = (title, headers, rows) => {
+    const panel = document.createElement("div");
+    panel.className = "cb-dashboard-panel";
+    const h = document.createElement("h3");
+    h.className = "cb-dashboard-panel-title";
+    h.textContent = title;
+    panel.appendChild(h);
+    if (!rows || !rows.length) {
+      const empty = document.createElement("p");
+      empty.className = "cb-modal-note";
+      empty.textContent = "No data.";
+      panel.appendChild(empty);
+      return panel;
+    }
+    const table = document.createElement("table");
+    table.className = "cb-dashboard-table";
+    const thead = document.createElement("thead");
+    const trh = document.createElement("tr");
+    headers.forEach((hdr) => {
+      const th = document.createElement("th");
+      th.textContent = hdr;
+      trh.appendChild(th);
+    });
+    thead.appendChild(trh);
+    table.appendChild(thead);
+    const tbody = document.createElement("tbody");
+    rows.forEach((cols) => {
+      const tr = document.createElement("tr");
+      cols.forEach((col) => {
+        const td = document.createElement("td");
+        if (col && col.nodeType) {
+          td.appendChild(col);
+        } else {
+          td.textContent = col == null ? "—" : String(col);
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    panel.appendChild(table);
+    return panel;
+  };
+
+  let tablesAdded = 0;
+
+  if (activeBlocks.includes("pages")) {
+    const pagesRows = (reportData.pages?.rows || []).map((row) => {
+      const pageEl = document.createElement("div");
+      const title = row.title || "";
+      const path = row.page || "";
+      if (title) {
+        const titleNode = document.createElement("div");
+        titleNode.textContent = title;
+        const pathNode = document.createElement("div");
+        pathNode.className = "cb-dashboard-muted";
+        pathNode.textContent = path;
+        pageEl.appendChild(titleNode);
+        pageEl.appendChild(pathNode);
+      } else {
+        const pathNode = document.createElement("div");
+        pathNode.textContent = path;
+        pageEl.appendChild(pathNode);
+      }
+      return [
+        pageEl,
+        cbFormatNumber(row.sessions),
+        row.conversions == null ? "—" : cbFormatNumber(row.conversions),
+      ];
+    });
+    tablesWrap.appendChild(renderTable("Top pages", ["Page", "Sessions", "Conversions"], pagesRows));
+    tablesAdded += 1;
+  }
+
+  if (activeBlocks.includes("sources")) {
+    const srcRows = (reportData.sources?.rows || []).map((row) => [
+      row.sourceMedium || "—",
+      cbFormatNumber(row.sessions),
+      row.conversions == null ? "—" : cbFormatNumber(row.conversions),
+    ]);
+    tablesWrap.appendChild(renderTable("Top source / medium", ["Source", "Sessions", "Conversions"], srcRows));
+    tablesAdded += 1;
+  }
+
+  if (activeBlocks.includes("events")) {
+    const eventRows = (reportData.events?.rows || []).map((row) => [
+      row.eventName || "—",
+      cbFormatNumber(row.count),
+    ]);
+    tablesWrap.appendChild(renderTable("Top events", ["Event", "Count"], eventRows));
+    tablesAdded += 1;
+  }
+
+  if (activeBlocks.includes("geo")) {
+    const countryRows = (reportData.geo?.countries || []).map((row) => [
+      row.country || "—",
+      cbFormatNumber(row.sessions),
+      row.conversions == null ? "—" : cbFormatNumber(row.conversions),
+    ]);
+    tablesWrap.appendChild(renderTable("Top countries", ["Country", "Sessions", "Conversions"], countryRows));
+    tablesAdded += 1;
+
+    const cityRows = (reportData.geo?.cities || []).map((row) => [
+      row.city || "—",
+      cbFormatNumber(row.sessions),
+      row.conversions == null ? "—" : cbFormatNumber(row.conversions),
+    ]);
+    tablesWrap.appendChild(renderTable("Top cities", ["City", "Sessions", "Conversions"], cityRows));
+    tablesAdded += 1;
+  }
+
+  if (activeBlocks.includes("device")) {
+    const deviceRows = (reportData.device?.deviceCategory || []).map((row) => [
+      row.deviceCategory || "—",
+      cbFormatNumber(row.sessions),
+      row.conversions == null ? "—" : cbFormatNumber(row.conversions),
+    ]);
+    tablesWrap.appendChild(renderTable("Device category", ["Device", "Sessions", "Conversions"], deviceRows));
+    tablesAdded += 1;
+
+    const osRows = (reportData.device?.os || []).map((row) => [
+      row.os || "—",
+      cbFormatNumber(row.sessions),
+      row.conversions == null ? "—" : cbFormatNumber(row.conversions),
+    ]);
+    tablesWrap.appendChild(renderTable("Operating system", ["OS", "Sessions", "Conversions"], osRows));
+    tablesAdded += 1;
+  }
+
+  if (tablesAdded) {
+    root.appendChild(tablesWrap);
+  }
+};
+
+const cbInitGa4Dashboard = () => {
+  cbRenderGa4Dashboard();
+};
+
+window.cbInitGa4Dashboard = cbInitGa4Dashboard;
+window.cbRenderGa4Dashboard = cbRenderGa4Dashboard;
+
+// --- Google Ads Dashboard (v0) ---
+const CB_GOOGLEADS_REPORT_BLOCKS_DEFAULT = ["overview", "series", "campaigns", "devices"];
+const CB_GOOGLEADS_REPORT_BLOCKS_OPTIONAL = ["networks", "search_terms", "keywords"];
+const CB_GOOGLEADS_REPORT_BLOCKS_ALL = [
+  ...CB_GOOGLEADS_REPORT_BLOCKS_DEFAULT,
+  ...CB_GOOGLEADS_REPORT_BLOCKS_OPTIONAL,
+];
+
+const cbNormalizeGoogleAdsReportBlocks = (blocks) => {
+  const raw = Array.isArray(blocks) ? blocks : [];
+  const normalized = raw
+    .map((b) => (b == null ? "" : String(b)).trim().toLowerCase())
+    .filter(Boolean)
+    .filter((b) => CB_GOOGLEADS_REPORT_BLOCKS_ALL.includes(b));
+  const unique = Array.from(new Set(normalized));
+  return unique.length ? unique : CB_GOOGLEADS_REPORT_BLOCKS_DEFAULT.slice();
+};
+
+const cbGoogleAdsBlocksStorageKey = (workspaceId) => {
+  const ws = cbNormalizeWorkspaceId(workspaceId);
+  return `coolbits:googleads_blocks:${ws}`;
+};
+
+const cbLoadGoogleAdsBlocksFromStorage = (workspaceId) => {
+  try {
+    const raw = window.localStorage.getItem(cbGoogleAdsBlocksStorageKey(workspaceId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return cbNormalizeGoogleAdsReportBlocks(parsed);
+  } catch (_err) {
+    return null;
+  }
+};
+
+const cbPersistGoogleAdsBlocksToStorage = (workspaceId, blocks) => {
+  try {
+    const normalized = cbNormalizeGoogleAdsReportBlocks(blocks);
+    window.localStorage.setItem(cbGoogleAdsBlocksStorageKey(workspaceId), JSON.stringify(normalized));
+  } catch (_err) {
+    // ignore
+  }
+};
+
+const CB_GOOGLEADS_COMPARE_MODES = [
+  { value: "previous_period", label: "Previous period" },
+  { value: "previous_year", label: "Previous year" },
+  { value: "custom", label: "Custom" },
+];
+
+const cbNormalizeGoogleAdsCompareMode = (mode) => {
+  const raw = (mode || "").toString().trim().toLowerCase();
+  if (raw === "previous_period") return "previous_period";
+  if (raw === "previous_year") return "previous_year";
+  if (raw === "custom") return "custom";
+  return "previous_period";
+};
+
+const cbDescribeGoogleAdsError = (status, errorCode, message) => {
+  const code = (errorCode || "").toString().trim();
+  if (status === 401) return "Please sign in to view Google Ads reports.";
+  if (code === "invalid_grant") return "Google authorization expired. Disconnect and reconnect (invalid_grant).";
+  if (code === "insufficient_permissions")
+    return "The connected Google account does not have access to this customer (insufficient_permissions).";
+  if (code === "customer_not_set")
+    return "Select a Google Ads customer in connector settings (customer_not_set).";
+  if (code === "rate_limited") return "Google Ads API rate limited. Please retry soon (rate_limited).";
+  if (code === "quota_exceeded") return "Google Ads API quota exceeded. Please try again later (quota_exceeded).";
+  if (code) return `${message || "Google Ads request failed."} (${code})`;
+  return message || "Google Ads request failed.";
+};
+
+const cbNormalizeGoogleAdsReportPayload = (payload) => {
+  if (!payload || typeof payload !== "object") return payload;
+  if (payload.data && payload.blocks && payload.range) return payload;
+  return payload;
+};
+
+const cbGoogleAdsDashboardState = {
+  initialized: false,
+  identityKey: null,
+  preset: "last_7_days",
+  from: null,
+  to: null,
+  selectedBlocks: new Set(CB_GOOGLEADS_REPORT_BLOCKS_DEFAULT),
+  compareEnabled: false,
+  compareMode: "previous_period",
+  compareFrom: null,
+  compareTo: null,
+  loading: false,
+  error: null,
+  errorCode: null,
+  report: null,
+  lastSuccessfulFingerprint: null,
+  snapshotsLoading: false,
+  snapshotsError: null,
+  snapshots: [],
+  selectedSnapshotId: "",
+  snapshotLabel: "",
+};
+
+const cbGetGoogleAdsDashboardRange = () => {
+  if (cbGoogleAdsDashboardState.preset === "custom") {
+    return {
+      from: cbGoogleAdsDashboardState.from,
+      to: cbGoogleAdsDashboardState.to,
+    };
+  }
+  const computed = cbComputePresetRange(cbGoogleAdsDashboardState.preset);
+  return computed || { from: cbGoogleAdsDashboardState.from, to: cbGoogleAdsDashboardState.to };
+};
+
+const cbGetGoogleAdsDashboardSelectedBlocks = () =>
+  cbNormalizeGoogleAdsReportBlocks(Array.from(cbGoogleAdsDashboardState.selectedBlocks || []));
+
+const cbSetGoogleAdsDashboardSelectedBlocks = (blocks, { persist = true } = {}) => {
+  const normalized = cbNormalizeGoogleAdsReportBlocks(blocks);
+  cbGoogleAdsDashboardState.selectedBlocks = new Set(normalized);
+  if (persist) {
+    cbPersistGoogleAdsBlocksToStorage(cbCurrentWorkspaceId, normalized);
+  }
+};
+
+const cbGetGoogleAdsDashboardSelection = () => {
+  const range = cbGetGoogleAdsDashboardRange();
+  const blocks = cbGetGoogleAdsDashboardSelectedBlocks();
+  const compareEnabled = !!cbGoogleAdsDashboardState.compareEnabled;
+  if (!compareEnabled) {
+    return {
+      from: range.from,
+      to: range.to,
+      blocks,
+      compareMode: "none",
+      compareFrom: null,
+      compareTo: null,
+    };
+  }
+  const compareMode = cbNormalizeGoogleAdsCompareMode(cbGoogleAdsDashboardState.compareMode);
+  const compareFrom =
+    compareMode === "custom"
+      ? (cbGoogleAdsDashboardState.compareFrom || "").toString().trim()
+      : null;
+  const compareTo =
+    compareMode === "custom" ? (cbGoogleAdsDashboardState.compareTo || "").toString().trim() : null;
+  return { from: range.from, to: range.to, blocks, compareMode, compareFrom, compareTo };
+};
+
+const cbBuildGoogleAdsReportFingerprint = (selection) => {
+  const blocks = cbNormalizeGoogleAdsReportBlocks(selection?.blocks);
+  const compareMode = (selection?.compareMode || "none").toString().trim().toLowerCase() || "none";
+  const base = {
+    from: selection?.from || "",
+    to: selection?.to || "",
+    blocks: blocks.join(","),
+    compareMode,
+  };
+  if (compareMode === "custom") {
+    base.compareFrom = selection?.compareFrom || "";
+    base.compareTo = selection?.compareTo || "";
+  }
+  return JSON.stringify(base);
+};
+
+const cbValidateGoogleAdsDashboardSelection = (selection) => {
+  const fromDate = cbParseLocalYmd(selection?.from);
+  const toDate = cbParseLocalYmd(selection?.to);
+  if (!fromDate || !toDate || fromDate.getTime() > toDate.getTime()) return "invalid_range";
+  const blocks = cbNormalizeGoogleAdsReportBlocks(selection?.blocks);
+  if (!blocks.length) return "no_blocks";
+  if ((selection?.compareMode || "none") === "custom") {
+    const compareFromDate = cbParseLocalYmd(selection?.compareFrom);
+    const compareToDate = cbParseLocalYmd(selection?.compareTo);
+    if (!compareFromDate || !compareToDate || compareFromDate.getTime() > compareToDate.getTime()) {
+      return "invalid_compare_range";
+    }
+  }
+  return null;
+};
+
+const cbFetchGoogleAdsDashboardReport = async ({
+  from,
+  to,
+  blocks,
+  compareMode,
+  compareFrom,
+  compareTo,
+}) => {
+  const base = "/api/connectors/googleads/report";
+  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  const params = new URLSearchParams({
+    workspaceId: ws,
+    from,
+    to,
+    blocks: Array.isArray(blocks) ? blocks.join(",") : "",
+    compareMode: compareMode || "none",
+  });
+  if ((compareMode || "").toLowerCase() === "custom") {
+    if (compareFrom) params.set("compareFrom", compareFrom);
+    if (compareTo) params.set("compareTo", compareTo);
+  }
+  const url = `${base}?${params.toString()}`;
+  return cbFetchJson(url);
+};
+
+const cbFetchGoogleAdsDashboardSnapshots = async (limit = 20) => {
+  const base = "/api/connectors/googleads/snapshots";
+  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  const params = new URLSearchParams({ workspaceId: ws, limit: String(limit) });
+  const url = `${base}?${params.toString()}`;
+  return cbFetchJson(url);
+};
+
+const cbFetchGoogleAdsDashboardSnapshotById = async (snapshotId) => {
+  const base = `/api/connectors/googleads/snapshots/${encodeURIComponent(snapshotId)}`;
+  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  const params = new URLSearchParams({ workspaceId: ws });
+  const url = `${base}?${params.toString()}`;
+  return cbFetchJson(url);
+};
+
+const cbCreateGoogleAdsDashboardSnapshot = async ({
+  from,
+  to,
+  blocks,
+  compareMode,
+  compareFrom,
+  compareTo,
+  label,
+}) => {
+  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  return cbFetchJson(`/api/connectors/googleads/snapshots`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      workspaceId: ws,
+      from,
+      to,
+      blocks: Array.isArray(blocks) ? blocks : [],
+      compareMode: compareMode || "none",
+      compareFrom: compareFrom || "",
+      compareTo: compareTo || "",
+      label: label || "",
+    }),
+  });
+};
+
+const cbLoadGoogleAdsDashboardSnapshots = async () => {
+  cbGoogleAdsDashboardState.snapshotsLoading = true;
+  cbGoogleAdsDashboardState.snapshotsError = null;
+  cbRenderGoogleAdsDashboard();
+  const { ok, json, status } = await cbFetchGoogleAdsDashboardSnapshots(20);
+  if (ok && json && Array.isArray(json.snapshots)) {
+    cbGoogleAdsDashboardState.snapshots = json.snapshots;
+    cbGoogleAdsDashboardState.snapshotsError = null;
+  } else {
+    cbGoogleAdsDashboardState.snapshots = [];
+    cbGoogleAdsDashboardState.snapshotsError = cbDescribeGoogleAdsError(
+      status,
+      json?.error,
+      json?.message || json?.error || "Unable to load Google Ads snapshots."
+    );
+  }
+  cbGoogleAdsDashboardState.snapshotsLoading = false;
+  cbRenderGoogleAdsDashboard();
+};
+
+const cbRestoreGoogleAdsDashboardSnapshot = async (snapshotId) => {
+  const nextId = (snapshotId || "").toString().trim();
+  if (!nextId) return;
+
+  cbGoogleAdsDashboardState.snapshotsLoading = true;
+  cbGoogleAdsDashboardState.error = null;
+  cbGoogleAdsDashboardState.errorCode = null;
+  cbRenderGoogleAdsDashboard();
+  const { ok, json, status } = await cbFetchGoogleAdsDashboardSnapshotById(nextId);
+  const snapshot = json?.snapshot;
+  if (ok && snapshot && snapshot.payload) {
+    cbGoogleAdsDashboardState.selectedSnapshotId = String(snapshot.id || nextId);
+    cbGoogleAdsDashboardState.preset = "custom";
+    cbGoogleAdsDashboardState.from = snapshot.from;
+    cbGoogleAdsDashboardState.to = snapshot.to;
+    const restoredBlocks = cbNormalizeGoogleAdsReportBlocks(snapshot.blocks);
+    cbSetGoogleAdsDashboardSelectedBlocks(restoredBlocks, { persist: true });
+
+    const compareModeRaw = (snapshot.compareMode || "").toString().trim();
+    const hasCompareRange = !!(snapshot.compareFrom && snapshot.compareTo);
+    cbGoogleAdsDashboardState.compareEnabled = !!(compareModeRaw || hasCompareRange);
+    cbGoogleAdsDashboardState.compareMode = compareModeRaw
+      ? cbNormalizeGoogleAdsCompareMode(compareModeRaw)
+      : hasCompareRange
+      ? "custom"
+      : "previous_period";
+    cbGoogleAdsDashboardState.compareFrom = snapshot.compareFrom || null;
+    cbGoogleAdsDashboardState.compareTo = snapshot.compareTo || null;
+
+    const payload = cbNormalizeGoogleAdsReportPayload(snapshot.payload);
+    cbGoogleAdsDashboardState.report = payload;
+    cbGoogleAdsDashboardState.lastSuccessfulFingerprint = cbBuildGoogleAdsReportFingerprint({
+      from: snapshot.from,
+      to: snapshot.to,
+      blocks: restoredBlocks,
+      compareMode: cbGoogleAdsDashboardState.compareEnabled
+        ? cbNormalizeGoogleAdsCompareMode(cbGoogleAdsDashboardState.compareMode)
+        : "none",
+      compareFrom: cbGoogleAdsDashboardState.compareMode === "custom" ? cbGoogleAdsDashboardState.compareFrom : null,
+      compareTo: cbGoogleAdsDashboardState.compareMode === "custom" ? cbGoogleAdsDashboardState.compareTo : null,
+    });
+    cbGoogleAdsDashboardState.error = null;
+    cbGoogleAdsDashboardState.errorCode = null;
+  } else {
+    cbGoogleAdsDashboardState.report = null;
+    cbGoogleAdsDashboardState.errorCode = json?.error || "snapshot_get_failed";
+    cbGoogleAdsDashboardState.error = cbDescribeGoogleAdsError(
+      status,
+      cbGoogleAdsDashboardState.errorCode,
+      json?.message || "Could not load snapshot."
+    );
+  }
+  cbGoogleAdsDashboardState.snapshotsLoading = false;
+  cbRenderGoogleAdsDashboard();
+};
+
+const cbRunGoogleAdsDashboardReport = async () => {
+  const adsState = cbConnectorState.googleads || {};
+  if (adsState.status !== "connected") {
+    cbGoogleAdsDashboardState.error = "Connect Google Ads first (not_connected).";
+    cbGoogleAdsDashboardState.errorCode = "not_connected";
+    cbRenderGoogleAdsDashboard();
+    return;
+  }
+  if (!adsState.customerId) {
+    cbGoogleAdsDashboardState.error = "Select a Google Ads customer first (customer_not_set).";
+    cbGoogleAdsDashboardState.errorCode = "customer_not_set";
+    cbRenderGoogleAdsDashboard();
+    return;
+  }
+  const selection = cbGetGoogleAdsDashboardSelection();
+  const selectionError = cbValidateGoogleAdsDashboardSelection(selection);
+  if (selectionError) {
+    cbGoogleAdsDashboardState.error =
+      selectionError === "invalid_compare_range"
+        ? "Select a valid compare range (invalid_compare_range)."
+        : selectionError === "no_blocks"
+        ? "Select at least one report block (no_blocks)."
+        : "Select a valid date range (invalid_range).";
+    cbGoogleAdsDashboardState.errorCode = selectionError;
+    cbRenderGoogleAdsDashboard();
+    return;
+  }
+
+  const fingerprint = cbBuildGoogleAdsReportFingerprint(selection);
+  cbGoogleAdsDashboardState.loading = true;
+  cbGoogleAdsDashboardState.error = null;
+  cbGoogleAdsDashboardState.errorCode = null;
+  cbRenderGoogleAdsDashboard();
+  const { ok, json, status } = await cbFetchGoogleAdsDashboardReport({
+    from: selection.from,
+    to: selection.to,
+    blocks: selection.blocks,
+    compareMode: selection.compareMode,
+    compareFrom: selection.compareFrom,
+    compareTo: selection.compareTo,
+  });
+  if (ok && json && !json.error) {
+    cbGoogleAdsDashboardState.report = cbNormalizeGoogleAdsReportPayload(json);
+    cbGoogleAdsDashboardState.error = null;
+    cbGoogleAdsDashboardState.errorCode = null;
+    cbGoogleAdsDashboardState.lastSuccessfulFingerprint = fingerprint;
+  } else {
+    cbGoogleAdsDashboardState.errorCode = json?.error || "googleads_report_failed";
+    cbGoogleAdsDashboardState.error = cbDescribeGoogleAdsError(
+      status,
+      cbGoogleAdsDashboardState.errorCode,
+      json?.message || json?.error || "Google Ads report failed."
+    );
+    cbGoogleAdsDashboardState.report = null;
+  }
+  cbGoogleAdsDashboardState.loading = false;
+  cbRenderGoogleAdsDashboard();
+};
+
+const cbFormatPercent = (ratio, { digits = 1 } = {}) => {
+  const n = typeof ratio === "number" ? ratio : Number(ratio);
+  if (!Number.isFinite(n)) return "—";
+  const pct = n * 100;
+  const formatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: digits });
+  return `${formatter.format(pct)}%`;
+};
+
+const cbFormatRatio = (ratio) => {
+  const n = typeof ratio === "number" ? ratio : Number(ratio);
+  if (!Number.isFinite(n)) return "—";
+  return `${Math.round(n * 100) / 100}x`;
+};
+
+const cbBuildGoogleAdsLineChartSvg = (daily = [], compareDaily = null) => {
+  const points = Array.isArray(daily) ? daily : [];
+  if (points.length < 2) {
+    return '<p class="cb-modal-note">Not enough data to plot a chart.</p>';
+  }
+  const comparePoints = Array.isArray(compareDaily) ? compareDaily : null;
+  const width = 720;
+  const height = 220;
+  const padding = { left: 34, right: 10, top: 12, bottom: 24 };
+  const innerW = width - padding.left - padding.right;
+  const innerH = height - padding.top - padding.bottom;
+  const values = points
+    .map((p) => (typeof p.cost === "number" ? p.cost : Number(p.cost) || 0))
+    .concat(
+      comparePoints ? comparePoints.map((p) => (typeof p.cost === "number" ? p.cost : Number(p.cost) || 0)) : []
+    );
+  const maxY = Math.max(1, ...values);
+  const stepX = points.length > 1 ? innerW / (points.length - 1) : innerW;
+  const toX = (idx) => padding.left + idx * stepX;
+  const toY = (val) => padding.top + innerH - (val / maxY) * innerH;
+  const costPath = points
+    .map((p, idx) => `${toX(idx).toFixed(1)},${toY(Number(p.cost) || 0).toFixed(1)}`)
+    .join(" ");
+  const shouldPlotCompare =
+    Array.isArray(comparePoints) && comparePoints.length === points.length && comparePoints.length >= 2;
+  const comparePath = shouldPlotCompare
+    ? comparePoints.map((p, idx) => `${toX(idx).toFixed(1)},${toY(Number(p.cost) || 0).toFixed(1)}`).join(" ")
+    : "";
+
+  const lastLabel = points[points.length - 1]?.date || "";
+  const firstLabel = points[0]?.date || "";
+
+  return `
+    <svg class="cb-dashboard-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Cost per day">
+      <rect x="0" y="0" width="${width}" height="${height}" fill="rgba(15,23,42,0.45)" rx="14"></rect>
+      <line x1="${padding.left}" y1="${padding.top + innerH}" x2="${padding.left + innerW}" y2="${padding.top + innerH}" stroke="rgba(255,255,255,0.12)" stroke-width="1"></line>
+      <polyline points="${costPath}" fill="none" stroke="rgba(95,225,207,0.95)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+      ${
+        shouldPlotCompare
+          ? `<polyline points="${comparePath}" fill="none" stroke="rgba(147, 197, 253, 0.75)" stroke-width="2" stroke-dasharray="6 6" stroke-linecap="round" stroke-linejoin="round"></polyline>`
+          : ""
+      }
+      <text x="${padding.left}" y="${height - 8}" fill="rgba(226,232,240,0.65)" font-size="10">${firstLabel}</text>
+      <text x="${padding.left + innerW}" y="${height - 8}" fill="rgba(226,232,240,0.65)" font-size="10" text-anchor="end">${lastLabel}</text>
+      <text x="${padding.left}" y="${padding.top + 10}" fill="rgba(226,232,240,0.65)" font-size="10">${cbFormatMoney(maxY)}</text>
+    </svg>
+  `;
+};
+
+const cbRenderGoogleAdsDashboard = () => {
+  const root = document.getElementById("cb-googleads-dashboard-root");
+  if (!root) return;
+  root.innerHTML = "";
+
+  if (!cbIsAuthenticated()) {
+    const banner = document.createElement("div");
+    banner.className = "cb-dashboard-banner";
+    banner.innerHTML = `
+      <strong>Sign in required.</strong>
+      <div class="cb-dashboard-muted">Connect your account to view Google Ads dashboards.</div>
+    `;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn btn-primary";
+    btn.textContent = "Continue with Google";
+    btn.addEventListener("click", () => startGoogleLogin());
+    banner.appendChild(btn);
+    root.appendChild(banner);
+    return;
+  }
+
+  if (!cbGoogleAdsDashboardState.initialized) {
+    const defaults = cbComputePresetRange(cbGoogleAdsDashboardState.preset) || cbComputePresetRange("last_7_days");
+    if (defaults) {
+      cbGoogleAdsDashboardState.from = defaults.from;
+      cbGoogleAdsDashboardState.to = defaults.to;
+    }
+    cbGoogleAdsDashboardState.initialized = true;
+  }
+
+  const adsState = cbConnectorState.googleads || {};
+  const connected = adsState.status === "connected";
+  const hasCustomer = !!adsState.customerId;
+  if (!connected || !hasCustomer) {
+    const banner = document.createElement("div");
+    banner.className = "cb-dashboard-banner";
+    banner.innerHTML = !connected
+      ? `<strong>Google Ads is not connected.</strong><div class="cb-dashboard-muted">Connect Google Ads to unlock dashboard reporting.</div>`
+      : `<strong>Select a Google Ads customer.</strong><div class="cb-dashboard-muted">Open the connector settings to choose a client customer.</div>`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn btn-primary";
+    btn.textContent = !connected ? "Connect Google Ads" : "Choose customer";
+    btn.addEventListener("click", () => cbOpenConnectorDetail("googleads"));
+    banner.appendChild(btn);
+    root.appendChild(banner);
+  }
+
+  const workspaceKey = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  const customerKey = (adsState.customerId || "").toString().trim() || "none";
+  const identityKey = `${workspaceKey}:${customerKey}`;
+  if (cbGoogleAdsDashboardState.identityKey !== identityKey) {
+    cbGoogleAdsDashboardState.identityKey = identityKey;
+    const storedBlocks = cbLoadGoogleAdsBlocksFromStorage(workspaceKey);
+    cbSetGoogleAdsDashboardSelectedBlocks(storedBlocks || CB_GOOGLEADS_REPORT_BLOCKS_DEFAULT, { persist: false });
+    cbGoogleAdsDashboardState.selectedSnapshotId = "";
+    cbGoogleAdsDashboardState.snapshotLabel = "";
+    cbGoogleAdsDashboardState.report = null;
+    cbGoogleAdsDashboardState.error = null;
+    cbGoogleAdsDashboardState.errorCode = null;
+    cbGoogleAdsDashboardState.lastSuccessfulFingerprint = null;
+    cbGoogleAdsDashboardState.snapshots = [];
+    cbGoogleAdsDashboardState.snapshotsError = null;
+    if (connected && hasCustomer) {
+      cbLoadGoogleAdsDashboardSnapshots();
+    }
+  }
+
+  const selection = cbGetGoogleAdsDashboardSelection();
+  const selectionError = cbValidateGoogleAdsDashboardSelection(selection);
+  const fingerprint = cbBuildGoogleAdsReportFingerprint(selection);
+
+  const controls = document.createElement("div");
+  controls.className = "cb-dashboard-controls";
+
+  const presetField = document.createElement("div");
+  presetField.className = "cb-dashboard-field";
+  const presetLabel = document.createElement("label");
+  presetLabel.textContent = "Time range";
+  const presetSelect = document.createElement("select");
+  presetSelect.className = "cb-dashboard-input";
+  presetSelect.innerHTML = `
+    <option value="today">Today</option>
+    <option value="yesterday">Yesterday</option>
+    <option value="last_7_days">Last 7 days</option>
+    <option value="last_30_days">Last 30 days</option>
+    <option value="this_month">This month</option>
+    <option value="last_month">Last month</option>
+    <option value="custom">Custom</option>
+  `;
+  presetSelect.value = cbGoogleAdsDashboardState.preset;
+  presetSelect.disabled = cbGoogleAdsDashboardState.loading;
+  presetSelect.addEventListener("change", () => {
+    cbGoogleAdsDashboardState.preset = presetSelect.value;
+    const next = cbComputePresetRange(cbGoogleAdsDashboardState.preset);
+    if (next) {
+      cbGoogleAdsDashboardState.from = next.from;
+      cbGoogleAdsDashboardState.to = next.to;
+    }
+    cbRenderGoogleAdsDashboard();
+  });
+  presetField.appendChild(presetLabel);
+  presetField.appendChild(presetSelect);
+  controls.appendChild(presetField);
+
+  const fromField = document.createElement("div");
+  fromField.className = "cb-dashboard-field";
+  const fromLabel = document.createElement("label");
+  fromLabel.textContent = "From";
+  const fromInput = document.createElement("input");
+  fromInput.type = "date";
+  fromInput.className = "cb-dashboard-input";
+  fromInput.value = cbGoogleAdsDashboardState.from || "";
+  fromInput.disabled = cbGoogleAdsDashboardState.loading || cbGoogleAdsDashboardState.preset !== "custom";
+  fromInput.addEventListener("change", () => {
+    cbGoogleAdsDashboardState.from = fromInput.value;
+    cbRenderGoogleAdsDashboard();
+  });
+  fromField.appendChild(fromLabel);
+  fromField.appendChild(fromInput);
+  controls.appendChild(fromField);
+
+  const toField = document.createElement("div");
+  toField.className = "cb-dashboard-field";
+  const toLabel = document.createElement("label");
+  toLabel.textContent = "To";
+  const toInput = document.createElement("input");
+  toInput.type = "date";
+  toInput.className = "cb-dashboard-input";
+  toInput.value = cbGoogleAdsDashboardState.to || "";
+  toInput.disabled = cbGoogleAdsDashboardState.loading || cbGoogleAdsDashboardState.preset !== "custom";
+  toInput.addEventListener("change", () => {
+    cbGoogleAdsDashboardState.to = toInput.value;
+    cbRenderGoogleAdsDashboard();
+  });
+  toField.appendChild(toLabel);
+  toField.appendChild(toInput);
+  controls.appendChild(toField);
+
+  const compareWrap = document.createElement("label");
+  compareWrap.className = "cb-dashboard-toggle";
+  const compareInput = document.createElement("input");
+  compareInput.type = "checkbox";
+  compareInput.checked = !!cbGoogleAdsDashboardState.compareEnabled;
+  compareInput.disabled = cbGoogleAdsDashboardState.loading;
+  compareInput.addEventListener("change", () => {
+    cbGoogleAdsDashboardState.compareEnabled = compareInput.checked;
+    cbRenderGoogleAdsDashboard();
+  });
+  const compareText = document.createElement("span");
+  compareText.textContent = "Compare";
+  compareWrap.appendChild(compareInput);
+  compareWrap.appendChild(compareText);
+  controls.appendChild(compareWrap);
+
+  if (cbGoogleAdsDashboardState.compareEnabled) {
+    const modeField = document.createElement("div");
+    modeField.className = "cb-dashboard-field";
+    const modeLabel = document.createElement("label");
+    modeLabel.textContent = "Compare mode";
+    const modeSelect = document.createElement("select");
+    modeSelect.className = "cb-dashboard-input";
+    modeSelect.innerHTML = CB_GOOGLEADS_COMPARE_MODES.map(
+      (opt) => `<option value="${opt.value}">${opt.label}</option>`
+    ).join("");
+    modeSelect.value = cbNormalizeGoogleAdsCompareMode(cbGoogleAdsDashboardState.compareMode);
+    modeSelect.disabled = cbGoogleAdsDashboardState.loading;
+    modeSelect.addEventListener("change", () => {
+      cbGoogleAdsDashboardState.compareMode = modeSelect.value;
+      cbRenderGoogleAdsDashboard();
+    });
+    modeField.appendChild(modeLabel);
+    modeField.appendChild(modeSelect);
+    controls.appendChild(modeField);
+
+    if (cbNormalizeGoogleAdsCompareMode(cbGoogleAdsDashboardState.compareMode) === "custom") {
+      const compareFromField = document.createElement("div");
+      compareFromField.className = "cb-dashboard-field";
+      const compareFromLabel = document.createElement("label");
+      compareFromLabel.textContent = "Compare from";
+      const compareFromInput = document.createElement("input");
+      compareFromInput.type = "date";
+      compareFromInput.className = "cb-dashboard-input";
+      compareFromInput.value = cbGoogleAdsDashboardState.compareFrom || "";
+      compareFromInput.disabled = cbGoogleAdsDashboardState.loading;
+      compareFromInput.addEventListener("change", () => {
+        cbGoogleAdsDashboardState.compareFrom = compareFromInput.value;
+        cbRenderGoogleAdsDashboard();
+      });
+      compareFromField.appendChild(compareFromLabel);
+      compareFromField.appendChild(compareFromInput);
+      controls.appendChild(compareFromField);
+
+      const compareToField = document.createElement("div");
+      compareToField.className = "cb-dashboard-field";
+      const compareToLabel = document.createElement("label");
+      compareToLabel.textContent = "Compare to";
+      const compareToInput = document.createElement("input");
+      compareToInput.type = "date";
+      compareToInput.className = "cb-dashboard-input";
+      compareToInput.value = cbGoogleAdsDashboardState.compareTo || "";
+      compareToInput.disabled = cbGoogleAdsDashboardState.loading;
+      compareToInput.addEventListener("change", () => {
+        cbGoogleAdsDashboardState.compareTo = compareToInput.value;
+        cbRenderGoogleAdsDashboard();
+      });
+      compareToField.appendChild(compareToLabel);
+      compareToField.appendChild(compareToInput);
+      controls.appendChild(compareToField);
+    }
+  }
+
+  const runBtn = document.createElement("button");
+  runBtn.type = "button";
+  runBtn.className = "btn btn-primary";
+  runBtn.textContent = cbGoogleAdsDashboardState.loading ? "Running..." : "Run report";
+  runBtn.disabled = cbGoogleAdsDashboardState.loading || !!selectionError || !connected || !hasCustomer;
+  runBtn.addEventListener("click", () => cbRunGoogleAdsDashboardReport());
+  controls.appendChild(runBtn);
+
+  root.appendChild(controls);
+
+  if (selectionError === "invalid_compare_range") {
+    const inlineErr = document.createElement("p");
+    inlineErr.className = "cb-form-error";
+    inlineErr.textContent = "Compare range is invalid. Set Compare from/to.";
+    root.appendChild(inlineErr);
+  } else if (selectionError === "no_blocks") {
+    const inlineErr = document.createElement("p");
+    inlineErr.className = "cb-form-error";
+    inlineErr.textContent = "Select at least one block to run the report.";
+    root.appendChild(inlineErr);
+  }
+
+  const blocksPanel = document.createElement("div");
+  blocksPanel.className = "cb-dashboard-panel cb-ga4-blocks-panel";
+  const blocksTitle = document.createElement("h3");
+  blocksTitle.className = "cb-dashboard-panel-title";
+  blocksTitle.textContent = "Blocks";
+  blocksPanel.appendChild(blocksTitle);
+  const blocksGrid = document.createElement("div");
+  blocksGrid.className = "cb-ga4-blocks-grid";
+  const blocksConfig = [
+    { key: "overview", label: "Overview" },
+    { key: "series", label: "Series" },
+    { key: "campaigns", label: "Campaigns" },
+    { key: "devices", label: "Devices" },
+    { key: "networks", label: "Networks" },
+    { key: "search_terms", label: "Search terms" },
+    { key: "keywords", label: "Keywords" },
+  ];
+  const selectedBlocks = cbGetGoogleAdsDashboardSelectedBlocks();
+  blocksConfig.forEach((block) => {
+    const wrap = document.createElement("label");
+    wrap.className = "cb-dashboard-toggle cb-ga4-block-toggle";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = selectedBlocks.includes(block.key);
+    input.disabled = cbGoogleAdsDashboardState.loading;
+    input.addEventListener("change", () => {
+      const next = new Set(cbGetGoogleAdsDashboardSelectedBlocks());
+      if (input.checked) {
+        next.add(block.key);
+      } else {
+        next.delete(block.key);
+      }
+      if (!next.size) {
+        input.checked = true;
+        return;
+      }
+      cbSetGoogleAdsDashboardSelectedBlocks(Array.from(next), { persist: true });
+      cbRenderGoogleAdsDashboard();
+    });
+    const label = document.createElement("span");
+    label.textContent = block.label;
+    wrap.appendChild(input);
+    wrap.appendChild(label);
+    blocksGrid.appendChild(wrap);
+  });
+  blocksPanel.appendChild(blocksGrid);
+  root.appendChild(blocksPanel);
+
+  const snapshotControls = document.createElement("div");
+  snapshotControls.className = "cb-dashboard-controls";
+
+  const labelField = document.createElement("div");
+  labelField.className = "cb-dashboard-field";
+  const labelLbl = document.createElement("label");
+  labelLbl.textContent = "Snapshot label (optional)";
+  const labelInput = document.createElement("input");
+  labelInput.type = "text";
+  labelInput.className = "cb-dashboard-input";
+  labelInput.value = cbGoogleAdsDashboardState.snapshotLabel || "";
+  labelInput.placeholder = "e.g. Weekly baseline";
+  labelInput.disabled = cbGoogleAdsDashboardState.loading || cbGoogleAdsDashboardState.snapshotsLoading;
+  labelInput.addEventListener("input", () => {
+    cbGoogleAdsDashboardState.snapshotLabel = labelInput.value;
+  });
+  labelField.appendChild(labelLbl);
+  labelField.appendChild(labelInput);
+  snapshotControls.appendChild(labelField);
+
+  const canSaveSnapshot =
+    !!cbGoogleAdsDashboardState.lastSuccessfulFingerprint &&
+    cbGoogleAdsDashboardState.lastSuccessfulFingerprint === fingerprint &&
+    !!cbGoogleAdsDashboardState.report &&
+    !cbGoogleAdsDashboardState.report?.error;
+
+  const saveBtn = document.createElement("button");
+  saveBtn.type = "button";
+  saveBtn.className = "btn btn-secondary";
+  saveBtn.textContent = cbGoogleAdsDashboardState.snapshotsLoading ? "Saving..." : "Save snapshot";
+  saveBtn.disabled =
+    cbGoogleAdsDashboardState.loading ||
+    cbGoogleAdsDashboardState.snapshotsLoading ||
+    !connected ||
+    !hasCustomer ||
+    !canSaveSnapshot;
+  saveBtn.addEventListener("click", async () => {
+    if (!canSaveSnapshot) {
+      cbShowBillingToast("cancel", "Run the report successfully before saving a snapshot.");
+      return;
+    }
+    const snapshotSelection = cbGetGoogleAdsDashboardSelection();
+    const { ok, json, status } = await cbCreateGoogleAdsDashboardSnapshot({
+      from: snapshotSelection.from,
+      to: snapshotSelection.to,
+      blocks: snapshotSelection.blocks,
+      compareMode: snapshotSelection.compareMode,
+      compareFrom: snapshotSelection.compareFrom,
+      compareTo: snapshotSelection.compareTo,
+      label: cbGoogleAdsDashboardState.snapshotLabel,
+    });
+    if (ok && json && json.snapshotId) {
+      cbShowBillingToast("success", "Google Ads snapshot saved.");
+      cbGoogleAdsDashboardState.snapshotLabel = "";
+      cbGoogleAdsDashboardState.selectedSnapshotId = String(json.snapshotId);
+      await cbLoadGoogleAdsDashboardSnapshots();
+      cbRenderGoogleAdsDashboard();
+    } else {
+      const errMsg = cbDescribeGoogleAdsError(
+        status,
+        json?.error,
+        json?.message || json?.error || "Snapshot save failed."
+      );
+      cbShowBillingToast("cancel", errMsg);
+    }
+  });
+  snapshotControls.appendChild(saveBtn);
+
+  const snapshotsField = document.createElement("div");
+  snapshotsField.className = "cb-dashboard-field";
+  const snapsLbl = document.createElement("label");
+  snapsLbl.textContent = "Restore snapshot";
+  const snapshotsSelect = document.createElement("select");
+  snapshotsSelect.className = "cb-dashboard-input";
+  snapshotsSelect.disabled = cbGoogleAdsDashboardState.snapshotsLoading || !connected || !hasCustomer;
+  const defaultOpt = document.createElement("option");
+  defaultOpt.value = "";
+  defaultOpt.textContent = cbGoogleAdsDashboardState.snapshotsLoading ? "Loading..." : "Select a snapshot";
+  snapshotsSelect.appendChild(defaultOpt);
+  (cbGoogleAdsDashboardState.snapshots || []).forEach((snap) => {
+    const opt = document.createElement("option");
+    opt.value = snap.id;
+    const label = snap.label || `${snap.from} → ${snap.to}`;
+    opt.textContent = `${label} (${snap.id})`;
+    snapshotsSelect.appendChild(opt);
+  });
+  snapshotsSelect.value = cbGoogleAdsDashboardState.selectedSnapshotId || "";
+  snapshotsSelect.addEventListener("change", () => {
+    cbGoogleAdsDashboardState.selectedSnapshotId = snapshotsSelect.value || "";
+    cbRenderGoogleAdsDashboard();
+  });
+  snapshotsField.appendChild(snapsLbl);
+  snapshotsField.appendChild(snapshotsSelect);
+  snapshotControls.appendChild(snapshotsField);
+
+  const restoreBtn = document.createElement("button");
+  restoreBtn.type = "button";
+  restoreBtn.className = "btn btn-secondary";
+  restoreBtn.textContent = cbGoogleAdsDashboardState.snapshotsLoading ? "Restoring..." : "Restore";
+  restoreBtn.disabled =
+    cbGoogleAdsDashboardState.loading ||
+    cbGoogleAdsDashboardState.snapshotsLoading ||
+    !connected ||
+    !hasCustomer ||
+    !cbGoogleAdsDashboardState.selectedSnapshotId;
+  restoreBtn.addEventListener("click", () => {
+    const nextId = cbGoogleAdsDashboardState.selectedSnapshotId;
+    if (!nextId) {
+      cbShowBillingToast("cancel", "Select a snapshot first.");
+      return;
+    }
+    cbRestoreGoogleAdsDashboardSnapshot(nextId);
+  });
+  snapshotControls.appendChild(restoreBtn);
+
+  root.appendChild(snapshotControls);
+
+  if (cbGoogleAdsDashboardState.snapshotsError) {
+    const err = document.createElement("p");
+    err.className = "cb-form-error";
+    err.textContent = cbGoogleAdsDashboardState.snapshotsError;
+    root.appendChild(err);
+  }
+
+  if (cbGoogleAdsDashboardState.loading) {
+    const note = document.createElement("p");
+    note.className = "cb-modal-note";
+    note.textContent = "Running Google Ads report...";
+    root.appendChild(note);
+    return;
+  }
+
+  if (cbGoogleAdsDashboardState.errorCode === "DEVELOPER_TOKEN_NOT_APPROVED") {
+    const errBanner = document.createElement("div");
+    errBanner.className = "cb-dashboard-banner";
+    errBanner.innerHTML = `
+      <strong>Developer token not approved / not enabled for this feature. Reporting is currently blocked.</strong>
+      <div class="cb-dashboard-muted">Error: DEVELOPER_TOKEN_NOT_APPROVED</div>
+    `;
+    root.appendChild(errBanner);
+    return;
+  }
+
+  if (cbGoogleAdsDashboardState.error) {
+    const err = document.createElement("p");
+    err.className = "cb-form-error";
+    err.textContent = cbGoogleAdsDashboardState.error;
+    root.appendChild(err);
+  }
+
+  const normalizedReport = cbNormalizeGoogleAdsReportPayload(cbGoogleAdsDashboardState.report);
+  if (!normalizedReport || normalizedReport.error) {
+    const hint = document.createElement("p");
+    hint.className = "cb-modal-note";
+    hint.textContent = "Run a report to see results.";
+    root.appendChild(hint);
+    return;
+  }
+
+  const activeBlocks = cbGetGoogleAdsDashboardSelectedBlocks();
+  const reportData = normalizedReport.data || {};
+
+  if (activeBlocks.includes("overview")) {
+    const cards = document.createElement("div");
+    cards.className = "cb-dashboard-cards";
+    const totals = reportData.overview || {};
+    const deltas = totals.deltas || null;
+    const formatDelta = (delta) => {
+      const pct = delta?.pct;
+      if (pct == null) return "—";
+      const n = Number(pct);
+      if (!Number.isFinite(n)) return "—";
+      const sign = n > 0 ? "+" : "";
+      return `${sign}${n}%`;
+    };
+
+    const cardItems = [
+      { title: "Cost", value: cbFormatMoney(totals.cost), delta: deltas ? formatDelta(deltas.cost) : null },
+      { title: "Clicks", value: cbFormatNumber(totals.clicks), delta: deltas ? formatDelta(deltas.clicks) : null },
+      {
+        title: "Impressions",
+        value: cbFormatNumber(totals.impressions),
+        delta: deltas ? formatDelta(deltas.impressions) : null,
+      },
+      { title: "CTR", value: cbFormatPercent(totals.ctr), delta: deltas ? formatDelta(deltas.ctr) : null },
+      { title: "Avg CPC", value: cbFormatMoney(totals.avgCpc), delta: deltas ? formatDelta(deltas.avgCpc) : null },
+      {
+        title: "Conversions",
+        value: totals.conversions == null ? "—" : cbFormatMoney(totals.conversions),
+        delta: deltas ? formatDelta(deltas.conversions) : null,
+      },
+      {
+        title: "Conv Value",
+        value: totals.convValue == null ? "—" : cbFormatMoney(totals.convValue),
+        delta: deltas ? formatDelta(deltas.convValue) : null,
+      },
+      { title: "ROAS", value: cbFormatRatio(totals.roas), delta: deltas ? formatDelta(deltas.roas) : null },
+      { title: "CPA", value: cbFormatMoney(totals.cpa), delta: deltas ? formatDelta(deltas.cpa) : null },
+    ];
+
+    cardItems.forEach((item) => {
+      const card = document.createElement("div");
+      card.className = "cb-dashboard-panel";
+      const t = document.createElement("p");
+      t.className = "cb-dashboard-card-title";
+      t.textContent = item.title;
+      const v = document.createElement("p");
+      v.className = "cb-dashboard-card-value";
+      v.textContent = item.value;
+      card.appendChild(t);
+      card.appendChild(v);
+      if (item.delta != null && normalizedReport.compare) {
+        const d = document.createElement("p");
+        d.className = "cb-dashboard-card-delta";
+        d.textContent = item.delta;
+        card.appendChild(d);
+      }
+      cards.appendChild(card);
+    });
+    root.appendChild(cards);
+  }
+
+  const rangePanel = document.createElement("div");
+  rangePanel.className = "cb-dashboard-panel";
+  const rangeTitle = document.createElement("h3");
+  rangeTitle.className = "cb-dashboard-panel-title";
+  rangeTitle.textContent = "Range";
+  rangePanel.appendChild(rangeTitle);
+  const rangeNote = document.createElement("p");
+  rangeNote.className = "cb-modal-note";
+  rangeNote.textContent = `${normalizedReport.range?.from || "—"} → ${normalizedReport.range?.to || "—"}`;
+  rangePanel.appendChild(rangeNote);
+  if (normalizedReport.compare) {
+    const compNote = document.createElement("p");
+    compNote.className = "cb-modal-note";
+    const modeLabel =
+      normalizedReport.compare.mode === "previous_year"
+        ? "Previous year"
+        : normalizedReport.compare.mode === "custom"
+        ? "Custom"
+        : "Previous period";
+    compNote.textContent = `Compare (${modeLabel}): ${normalizedReport.compare.from} → ${normalizedReport.compare.to}`;
+    rangePanel.appendChild(compNote);
+  }
+
+  if (activeBlocks.includes("series")) {
+    const grid = document.createElement("div");
+    grid.className = "cb-dashboard-grid";
+
+    const chartPanel = document.createElement("div");
+    chartPanel.className = "cb-dashboard-panel";
+    const chartTitle = document.createElement("h3");
+    chartTitle.className = "cb-dashboard-panel-title";
+    chartTitle.textContent = "Cost per day";
+    chartPanel.appendChild(chartTitle);
+    const chartHtml = document.createElement("div");
+    chartHtml.innerHTML = cbBuildGoogleAdsLineChartSvg(
+      reportData.series?.daily || [],
+      reportData.series?.compareDaily || null
+    );
+    chartPanel.appendChild(chartHtml);
+    grid.appendChild(chartPanel);
+
+    grid.appendChild(rangePanel);
+    root.appendChild(grid);
+  } else {
+    root.appendChild(rangePanel);
+  }
+
+  const tablesWrap = document.createElement("div");
+  tablesWrap.className = "cb-dashboard-tables";
+
+  const renderTable = (title, headers, rows, { note = null } = {}) => {
+    const panel = document.createElement("div");
+    panel.className = "cb-dashboard-panel";
+    const h = document.createElement("h3");
+    h.className = "cb-dashboard-panel-title";
+    h.textContent = title;
+    panel.appendChild(h);
+    if (note) {
+      const noteEl = document.createElement("p");
+      noteEl.className = "cb-modal-note";
+      noteEl.textContent = note;
+      panel.appendChild(noteEl);
+    }
+    if (!rows || !rows.length) {
+      const empty = document.createElement("p");
+      empty.className = "cb-modal-note";
+      empty.textContent = "No data.";
+      panel.appendChild(empty);
+      return panel;
+    }
+    const table = document.createElement("table");
+    table.className = "cb-dashboard-table";
+    const thead = document.createElement("thead");
+    const trh = document.createElement("tr");
+    headers.forEach((hdr) => {
+      const th = document.createElement("th");
+      th.textContent = hdr;
+      trh.appendChild(th);
+    });
+    thead.appendChild(trh);
+    table.appendChild(thead);
+    const tbody = document.createElement("tbody");
+    rows.forEach((cols) => {
+      const tr = document.createElement("tr");
+      cols.forEach((col) => {
+        const td = document.createElement("td");
+        if (col && col.nodeType) {
+          td.appendChild(col);
+        } else {
+          td.textContent = col == null ? "—" : String(col);
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    panel.appendChild(table);
+    return panel;
+  };
+
+  let tablesAdded = 0;
+
+  if (activeBlocks.includes("campaigns")) {
+    const rows = (reportData.campaigns?.rows || []).map((row) => {
+      const nameEl = document.createElement("div");
+      const titleNode = document.createElement("div");
+      titleNode.textContent = row.name || "—";
+      nameEl.appendChild(titleNode);
+      const metaParts = [];
+      if (row.channel) metaParts.push(row.channel);
+      if (row.status) metaParts.push(row.status);
+      if (metaParts.length) {
+        const metaNode = document.createElement("div");
+        metaNode.className = "cb-dashboard-muted";
+        metaNode.textContent = metaParts.join(" · ");
+        nameEl.appendChild(metaNode);
+      }
+      return [nameEl, cbFormatMoney(row.cost), cbFormatMoney(row.conversions), cbFormatRatio(row.roas)];
+    });
+    tablesWrap.appendChild(renderTable("Top campaigns", ["Campaign", "Cost", "Conversions", "ROAS"], rows));
+    tablesAdded += 1;
+  }
+
+  if (activeBlocks.includes("devices")) {
+    const rows = (reportData.devices?.rows || []).map((row) => [
+      row.device || "—",
+      cbFormatMoney(row.cost),
+      cbFormatMoney(row.conversions),
+      cbFormatRatio(row.roas),
+    ]);
+    tablesWrap.appendChild(renderTable("Devices", ["Device", "Cost", "Conversions", "ROAS"], rows));
+    tablesAdded += 1;
+  }
+
+  if (activeBlocks.includes("networks")) {
+    const rows = (reportData.networks?.rows || []).map((row) => [
+      row.network || "—",
+      cbFormatMoney(row.cost),
+      cbFormatMoney(row.conversions),
+    ]);
+    tablesWrap.appendChild(renderTable("Networks", ["Network", "Cost", "Conversions"], rows));
+    tablesAdded += 1;
+  }
+
+  if (activeBlocks.includes("search_terms")) {
+    const warning = reportData.search_terms?.warning
+      ? "Search terms not available for this account."
+      : null;
+    const rows = (reportData.search_terms?.rows || []).map((row) => [
+      row.term || "—",
+      cbFormatMoney(row.cost),
+      cbFormatMoney(row.conversions),
+    ]);
+    tablesWrap.appendChild(renderTable("Search terms", ["Term", "Cost", "Conversions"], rows, { note: warning }));
+    tablesAdded += 1;
+  }
+
+  if (activeBlocks.includes("keywords")) {
+    const warning = reportData.keywords?.warning ? "Keywords not available for this account." : null;
+    const rows = (reportData.keywords?.rows || []).map((row) => {
+      const kwEl = document.createElement("div");
+      const titleNode = document.createElement("div");
+      titleNode.textContent = row.keyword || "—";
+      kwEl.appendChild(titleNode);
+      if (row.matchType) {
+        const metaNode = document.createElement("div");
+        metaNode.className = "cb-dashboard-muted";
+        metaNode.textContent = row.matchType;
+        kwEl.appendChild(metaNode);
+      }
+      return [kwEl, cbFormatMoney(row.cost), cbFormatMoney(row.conversions)];
+    });
+    tablesWrap.appendChild(renderTable("Keywords", ["Keyword", "Cost", "Conversions"], rows, { note: warning }));
+    tablesAdded += 1;
+  }
+
+  if (tablesAdded) {
+    root.appendChild(tablesWrap);
+  }
+};
+
+const cbInitGoogleAdsDashboard = () => {
+  cbRenderGoogleAdsDashboard();
+};
+
+window.cbInitGoogleAdsDashboard = cbInitGoogleAdsDashboard;
+window.cbRenderGoogleAdsDashboard = cbRenderGoogleAdsDashboard;
 
 const cbHandleGoogleAdsConnect = async () => {
   const connector = CONNECTORS_CONFIG.find((c) => c.key === "googleads");
@@ -5883,19 +9679,230 @@ const cbHandleGoogleAdsDisconnect = async () => {
   const connector = CONNECTORS_CONFIG.find((c) => c.key === "googleads");
   if (!connector || !connector.apiBase) return;
   const { ok } = await cbFetchJson(`${connector.apiBase}/disconnect`, { method: "POST" });
-  if (ok) {
-    cbUpdateConnectorState("googleads", {
-      status: "disconnected",
-      customerId: null,
-      lastSyncAt: null,
-      lastError: null,
-    });
-  } else {
+	  if (ok) {
+	    cbUpdateConnectorState("googleads", {
+	      status: "disconnected",
+	      customerId: null,
+	      loginCustomerId: null,
+	      customerName: null,
+	      lastSyncAt: null,
+	      lastError: null,
+	    });
+	  } else {
     cbUpdateConnectorState("googleads", {
       status: "error",
       lastError: "Failed to disconnect Google Ads.",
     });
   }
+};
+
+const cbHandleGa4Connect = async () => {
+  const connector = CONNECTORS_CONFIG.find((c) => c.key === "ga4");
+  if (!connector || !connector.apiBase) return;
+  cbUpdateConnectorState("ga4", { lastError: null });
+  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  const params = new URLSearchParams();
+  if (ws) params.set("workspaceId", ws);
+  const { ok, status, json } = await cbFetchJson(
+    `${connector.apiBase}/auth/url${params.toString() ? `?${params.toString()}` : ""}`
+  );
+  if (ok && json?.url) {
+    window.location.href = json.url;
+    return;
+  }
+  if (status === 401) {
+    cbUpdateConnectorState("ga4", {
+      status: "error",
+      lastError: "Please sign in to connect GA4.",
+    });
+    return;
+  }
+  cbUpdateConnectorState("ga4", {
+    status: "error",
+    lastError: "We could not start GA4 connect. Please try again.",
+  });
+};
+
+const cbHandleGa4Disconnect = async () => {
+  const connector = CONNECTORS_CONFIG.find((c) => c.key === "ga4");
+  if (!connector || !connector.apiBase) return;
+  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  const { ok, status, json } = await cbFetchJson(`${connector.apiBase}/disconnect`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ workspaceId: ws }),
+  });
+  if (ok) {
+    cbUpdateConnectorState("ga4", {
+      status: "disconnected",
+      propertyId: null,
+      lastSyncAt: null,
+      lastError: null,
+      properties: [],
+    });
+  } else {
+    const message =
+      (json && (json.error || json.message)) ||
+      (status === 401 ? "Please sign in to disconnect GA4." : "Failed to disconnect GA4.");
+    cbUpdateConnectorState("ga4", {
+      status: "error",
+      lastError: message,
+    });
+  }
+};
+
+const cbDescribeGa4Error = (status, errorCode, message) => {
+  if (status === 401) return "Sign in required to access GA4 (401).";
+  const code = (errorCode || "").toString().trim();
+  const safeMsg = (message || "").toString().trim();
+  if (code === "not_connected") return "Connect GA4 first (not_connected).";
+  if (code === "missing_refresh_token")
+    return "GA4 is missing a refresh token (missing_refresh_token). Disconnect and reconnect.";
+  if (code === "invalid_grant")
+    return "Google authorization expired (invalid_grant). Disconnect and reconnect.";
+  if (code === "invalid_range") return "Select a valid date range (invalid_range).";
+  if (code === "invalid_compare_range") return "Select a valid compare range (invalid_compare_range).";
+  if (code === "insufficient_permissions")
+    return "Your Google account has no access to GA4 properties (insufficient_permissions).";
+  if (code === "api_not_enabled")
+    return "Google Analytics API is not enabled (api_not_enabled). Enable Analytics Admin + Data APIs.";
+  if (code === "quota_exceeded") return "Google Analytics quota exceeded (quota_exceeded). Please try again later.";
+  if (code === "rate_limited") return "Google Analytics rate limited (rate_limited). Please retry shortly.";
+  if (code === "property_not_set") return "Select a GA4 property first (property_not_set).";
+  return safeMsg || (code ? `GA4 request failed (${code}).` : "GA4 request failed.");
+};
+
+const cbLoadGa4Properties = async () => {
+  const connector = CONNECTORS_CONFIG.find((c) => c.key === "ga4");
+  if (!connector || !connector.apiBase) return;
+  cbConnectorDetailState.ga4Loading = true;
+  cbConnectorDetailState.ga4Error = null;
+  cbRenderConnectorDetail(connector);
+  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  const params = new URLSearchParams();
+  if (ws) params.set("workspaceId", ws);
+  const { ok, json, status } = await cbFetchJson(
+    `${connector.apiBase}/properties${params.toString() ? `?${params.toString()}` : ""}`
+  );
+  if (ok && json && Array.isArray(json.properties)) {
+    cbConnectorDetailState.ga4Properties = json.properties;
+    cbConnectorDetailState.ga4Error = null;
+  } else {
+    cbConnectorDetailState.ga4Properties = [];
+    const message =
+      (json && (json.message || json.error)) ||
+      (status === 401 ? "Please sign in to view GA4 properties." : "Unable to load GA4 properties.");
+    cbConnectorDetailState.ga4Error = cbDescribeGa4Error(status, json?.error, message);
+  }
+  cbConnectorDetailState.ga4Loading = false;
+  cbRenderConnectorDetail(connector);
+};
+
+const cbLoadGoogleAdsCustomers = async () => {
+  const connector = CONNECTORS_CONFIG.find((c) => c.key === "googleads");
+  if (!connector || !connector.apiBase) return;
+  cbConnectorDetailState.googleAdsLoading = true;
+  cbConnectorDetailState.googleAdsError = null;
+  cbRenderConnectorDetail(connector);
+  const { ok, json, status } = await cbFetchJson(`${connector.apiBase}/customers`);
+  if (ok && json && Array.isArray(json.customers)) {
+    cbConnectorDetailState.googleAdsCustomers = json.customers;
+    cbConnectorDetailState.googleAdsError = null;
+  } else {
+    cbConnectorDetailState.googleAdsCustomers = [];
+    const message =
+      (json && (json.error || json.message)) ||
+      (status === 401 ? "Please sign in to view Google Ads accounts." : "Unable to load Google Ads accounts.");
+    cbConnectorDetailState.googleAdsError = message;
+  }
+  cbConnectorDetailState.googleAdsLoading = false;
+  cbRenderConnectorDetail(connector);
+};
+
+const cbLoadGoogleAdsClients = async (managerId) => {
+  const connector = CONNECTORS_CONFIG.find((c) => c.key === "googleads");
+  if (!connector || !connector.apiBase) return;
+  const normalizedManagerId = (managerId || "").toString().trim();
+  if (!normalizedManagerId) {
+    cbConnectorDetailState.googleAdsClients = [];
+    cbConnectorDetailState.googleAdsClientsError = null;
+    cbConnectorDetailState.googleAdsClientsLoading = false;
+    cbRenderConnectorDetail(connector);
+    return;
+  }
+
+  cbConnectorDetailState.googleAdsClientsLoading = true;
+  cbConnectorDetailState.googleAdsClientsError = null;
+  cbRenderConnectorDetail(connector);
+
+  const params = new URLSearchParams({ managerId: normalizedManagerId });
+  const { ok, json, status } = await cbFetchJson(`${connector.apiBase}/customers/clients?${params.toString()}`);
+  if (ok && json && Array.isArray(json.clients)) {
+    cbConnectorDetailState.googleAdsClients = json.clients;
+    cbConnectorDetailState.googleAdsClientsError = null;
+  } else {
+    cbConnectorDetailState.googleAdsClients = [];
+    const message =
+      (json && (json.message || json.error)) ||
+      (status === 401
+        ? "Please sign in to view Google Ads clients."
+        : "Unable to load Google Ads clients.");
+    cbConnectorDetailState.googleAdsClientsError = message;
+  }
+
+  cbConnectorDetailState.googleAdsClientsLoading = false;
+  cbRenderConnectorDetail(connector);
+};
+
+const cbSaveGoogleAdsCustomer = async (customerId, loginCustomerId) => {
+  const connector = CONNECTORS_CONFIG.find((c) => c.key === "googleads");
+  if (!connector || !connector.apiBase || !customerId) return;
+  cbConnectorDetailState.googleAdsLoading = true;
+  cbConnectorDetailState.googleAdsError = null;
+  cbRenderConnectorDetail(connector);
+	  const { ok, json, status } = await cbFetchJson(`${connector.apiBase}/customer`, {
+	    method: "POST",
+	    headers: { "Content-Type": "application/json" },
+	    body: JSON.stringify({ customerId, loginCustomerId }),
+	  });
+	  if (ok) {
+	    cbUpdateConnectorState("googleads", { customerId, loginCustomerId, status: "connected" });
+	    cbConnectorDetailState.googleAdsError = null;
+	    cbRefreshConnectorStatuses();
+	  } else {
+	    const message =
+	      (json && (json.error || json.message)) ||
+      (status === 401 ? "Please sign in to save Google Ads account." : "Unable to save Google Ads account.");
+    cbConnectorDetailState.googleAdsError = message;
+  }
+  cbConnectorDetailState.googleAdsLoading = false;
+  cbRenderConnectorDetail(connector);
+};
+
+const cbSaveGa4Property = async (propertyId) => {
+  const connector = CONNECTORS_CONFIG.find((c) => c.key === "ga4");
+  if (!connector || !connector.apiBase || !propertyId) return;
+  cbConnectorDetailState.ga4Loading = true;
+  cbConnectorDetailState.ga4Error = null;
+  cbRenderConnectorDetail(connector);
+  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  const { ok, json, status } = await cbFetchJson(`${connector.apiBase}/property`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ propertyId, workspaceId: ws }),
+  });
+  if (ok) {
+    cbUpdateConnectorState("ga4", { propertyId, status: "connected" });
+    cbConnectorDetailState.ga4Error = null;
+    cbRefreshConnectorStatuses();
+  } else {
+    const message =
+      (json && (json.error || json.message)) ||
+      (status === 401 ? "Please sign in to save GA4 property." : "Unable to save GA4 property.");
+    cbConnectorDetailState.ga4Error = cbDescribeGa4Error(status, json?.error, message);
+  }
+  cbConnectorDetailState.ga4Loading = false;
+  cbRenderConnectorDetail(connector);
 };
 
 const cbGetConnectorIconText = (connector) => {
@@ -5936,6 +9943,15 @@ const cbHandleConnectorAction = (connector) => {
       return;
     }
     cbHandleGoogleAdsConnect();
+    return;
+  }
+  if (key === "ga4") {
+    const state = cbConnectorState.ga4 || {};
+    if (state.status === "connected") {
+      cbHandleGa4Disconnect();
+      return;
+    }
+    cbHandleGa4Connect();
     return;
   }
   if (status === "available" || status === "planned") {
@@ -6022,6 +10038,14 @@ const cbRenderConnectorCard = (connector) => {
       actionBtn.textContent = "Connect Google Ads";
       actionBtn.addEventListener("click", () => cbHandleGoogleAdsConnect());
     }
+  } else if (connector.key === "ga4") {
+    if (status === "connected") {
+      actionBtn.textContent = "Disconnect";
+      actionBtn.addEventListener("click", () => cbHandleGa4Disconnect());
+    } else {
+      actionBtn.textContent = "Connect GA4";
+      actionBtn.addEventListener("click", () => cbHandleGa4Connect());
+    }
   } else if (status === "available" || status === "planned") {
     actionBtn.textContent = "Connect";
     actionBtn.addEventListener("click", () => cbHandleConnectorAction(connector));
@@ -6046,11 +10070,20 @@ const cbRenderConnectorCard = (connector) => {
 
   if (connector.key === "googleads") {
     if (status === "connected") {
+      const chooseBtn = document.createElement("button");
+      chooseBtn.type = "button";
+      chooseBtn.className = "btn btn-secondary cb-connector-action";
+      chooseBtn.textContent = "Choose account";
+      chooseBtn.addEventListener("click", (event) => {
+        event?.preventDefault?.();
+        cbOpenConnectorDetail(connector.key);
+      });
       const disconnectBtn = document.createElement("button");
       disconnectBtn.type = "button";
       disconnectBtn.className = "btn btn-secondary cb-connector-action";
       disconnectBtn.textContent = "Disconnect";
       disconnectBtn.addEventListener("click", () => cbHandleGoogleAdsDisconnect());
+      actions.appendChild(chooseBtn);
       actions.appendChild(disconnectBtn);
     } else {
       const placeholder = document.createElement("span");
@@ -6058,6 +10091,22 @@ const cbRenderConnectorCard = (connector) => {
       placeholder.textContent = "Requires Google Ads OAuth";
       actions.appendChild(placeholder);
     }
+  } else if (connector.key === "ga4" && status === "connected") {
+    const chooseBtn = document.createElement("button");
+    chooseBtn.type = "button";
+    chooseBtn.className = "btn btn-secondary cb-connector-action";
+    chooseBtn.textContent = "Choose property";
+    chooseBtn.addEventListener("click", (event) => {
+      event?.preventDefault?.();
+      cbOpenConnectorDetail(connector.key);
+    });
+    const disconnectBtn = document.createElement("button");
+    disconnectBtn.type = "button";
+    disconnectBtn.className = "btn btn-secondary cb-connector-action";
+    disconnectBtn.textContent = "Disconnect";
+    disconnectBtn.addEventListener("click", () => cbHandleGa4Disconnect());
+    actions.appendChild(chooseBtn);
+    actions.appendChild(disconnectBtn);
   }
 
   const detailsBtn = document.createElement("button");
@@ -6074,7 +10123,23 @@ const cbRenderConnectorCard = (connector) => {
     if (state.customerId) {
       const meta = document.createElement("p");
       meta.className = "cb-connector-meta";
-      meta.textContent = `Customer ID: ${state.customerId}${state.lastSyncAt ? ` · Last sync: ${state.lastSyncAt}` : ""}`;
+      meta.textContent = `Customer ID: ${state.customerId}${state.lastSyncAt ? ` \u00b7 Last sync: ${state.lastSyncAt}` : ""}`;
+      card.appendChild(meta);
+    }
+    if (state.lastError) {
+      const err = document.createElement("p");
+      err.className = "cb-connector-error";
+      err.textContent = state.lastError;
+      card.appendChild(err);
+    }
+  } else if (connector.key === "ga4") {
+    if (state.propertyId || state.lastSyncAt) {
+      const meta = document.createElement("p");
+      meta.className = "cb-connector-meta";
+      const parts = [];
+      if (state.propertyId) parts.push(`Property: ${state.propertyId}`);
+      if (state.lastSyncAt) parts.push(`Last sync: ${state.lastSyncAt}`);
+      meta.textContent = parts.join(" \u00b7 ");
       card.appendChild(meta);
     }
     if (state.lastError) {
@@ -6091,6 +10156,151 @@ const cbRenderConnectorCard = (connector) => {
   return card;
 };
 
+const cbRenderCouncilPerformanceCard = () => {
+  const container =
+    (shellElements.councilPerformanceCard && shellElements.councilPerformanceCard instanceof HTMLElement
+      ? shellElements.councilPerformanceCard
+      : document.getElementById("cb-council-performance-card"));
+  if (!container) return;
+
+  const state = cbCouncilPerformanceState;
+  const range = state.range || "billing_period";
+  const ranges = [
+    { value: "billing_period", label: "Billing period" },
+    { value: "last_7_days", label: "Last 7 days" },
+    { value: "last_30_days", label: "Last 30 days" },
+  ];
+
+  const formatNumber = (value) => {
+    if (typeof value !== "number" || Number.isNaN(value)) return "0";
+    return value.toLocaleString(undefined);
+  };
+
+  const formatMoney = (value) => {
+    const num = typeof value === "number" && !Number.isNaN(value) ? value : 0;
+    return `$${num.toFixed(2)}`;
+  };
+
+  const summary = state.summary || {};
+  const totalTokens =
+    summary.totalTokens ?? summary.total_tokens ?? summary.tokens ?? summary.total ?? 0;
+  const totalCost =
+    summary.totalCostUsd ?? summary.total_cost_usd ?? summary.costUsd ?? summary.cost_usd ?? 0;
+
+  const rowsRaw =
+    summary.byCouncil ||
+    summary.by_council ||
+    summary.councils ||
+    summary.agents ||
+    [];
+  const rows = Array.isArray(rowsRaw) ? [...rowsRaw] : [];
+  rows.sort((a, b) => {
+    const costA = a?.costUsd ?? a?.cost_usd ?? a?.cost ?? 0;
+    const costB = b?.costUsd ?? b?.cost_usd ?? b?.cost ?? 0;
+    return costB - costA;
+  });
+
+  const rangeSelector = document.createElement("div");
+  rangeSelector.className = "cb-council-range-toggle";
+  rangeSelector.innerHTML = ranges
+    .map(
+      (opt) => `
+      <button type="button"
+        class="cb-council-range-toggle__option${
+          opt.value === range ? " cb-council-range-toggle__option--active" : ""
+        }"
+        data-range="${opt.value}"
+      >
+        ${opt.label}
+      </button>
+    `
+    )
+    .join("");
+
+  const body = document.createElement("div");
+  body.className = "cb-account-card-body";
+
+  if (state.loading && !state.loaded) {
+    body.innerHTML = `<p class="cb-text-muted">Loading council performance...</p>`;
+  } else if (state.error) {
+    body.innerHTML = `<p class="cb-text-muted">Could not load council performance right now.</p>`;
+  } else if (!totalTokens && !totalCost && rows.length === 0) {
+    body.innerHTML = `<p class="cb-text-muted">No council usage recorded yet. Run a council to see tokens and cost here.</p>`;
+  } else {
+    const tableRows = rows
+      .map((row) => {
+        const slug = row.councilSlug || row.slug || row.id || "Council";
+        const tokens =
+          row.totalTokens ?? row.total_tokens ?? row.tokens ?? row.total ?? 0;
+        const cost = row.costUsd ?? row.cost_usd ?? row.cost ?? 0;
+        return `<div class="cb-council-performance-table__row">
+          <span>${slug}</span>
+          <span>${formatNumber(tokens)}</span>
+          <span>${formatMoney(cost)}</span>
+        </div>`;
+      })
+      .join("");
+
+    body.innerHTML = `
+      <div class="cb-council-performance-summary">
+        <div class="cb-council-performance-metric">
+          <p class="cb-council-performance-label">Total council tokens</p>
+          <p class="cb-council-performance-value">${formatNumber(totalTokens)}</p>
+        </div>
+        <div class="cb-council-performance-metric">
+          <p class="cb-council-performance-label">Total council cost</p>
+          <p class="cb-council-performance-value">${formatMoney(totalCost)}</p>
+        </div>
+      </div>
+      ${
+        rows.length
+          ? `<div class="cb-council-performance-table">
+              <div class="cb-council-performance-table__header">
+                <span>Council</span>
+                <span>Tokens</span>
+                <span>Cost</span>
+              </div>
+              <div class="cb-council-performance-table__body">
+                ${tableRows}
+              </div>
+            </div>`
+          : ""
+      }
+    `;
+  }
+
+  container.innerHTML = "";
+  const header = document.createElement("header");
+  header.className = "cb-account-card-header";
+  const headerWrap = document.createElement("div");
+  const subtitle = document.createElement("p");
+  subtitle.className = "cb-account-card-subtitle";
+  subtitle.textContent = "Performance Council";
+  const title = document.createElement("h3");
+  title.textContent = "Council performance";
+  headerWrap.appendChild(subtitle);
+  headerWrap.appendChild(title);
+  header.appendChild(headerWrap);
+  header.appendChild(rangeSelector);
+
+  container.appendChild(header);
+  container.appendChild(body);
+
+  const rangeButtons = container.querySelectorAll(".cb-council-range-toggle__option");
+  rangeButtons.forEach((btn) => {
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      const selected = btn.getAttribute("data-range") || "billing_period";
+      if (selected === cbCouncilPerformanceState.range) return;
+      cbCouncilPerformanceState.range = selected;
+      cbCouncilPerformanceState.loading = true;
+      cbCouncilPerformanceState.error = null;
+      cbRenderCouncilPerformanceCard();
+      cbFetchCouncilPerformanceSummary(selected);
+    });
+  });
+};
+
 const cbRenderConnectorsPanel = () => {
   const container =
     (shellElements.connectorsCategories && shellElements.connectorsCategories instanceof HTMLElement
@@ -6098,9 +10308,6 @@ const cbRenderConnectorsPanel = () => {
       : document.getElementById("cb-connectors-categories"));
   if (!container) return;
   container.innerHTML = "";
-
-  // Billing summary card at top of connectors view
-  cbRenderBillingSummaryCard(container);
 
   CONNECTOR_CATEGORIES.forEach((category) => {
     const connectors = CONNECTORS_CONFIG.filter(
@@ -6139,6 +10346,122 @@ const cbRenderConnectorsPanel = () => {
 // --- Agent detail (mock) ---
 const cbAgentDetailState = {
   agent: null,
+  googleAdsSummary: null,
+  googleAdsSummaryLoading: false,
+  googleAdsSummaryError: null,
+  ga4Summary: null,
+  ga4SummaryLoading: false,
+  ga4SummaryError: null,
+};
+
+const CB_PROVIDER_MODEL_MATRIX = {
+  auto: {
+    label: "Auto",
+    models: [
+      "gpt-4o",
+      "claude-3.5-sonnet",
+      "gemini-2.5-pro",
+      "gemini-2.5-flash",
+      "grok-2",
+      "copilot-pro",
+    ],
+  },
+  chatgpt: {
+    label: "ChatGPT",
+    models: [
+      "gpt-4o",
+      "gpt-4o-mini",
+      "gpt-4.1",
+      "gpt-4.1-mini",
+      "o1",
+      "o1-mini",
+    ],
+  },
+  claude: {
+    label: "Claude",
+    models: [
+      "claude-3.5-sonnet",
+      "claude-3.5-haiku",
+      "claude-3-opus",
+      "claude-3-sonnet",
+    ],
+  },
+  gemini: {
+    label: "Gemini",
+    models: [
+      "gemini-1.5-pro",
+      "gemini-1.5-flash",
+      "gemini-2.5-pro",
+      "gemini-2.5-flash",
+      "gemini-2.0-pro",
+      "gemini-2.0-flash",
+    ],
+  },
+  grok: {
+    label: "Grok",
+    models: [
+      "grok-2",
+      "grok-2-mini",
+      "grok-vision-beta",
+    ],
+  },
+  copilot: {
+    label: "Copilot",
+    models: [
+      "copilot-pro",
+      "copilot-vision",
+      "copilot-enterprise",
+    ],
+  },
+};
+
+const cbGetProviderConfig = (providerValue) => {
+  const key = String(providerValue || "auto").toLowerCase();
+  return CB_PROVIDER_MODEL_MATRIX[key] || CB_PROVIDER_MODEL_MATRIX.auto;
+};
+
+const cbRenderModelList = (listEl, models) => {
+  if (!listEl) return;
+  listEl.innerHTML = "";
+  models.forEach((model) => {
+    const option = document.createElement("option");
+    option.value = model;
+    listEl.appendChild(option);
+  });
+};
+
+const cbUpdateModelSearch = (providerValue, searchInput, listEl) => {
+  if (!searchInput || !listEl) return;
+  const config = cbGetProviderConfig(providerValue);
+  const placeholder =
+    providerValue === "auto" ? "Search models" : `Search ${config.label} models`;
+  cbRenderModelList(listEl, config.models);
+  searchInput.placeholder = placeholder;
+  const prevProvider = searchInput.dataset.provider || "";
+  if (prevProvider !== providerValue) {
+    searchInput.value = "";
+  }
+  searchInput.dataset.provider = providerValue;
+};
+
+const cbInitModelMenu = () => {
+  const providerSelect = document.getElementById("cb-model-selector");
+  const searchInput = document.getElementById("cb-model-search");
+  const listEl = document.getElementById("cb-model-search-list");
+  if (!providerSelect || !searchInput || !listEl) return;
+  if (providerSelect.dataset.modelMenuBound === "true") return;
+  const update = () => {
+    cbUpdateModelSearch(providerSelect.value || "auto", searchInput, listEl);
+    cbUpdateChatHeader();
+    cbActivateContextFromUi("model-provider-change");
+  };
+  providerSelect.addEventListener("change", update);
+  searchInput.addEventListener("input", () => {
+    cbUpdateChatHeader();
+    cbQueueActivateContextFromUi("model-hint-change");
+  });
+  update();
+  providerSelect.dataset.modelMenuBound = "true";
 };
 
 const cbPopulateAgentModelSelect = (selectEl) => {
@@ -6242,9 +10565,165 @@ const cbRenderAgentDetail = (agent) => {
 
         row.appendChild(name);
         row.appendChild(status);
-        connectorsEl.appendChild(row);
-      });
+      connectorsEl.appendChild(row);
+    });
+  }
+}
+
+  const metricsEl = document.getElementById("cb-agent-detail-metrics");
+  if (metricsEl) {
+    metricsEl.innerHTML = "";
+    const isBusiness =
+      cbNormalizeAgentWorkspace(agent.workspace) === "business";
+    const usesGoogleAds =
+      Array.isArray(agent.connectors) &&
+      agent.connectors.includes("googleads");
+    const usesGa4 =
+      Array.isArray(agent.connectors) && agent.connectors.includes("ga4");
+    const appendHtmlBlock = (html) => {
+      if (!html) return;
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html.trim();
+      const el = tmp.firstElementChild;
+      if (el) metricsEl.appendChild(el);
+    };
+
+    if (isBusiness && usesGoogleAds) {
+      const googleState = cbConnectorState.googleads || {};
+      const googleStatus = googleState.status || "unknown";
+      const hasCustomer = !!googleState.customerId;
+      if (googleStatus !== "connected") {
+        appendHtmlBlock(
+          '<p class="cb-modal-note">Connect Google Ads in Account &amp; Billing \u2192 Connectors to see performance here.</p>'
+        );
+      } else if (!hasCustomer) {
+        appendHtmlBlock(
+          '<p class="cb-modal-note">Choose a primary Google Ads account in Account &amp; Billing \u2192 Connectors to see performance metrics here.</p>'
+        );
+      } else if (cbAgentDetailState.googleAdsSummaryLoading) {
+        appendHtmlBlock(
+          '<p class="cb-modal-note">Loading Google Ads summary.</p>'
+        );
+      } else if (cbAgentDetailState.googleAdsSummaryError) {
+        appendHtmlBlock(
+          `<p class="cb-form-error">${cbAgentDetailState.googleAdsSummaryError}</p>`
+        );
+      } else if (cbAgentDetailState.googleAdsSummary) {
+        const s = cbAgentDetailState.googleAdsSummary;
+        const currency = s?.currency || "USD";
+        const formatValue = (val, decimals = 0) =>
+          typeof val === "number" && Number.isFinite(val)
+            ? val.toFixed(decimals)
+            : "-";
+        const formatPercent = (val) =>
+          typeof val === "number" && Number.isFinite(val)
+            ? `${(val * 100).toFixed(2)}%`
+            : "-";
+        appendHtmlBlock(`
+          <section class="cb-account-card">
+            <header class="cb-account-card-header">
+              <div>
+                <p class="cb-account-card-subtitle">Google Ads</p>
+                <h3>Last 7 days</h3>
+              </div>
+            </header>
+            <div class="cb-enterprise-inline">
+              <div>
+                <p class="cb-modal-note">Cost</p>
+                <p class="cb-modal-value">${formatValue(s.cost, 2)} ${currency}</p>
+              </div>
+              <div>
+                <p class="cb-modal-note">Conversions</p>
+                <p class="cb-modal-value">${formatValue(s.conversions)}</p>
+              </div>
+              <div>
+                <p class="cb-modal-note">CPA</p>
+                <p class="cb-modal-value">${formatValue(s.cpa, 2)} ${currency}</p>
+              </div>
+              <div>
+                <p class="cb-modal-note">Clicks</p>
+                <p class="cb-modal-value">${formatValue(s.clicks)}</p>
+              </div>
+              <div>
+                <p class="cb-modal-note">Impressions</p>
+                <p class="cb-modal-value">${formatValue(s.impressions)}</p>
+              </div>
+              <div>
+                <p class="cb-modal-note">CTR</p>
+                <p class="cb-modal-value">${formatPercent(s.ctr)}</p>
+              </div>
+              <div>
+                <p class="cb-modal-note">Conv. rate</p>
+                <p class="cb-modal-value">${formatPercent(s.conversionRate)}</p>
+              </div>
+              <div>
+                <p class="cb-modal-note">Avg CPC</p>
+                <p class="cb-modal-value">${formatValue(s.avgCpc, 2)} ${currency}</p>
+              </div>
+            </div>
+          </section>
+        `);
+      }
     }
+
+    if (isBusiness && usesGa4) {
+      const ga4State = cbConnectorState.ga4 || {};
+      const ga4Status = ga4State.status || "unknown";
+      const hasProperty = !!ga4State.propertyId;
+      if (ga4Status !== "connected" || !hasProperty) {
+        appendHtmlBlock(
+          '<p class="cb-modal-note">Connect GA4 and choose a property in Account &amp; Billing \u2192 Connectors to see traffic metrics here.</p>'
+        );
+      } else if (cbAgentDetailState.ga4SummaryLoading) {
+        appendHtmlBlock(
+          '<p class="cb-modal-note">Loading GA4 metrics\u2026</p>'
+        );
+      } else if (cbAgentDetailState.ga4SummaryError) {
+        appendHtmlBlock(
+          `<p class="cb-form-error">${cbAgentDetailState.ga4SummaryError}</p>`
+        );
+	      } else if (cbAgentDetailState.ga4Summary) {
+	        const s = cbAgentDetailState.ga4Summary;
+	        const formatValue = (val, decimals = 0) =>
+	          typeof val === "number" && Number.isFinite(val)
+	            ? val.toFixed(decimals)
+	            : "-";
+	        const rangeLabel =
+	          s.dateRange === "last_30_days" ? "Last 30 days" : "Last 7 days";
+	        appendHtmlBlock(`
+	          <section class="cb-account-card">
+	            <header class="cb-account-card-header">
+	              <div>
+	                <p class="cb-account-card-subtitle">GA4</p>
+	                <h3>${rangeLabel}</h3>
+	              </div>
+	            </header>
+	            <div class="cb-enterprise-inline">
+	              <div>
+	                <p class="cb-modal-note">Sessions</p>
+	                <p class="cb-modal-value">${formatValue(s.sessions)}</p>
+	              </div>
+	              <div>
+	                <p class="cb-modal-note">Total users</p>
+	                <p class="cb-modal-value">${formatValue(s.totalUsers)}</p>
+	              </div>
+	              <div>
+	                <p class="cb-modal-note">Active users</p>
+	                <p class="cb-modal-value">${formatValue(s.activeUsers)}</p>
+	              </div>
+	              <div>
+	                <p class="cb-modal-note">Conversions</p>
+	                <p class="cb-modal-value">${formatValue(s.conversions)}</p>
+	              </div>
+	              <div>
+	                <p class="cb-modal-note">Purchase revenue</p>
+	                <p class="cb-modal-value">${formatValue(s.purchaseRevenue, 2)}</p>
+	              </div>
+	            </div>
+	          </section>
+	        `);
+	      }
+	    }
   }
 
   if (usageEl) {
@@ -6264,13 +10743,6 @@ const cbRenderAgentDetail = (agent) => {
       usageEl.appendChild(tr);
     });
   }
-
-  // Business Pulse (only for CMO/CFO)
-  if (agent.key === "cmo" || agent.key === "cfo") {
-    cbLoadBusinessPulse(agent);
-  } else {
-    cbResetBusinessPulse();
-  }
 };
 
 function cbOpenAgentDetail(workspaceKey, agentKey) {
@@ -6282,404 +10754,113 @@ function cbOpenAgentDetail(workspaceKey, agentKey) {
     return;
   }
   cbAgentDetailState.agent = agent;
+  cbAgentDetailState.googleAdsSummary = null;
+  cbAgentDetailState.googleAdsSummaryError = null;
+  cbAgentDetailState.googleAdsSummaryLoading = false;
+  cbAgentDetailState.ga4Summary = null;
+  cbAgentDetailState.ga4SummaryError = null;
+  cbAgentDetailState.ga4SummaryLoading = false;
+
+  const isBusiness =
+    cbNormalizeAgentWorkspace(agent.workspace) === "business";
+  const usesGoogleAds =
+    Array.isArray(agent.connectors) &&
+    agent.connectors.includes("googleads");
+  const usesGa4 =
+    Array.isArray(agent.connectors) && agent.connectors.includes("ga4");
+  const googleState = cbConnectorState.googleads || {};
+  const googleStatus = googleState.status || "unknown";
+  const hasGoogleCustomer = !!googleState.customerId;
+  const ga4State = cbConnectorState.ga4 || {};
+  const shouldFetchGoogleAds =
+    isBusiness && usesGoogleAds && googleStatus === "connected" && hasGoogleCustomer;
+  const shouldFetchGa4 =
+    isBusiness && usesGa4 && ga4State.status === "connected" && ga4State.propertyId;
+
+  if (shouldFetchGoogleAds) {
+    cbAgentDetailState.googleAdsSummaryLoading = true;
+  }
+  if (shouldFetchGa4) {
+    cbAgentDetailState.ga4SummaryLoading = true;
+  }
+
   cbRenderAgentDetail(agent);
   openModal("cb-agent-detail-modal");
+
+  if (shouldFetchGoogleAds) {
+    (async () => {
+      try {
+        const summary = await cbFetchGoogleAdsSummary(cbCurrentWorkspaceId);
+        if (summary && !summary.error) {
+          cbAgentDetailState.googleAdsSummary = summary;
+          cbAgentDetailState.googleAdsSummaryError = null;
+        } else if (summary && summary.error === "customer_not_set") {
+          cbAgentDetailState.googleAdsSummary = null;
+          cbAgentDetailState.googleAdsSummaryError =
+            "Choose a primary Google Ads account in Account & Billing \u2192 Connectors to see performance metrics here.";
+        } else {
+          cbAgentDetailState.googleAdsSummary = null;
+          cbAgentDetailState.googleAdsSummaryError =
+            "Could not load Google Ads summary. Please try again later.";
+        }
+      } catch (err) {
+        cbAgentDetailState.googleAdsSummary = null;
+        cbAgentDetailState.googleAdsSummaryError =
+          "Could not load Google Ads summary. Please try again later.";
+      } finally {
+        cbAgentDetailState.googleAdsSummaryLoading = false;
+        cbRenderAgentDetail(agent);
+      }
+    })();
+  }
+
+	  if (shouldFetchGa4) {
+	    (async () => {
+	      try {
+	        const summary = await cbFetchGa4Summary(cbCurrentWorkspaceId);
+	        if (summary && !summary.error) {
+	          cbAgentDetailState.ga4Summary = summary;
+	          cbAgentDetailState.ga4SummaryError = null;
+	        } else if (summary && summary.error === "property_not_set") {
+	          cbAgentDetailState.ga4Summary = null;
+	          cbAgentDetailState.ga4SummaryError =
+	            "Choose a GA4 property in Account & Billing → Connectors to see traffic metrics here.";
+	        } else {
+	          cbAgentDetailState.ga4Summary = null;
+	          cbAgentDetailState.ga4SummaryError = cbDescribeGa4Error(
+	            summary?.status || null,
+	            summary?.error || "ga4_api_error",
+	            summary?.message || null
+	          );
+	        }
+	      } catch (err) {
+	        cbAgentDetailState.ga4Summary = null;
+	        cbAgentDetailState.ga4SummaryError =
+	          "Could not load GA4 metrics. Please try again later.";
+	      } finally {
+	        cbAgentDetailState.ga4SummaryLoading = false;
+	        cbRenderAgentDetail(agent);
+	      }
+	    })();
+	  }
 }
 
 window.cbOpenAgentDetail = cbOpenAgentDetail;
 
-// --- Business Pulse (Ads + GA4) ---
-const cbBusinessPulseState = {
-  loading: false,
-  ads: { available: false, error: null, data: null },
-  ga4: { available: false, error: null, data: null },
-};
-
-const cbFormatMoney = (value, currency = "") => {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "—";
-  const label = currency || "";
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency: label || "USD",
-      maximumFractionDigits: 2,
-    }).format(n);
-  } catch (_err) {
-    const rounded = Math.round(n * 100) / 100;
-    return `${rounded}${label ? ` ${label}` : ""}`;
-  }
-};
-
-const cbFormatPercent = (value) => {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return "—";
-  return `${(n * 100).toFixed(2)}%`;
-};
-
-const cbEnsureBusinessPulseContainer = () => {
-  let container = document.getElementById("cb-business-pulse");
-  if (container) return container;
-  container = document.createElement("div");
-  container.id = "cb-business-pulse";
-  container.className = "cb-business-pulse";
-  const modal = document.getElementById("cb-agent-detail-modal");
-  const modalContent = modal ? modal.querySelector(".cb-modal-content") || modal : null;
-  if (modalContent) {
-    modalContent.appendChild(container);
-  } else {
-    document.body.appendChild(container);
-  }
-  return container;
-};
-
-const cbRenderBusinessPulse = (state, agent) => {
-  const container = cbEnsureBusinessPulseContainer();
-  if (!agent || (agent.key !== "cmo" && agent.key !== "cfo")) {
-    container.hidden = true;
-    return;
-  }
-  container.hidden = false;
-
-  const ads = state.ads || {};
-  const ga4 = state.ga4 || {};
-  const hasAds = ads.available && ads.data;
-  const hasGa4 = ga4.available && ga4.data;
-  const mode = hasAds && hasGa4 ? "full" : hasAds || hasGa4 ? "partial" : "empty";
-  const badgeLabel =
-    mode === "full" ? "Full data" : mode === "partial" ? "Partial data" : "No data";
-
-  const buildAdsColumns = () => {
-    if (!hasAds) {
-      return `
-        <div class="cb-bp-column cb-bp-column--wide">
-          <div class="cb-bp-hint">
-            Connect Google Ads and choose a primary account in <strong>Account & Billing → Connectors</strong> to see spend & performance here.
-          </div>
-        </div>
-      `;
-    }
-    const d = ads.data || {};
-    return `
-      <div class="cb-bp-column">
-        <div class="cb-bp-label">Spend</div>
-        <div class="cb-bp-value">${cbFormatMoney(d.cost, d.currency || d.currencyCode)}</div>
-        <div class="cb-bp-label">Clicks</div>
-        <div class="cb-bp-value">${d.clicks ?? "—"}</div>
-        <div class="cb-bp-label">Impressions</div>
-        <div class="cb-bp-value">${d.impressions ?? "—"}</div>
-      </div>
-      <div class="cb-bp-column">
-        <div class="cb-bp-label">CTR</div>
-        <div class="cb-bp-value">${cbFormatPercent(d.ctr)}</div>
-        <div class="cb-bp-label">Conv. rate</div>
-        <div class="cb-bp-value">${cbFormatPercent(d.conversionRate)}</div>
-        <div class="cb-bp-label">CPA</div>
-        <div class="cb-bp-value">${cbFormatMoney(d.cpa, d.currency || d.currencyCode)}</div>
-        <div class="cb-bp-label">Avg CPC</div>
-        <div class="cb-bp-value">${cbFormatMoney(d.avgCpc, d.currency || d.currencyCode)}</div>
-      </div>
-    `;
-  };
-
-  const buildGa4Column = () => {
-    if (!hasGa4) {
-      return `
-        <div class="cb-bp-column">
-          <div class="cb-bp-hint">
-            Connect GA4 in <strong>Account & Billing → Connectors</strong> to see sessions, conversions and revenue.
-          </div>
-        </div>
-      `;
-    }
-    const g = ga4.data || {};
-    const currency = g.currency || g.currencyCode;
-    return `
-      <div class="cb-bp-column">
-        <div class="cb-bp-label">Sessions</div>
-        <div class="cb-bp-value">${g.sessions ?? "—"}</div>
-        <div class="cb-bp-label">GA4 conversions</div>
-        <div class="cb-bp-value">${g.conversions ?? "—"}</div>
-        <div class="cb-bp-label">Revenue</div>
-        <div class="cb-bp-value">${g.revenue ? cbFormatMoney(g.revenue, currency) : "—"}</div>
-      </div>
-    `;
-  };
-
-  const loading = state.loading;
-  const bodyContent = loading
-    ? `<div class="cb-bp-loading">Loading Business Pulse...</div>`
-    : `${buildAdsColumns()}${buildGa4Column()}`;
-
-  container.innerHTML = `
-    <div class="cb-card cb-business-pulse">
-      <div class="cb-card-header">
-        <div class="cb-card-title">Business Pulse – Last 7 days</div>
-        <div class="cb-badge cb-badge--${mode}">${badgeLabel}</div>
-      </div>
-      <div class="cb-card-body cb-bp-body">
-        ${bodyContent}
-      </div>
-    </div>
-  `;
-};
-
-const cbLoadBusinessPulse = async (agent) => {
-  if (!agent || (agent.key !== "cmo" && agent.key !== "cfo")) {
-    cbResetBusinessPulse();
-    return;
-  }
-  cbBusinessPulseState.loading = true;
-  cbRenderBusinessPulse(cbBusinessPulseState, agent);
-
-  const workspaceId = cbCurrentWorkspaceId;
-  const adsConn = cbConnectorState.googleads || {};
-  const ga4Conn = cbConnectorState.ga4 || {};
-
-  const adsState = { available: false, error: null, data: null };
-  if (adsConn.status === "connected" && adsConn.customerId) {
-    try {
-      const { ok, json } = await cbFetchJson(
-        `${API_BASE}/connectors/googleads/summary?workspaceId=${encodeURIComponent(workspaceId)}&dateRange=last_7_days`
-      );
-      if (ok && json && !json.error) {
-        adsState.available = true;
-        adsState.data = json;
-      } else if (json && json.error === "customer_not_set") {
-        adsState.error = "customer_not_set";
-      } else {
-        adsState.error = json?.error || "unknown_error";
-      }
-    } catch (_err) {
-      adsState.error = "network_error";
-    }
-  } else {
-    adsState.error = "not_configured";
-  }
-
-  const ga4State = { available: false, error: null, data: null };
-  if (ga4Conn.status === "connected" && ga4Conn.propertyId) {
-    try {
-      const { ok, json } = await cbFetchJson(
-        `${API_BASE}/connectors/ga4/summary?workspaceId=${encodeURIComponent(workspaceId)}&dateRange=last_7_days`
-      );
-      if (ok && json && !json.error) {
-        ga4State.available = true;
-        ga4State.data = json;
-      } else {
-        ga4State.error = json?.error || "unknown_error";
-      }
-    } catch (_err) {
-      ga4State.error = "network_error";
-    }
-  } else {
-    ga4State.error = "not_configured";
-  }
-
-  cbBusinessPulseState.loading = false;
-  cbBusinessPulseState.ads = adsState;
-  cbBusinessPulseState.ga4 = ga4State;
-  cbRenderBusinessPulse(cbBusinessPulseState, agent);
-};
-
-const cbResetBusinessPulse = () => {
-  cbBusinessPulseState.loading = false;
-  cbBusinessPulseState.ads = { available: false, error: null, data: null };
-  cbBusinessPulseState.ga4 = { available: false, error: null, data: null };
-  const container = document.getElementById("cb-business-pulse");
-  if (container) container.hidden = true;
-};
-
-// --- Billing summary card (Account & Billing → Connectors) ---
-function cbRenderBillingSummaryCard(container) {
-  const target =
-    container ||
-    (shellElements.connectorsCategories && shellElements.connectorsCategories instanceof HTMLElement
-      ? shellElements.connectorsCategories
-      : document.getElementById("cb-connectors-categories"));
-  if (!target) return;
-
-  let card = document.getElementById("cb-billing-summary-card");
-  if (!card) {
-    card = document.createElement("div");
-    card.id = "cb-billing-summary-card";
-    target.appendChild(card);
-  }
-  card.className = "cb-card cb-billing-card";
-
-  if (!cbIsAuthenticated()) {
-    card.innerHTML = `
-      <div class="cb-card-header">
-        <div class="cb-card-title">Plan & Usage</div>
-      </div>
-      <div class="cb-card-body">
-        <div class="cb-text-muted">You need to sign in to view billing information.</div>
-      </div>
-    `;
-    target.appendChild(card);
-    return;
-  }
-
-  const state = cbBillingSummaryState;
-  const summary = cbLatestBillingSummary;
-
-  if (state.error && state.error !== "unauthorized") {
-    card.innerHTML = `
-      <div class="cb-card-header">
-        <div class="cb-card-title">Plan & Usage</div>
-      </div>
-      <div class="cb-card-body">
-        <div class="cb-text-muted">Could not load billing summary. Please try again later.</div>
-      </div>
-    `;
-    target.appendChild(card);
-    return;
-  }
-
-  if (state.loading || !summary) {
-    card.innerHTML = `
-      <div class="cb-card-header">
-        <div class="cb-card-title">Plan & Usage</div>
-      </div>
-      <div class="cb-card-body">
-        <div class="cb-skeleton cb-skeleton-line"></div>
-        <div class="cb-skeleton cb-skeleton-line"></div>
-        <div class="cb-skeleton cb-skeleton-bar"></div>
-      </div>
-    `;
-    target.appendChild(card);
-    return;
-  }
-
-  const planCode = cbNormalizePlanCode(summary.plan);
-  const planLabel =
-    summary.plan?.label || PLAN_DEFINITIONS[planCode]?.label || planCode || "Plan";
-  const usageMetrics = cbDeriveUsageMetrics(summary);
-  const total =
-    usageMetrics.tokensIncluded ??
-    summary.usage?.monthlyTokens ??
-    summary.plan?.tokensPerMonth ??
-    0;
-  const used =
-    usageMetrics.tokensUsed ??
-    summary.usage?.tokensUsed ??
-    summary.usage?.usedTokens ??
-    0;
-  const remaining =
-    usageMetrics.tokensRemaining ??
-    (typeof total === "number" ? Math.max(total - used, 0) : null);
-  const pctUsed =
-    typeof total === "number" && total > 0
-      ? Math.min(100, Math.max(0, (used / total) * 100))
-      : 0;
-
-  let usageClass = "cb-usage-bar--ok";
-  if (pctUsed >= 100) {
-    usageClass = "cb-usage-bar--danger";
-  } else if (pctUsed >= 80) {
-    usageClass = "cb-usage-bar--warning";
-  }
-  const barColor =
-    usageClass === "cb-usage-bar--danger"
-      ? "#e74c3c"
-      : usageClass === "cb-usage-bar--warning"
-      ? "#f39c12"
-      : "#4a90e2";
-
-  const periodText = cbFormatDateRange(
-    summary?.usage?.periodStart || summary?.usage?.currentPeriodStart,
-    summary?.usage?.periodEnd || summary?.usage?.currentPeriodEnd
-  );
-
-  const stripeStatus = (summary?.stripe?.status || "").toString().toLowerCase();
-  let stripeText = "No Stripe subscription linked. Using default plan.";
-  if (stripeStatus === "active") {
-    stripeText = "Stripe subscription: Active.";
-  } else if (stripeStatus === "canceled") {
-    stripeText = "Stripe subscription: Canceled. Using fallback plan.";
-  } else if (stripeStatus === "trialing") {
-    stripeText = "Stripe subscription: Trialing.";
-  }
-  const portalUrl = summary?.stripe?.customerPortalUrl || summary?.stripe?.customer_portal_url;
-
-  card.innerHTML = `
-    <div class="cb-card-header">
-      <div class="cb-card-title">Plan & Usage</div>
-      <div class="cb-badge cb-badge-plan">${planLabel}</div>
-    </div>
-    <div class="cb-card-body">
-      <div class="cb-billing-row">
-        <div class="cb-billing-label">Included</div>
-        <div class="cb-billing-value">${cbFormatNumber(total)} cbT / period</div>
-      </div>
-      <div class="cb-billing-row">
-        <div class="cb-billing-label">Current period</div>
-        <div class="cb-billing-value">${periodText}</div>
-      </div>
-      <div class="cb-usage-bar-wrapper">
-        <div class="cb-usage-bar ${usageClass}" style="background:#eee;height:8px;border-radius:4px;overflow:hidden;">
-          <div class="cb-usage-bar-fill" style="width:${pctUsed}%;height:100%;background:${barColor};"></div>
-        </div>
-        <div class="cb-usage-text">
-          Used: ${cbFormatNumber(used)} / ${cbFormatNumber(total)} cbT (${cbFormatPercentText(
-            pctUsed
-          )})<br/>
-          Remaining: ${
-            remaining !== null && typeof remaining === "number" ? cbFormatNumber(remaining) : "—"
-          } cbT
-        </div>
-      </div>
-      ${
-        pctUsed >= 100
-          ? `<div class="cb-warning-text">Limit reached for this period. New messages are blocked until the next reset.</div>`
-          : pctUsed >= 80
-          ? `<div class="cb-warning-text">You have used more than 80% of your cbT for this period.</div>`
-          : ""
-      }
-      <div class="cb-billing-stripe">
-        <div class="cb-billing-stripe-text">${stripeText}</div>
-        ${
-          portalUrl && stripeStatus === "active"
-            ? `<a href="${portalUrl}" class="cb-button cb-button--ghost" target="_blank" rel="noopener noreferrer">Manage subscription</a>`
-            : ""
-        }
-      </div>
-    </div>
-  `;
-
-  target.appendChild(card);
-}
-
-const cbLoadBillingSummaryCard = async () => {
-  if (cbBillingSummaryState.loading) return;
-  if (!cbIsAuthenticated()) {
-    cbBillingSummaryState.error = "unauthorized";
-    cbBillingSummaryState.loading = false;
-    cbRenderBillingSummaryCard();
-    return;
-  }
-  if (!cbAccountBillingNeedsRefresh() && cbLatestBillingSummary) {
-    cbBillingSummaryState.error = null;
-    cbRenderBillingSummaryCard();
-    return;
-  }
-  cbBillingSummaryState.loading = true;
-  cbBillingSummaryState.error = null;
-  cbRenderBillingSummaryCard();
-  try {
-    await fetchBillingSummary();
-  } catch (_err) {
-    cbBillingSummaryState.error = "server_error";
-  } finally {
-    cbBillingSummaryState.loading = false;
-    cbRenderBillingSummaryCard();
-  }
-};
-
-
 // --- Connector detail (mock) ---
 const cbConnectorDetailState = {
   connector: null,
+  ga4Properties: [],
+  ga4Loading: false,
+  ga4Error: null,
+  googleAdsCustomers: [],
+  googleAdsLoading: false,
+  googleAdsError: null,
+  googleAdsClients: [],
+  googleAdsClientsLoading: false,
+  googleAdsClientsError: null,
+  googleAdsSelectedManagerId: null,
+  googleAdsSelectedClientId: null,
 };
 
 const cbRenderConnectorDetail = (connector) => {
@@ -6718,6 +10899,15 @@ const cbRenderConnectorDetail = (connector) => {
       } else {
         connectBtn.textContent = "Connect";
         connectBtn.onclick = () => cbHandleGoogleAdsConnect();
+      }
+    } else if (connector.key === "ga4") {
+      connectBtn.disabled = false;
+      if (effectiveStatus === "connected") {
+        connectBtn.textContent = "Disconnect";
+        connectBtn.onclick = () => cbHandleGa4Disconnect();
+      } else {
+        connectBtn.textContent = "Connect";
+        connectBtn.onclick = () => cbHandleGa4Connect();
       }
     } else {
       connectBtn.disabled = connector.status !== "available";
@@ -6764,19 +10954,252 @@ const cbRenderConnectorDetail = (connector) => {
     }
   }
 
-  if (accountLine) {
-    if (connector.key === "googleads") {
-      const parts = [];
+	  if (accountLine) {
+	    accountLine.innerHTML = "";
+	    if (connector.key === "googleads") {
+	      if (effectiveStatus !== "connected") {
+	        accountLine.textContent = "Connect Google Ads first to select an account.";
+	        return;
+	      }
+	      const parts = [];
+	      if (state.lastError) {
+	        accountLine.textContent = state.lastError;
+	        return;
+	      }
+	      const hasLoginCustomerId =
+	        state.loginCustomerId && state.customerId && String(state.loginCustomerId) !== String(state.customerId);
+	      if (hasLoginCustomerId) parts.push(`Manager ID: ${state.loginCustomerId}`);
+	      if (state.customerId) parts.push(`Customer ID: ${state.customerId}`);
+	      if (state.lastSyncAt) parts.push(`Last sync: ${state.lastSyncAt}`);
+	      const current = document.createElement("p");
+	      current.className = "cb-modal-note";
+	      current.textContent = parts.length ? parts.join(" \u00b7 ") : "Account: -";
+	      accountLine.appendChild(current);
+	      if (effectiveStatus === "connected") {
+	        const controlsWrap = document.createElement("div");
+	        controlsWrap.className = "cb-enterprise-inline";
+
+	        const managerSelectWrap = document.createElement("div");
+	        const managerLabel = document.createElement("div");
+	        managerLabel.className = "cb-modal-label";
+	        managerLabel.textContent = "Manager account (MCC)";
+
+	        const managerSelect = document.createElement("select");
+	        managerSelect.id = "cb-googleads-manager-select";
+	        managerSelect.className = "cb-input";
+	        managerSelect.disabled = !!cbConnectorDetailState.googleAdsLoading;
+
+	        const customersLoading = cbConnectorDetailState.googleAdsLoading;
+	        const customers = Array.isArray(cbConnectorDetailState.googleAdsCustomers)
+	          ? cbConnectorDetailState.googleAdsCustomers
+	          : [];
+	        const managerDefaultOpt = document.createElement("option");
+	        managerDefaultOpt.value = "";
+	        managerDefaultOpt.textContent = customersLoading
+	          ? "Loading accounts..."
+	          : "Select a manager account";
+	        managerSelect.appendChild(managerDefaultOpt);
+	        customers.forEach((cust) => {
+	          const opt = document.createElement("option");
+	          opt.value = cust.customerId || cust.customer_id || "";
+	          const label = cust.descriptiveName || cust.descriptive_name || opt.value;
+	          opt.textContent = label ? `${label} (${opt.value})` : opt.value;
+	          managerSelect.appendChild(opt);
+	        });
+
+	        const selectedManagerId =
+	          cbConnectorDetailState.googleAdsSelectedManagerId ||
+	          (state.loginCustomerId ? String(state.loginCustomerId) : state.customerId ? String(state.customerId) : "");
+	        if (selectedManagerId) managerSelect.value = selectedManagerId;
+
+	        managerSelect.addEventListener("change", () => {
+	          const nextManagerId = managerSelect.value || null;
+	          cbConnectorDetailState.googleAdsSelectedManagerId = nextManagerId;
+	          cbConnectorDetailState.googleAdsSelectedClientId = null;
+	          cbConnectorDetailState.googleAdsClients = [];
+	          cbConnectorDetailState.googleAdsClientsError = null;
+	          cbLoadGoogleAdsClients(nextManagerId);
+	        });
+
+	        managerSelectWrap.appendChild(managerLabel);
+	        managerSelectWrap.appendChild(managerSelect);
+
+	        const clientSelectWrap = document.createElement("div");
+	        const clientLabel = document.createElement("div");
+	        clientLabel.className = "cb-modal-label";
+	        clientLabel.textContent = "Client under manager";
+
+	        const clientSelect = document.createElement("select");
+	        clientSelect.id = "cb-googleads-client-select";
+	        clientSelect.className = "cb-input";
+
+	        const managerId = selectedManagerId || "";
+	        const clientsLoading = cbConnectorDetailState.googleAdsClientsLoading;
+	        const clients = Array.isArray(cbConnectorDetailState.googleAdsClients)
+	          ? cbConnectorDetailState.googleAdsClients
+	          : [];
+
+	        clientSelect.disabled = !managerId || clientsLoading;
+
+	        const clientDefaultOpt = document.createElement("option");
+	        clientDefaultOpt.value = "";
+	        if (!managerId) {
+	          clientDefaultOpt.textContent = "Select a manager first";
+	        } else if (clientsLoading) {
+	          clientDefaultOpt.textContent = "Loading clients...";
+	        } else if (!clients.length) {
+	          clientDefaultOpt.textContent = "No clients found";
+	        } else {
+	          clientDefaultOpt.textContent = "Select a client (optional)";
+	        }
+	        clientSelect.appendChild(clientDefaultOpt);
+
+	        clients.forEach((client) => {
+	          const opt = document.createElement("option");
+	          opt.value = client.customerId || client.customer_id || "";
+	          const label = client.descriptiveName || client.descriptive_name || opt.value;
+	          opt.textContent = label ? `${label} (${opt.value})` : opt.value;
+	          clientSelect.appendChild(opt);
+	        });
+
+	        const selectedClientId = cbConnectorDetailState.googleAdsSelectedClientId || "";
+	        if (selectedClientId) clientSelect.value = selectedClientId;
+
+	        clientSelect.addEventListener("change", () => {
+	          cbConnectorDetailState.googleAdsSelectedClientId = clientSelect.value || null;
+	        });
+
+	        clientSelectWrap.appendChild(clientLabel);
+	        clientSelectWrap.appendChild(clientSelect);
+
+	        const saveBtn = document.createElement("button");
+	        saveBtn.type = "button";
+	        saveBtn.className = "btn btn-primary cb-modal-primary-button";
+	        saveBtn.textContent = cbConnectorDetailState.googleAdsLoading ? "Saving..." : "Save";
+	        const canSave = !!managerId && !cbConnectorDetailState.googleAdsLoading && !clientsLoading;
+	        saveBtn.disabled = !canSave;
+	        saveBtn.addEventListener("click", () => {
+	          const selectedManager = (cbConnectorDetailState.googleAdsSelectedManagerId || "").trim();
+	          if (!selectedManager) return;
+	          const selectedClient = (cbConnectorDetailState.googleAdsSelectedClientId || "").trim();
+	          const customerId = selectedClient || selectedManager;
+	          const loginCustomerId = selectedClient && selectedClient !== selectedManager ? selectedManager : null;
+	          cbSaveGoogleAdsCustomer(customerId, loginCustomerId);
+	        });
+
+	        controlsWrap.appendChild(managerSelectWrap);
+	        controlsWrap.appendChild(clientSelectWrap);
+	        controlsWrap.appendChild(saveBtn);
+	        accountLine.appendChild(controlsWrap);
+
+	        if (cbConnectorDetailState.googleAdsClientsError) {
+	          const err = document.createElement("p");
+	          err.className = "cb-form-error";
+	          err.textContent = cbConnectorDetailState.googleAdsClientsError;
+	          accountLine.appendChild(err);
+	        }
+
+	        if (cbConnectorDetailState.googleAdsError) {
+	          const err = document.createElement("p");
+	          err.className = "cb-form-error";
+	          err.textContent = cbConnectorDetailState.googleAdsError;
+	          accountLine.appendChild(err);
+	        } else if (!customersLoading && !customers.length) {
+	          const none = document.createElement("p");
+	          none.className = "cb-modal-note";
+	          none.textContent = "No accounts found. Check your Google Ads access.";
+	          accountLine.appendChild(none);
+	        }
+	      }
+	    } else if (connector.key === "ga4") {
       if (state.lastError) {
         accountLine.textContent = state.lastError;
         return;
       }
-      if (state.customerId) parts.push(`Customer ID: ${state.customerId}`);
-      if (state.lastSyncAt) parts.push(`Last sync: ${state.lastSyncAt}`);
-      accountLine.textContent = parts.length ? parts.join(" · ") : "Account: —";
+	      if (state.propertyId) {
+	        const current = document.createElement("p");
+	        current.className = "cb-modal-note";
+	        const props = Array.isArray(cbConnectorDetailState.ga4Properties)
+	          ? cbConnectorDetailState.ga4Properties
+	          : [];
+	        const match = props.find((p) => {
+	          const pid = p?.propertyId || p?.id || p?.property_id || null;
+	          return pid && String(pid) === String(state.propertyId);
+	        });
+	        const displayName = match?.displayName || match?.name || null;
+	        const label = displayName ? `${displayName} (${state.propertyId})` : state.propertyId;
+	        current.textContent = `Property: ${label}${state.lastSyncAt ? ` · Last sync: ${state.lastSyncAt}` : ""}`;
+	        accountLine.appendChild(current);
+	      } else {
+	        const hint = document.createElement("p");
+	        hint.className = "cb-modal-note";
+        hint.textContent = "No property selected yet.";
+        accountLine.appendChild(hint);
+      }
+      if (effectiveStatus === "connected") {
+        const propsWrap = document.createElement("div");
+        propsWrap.className = "cb-enterprise-inline";
+
+        const select = document.createElement("select");
+        select.id = "cb-ga4-property-select";
+        select.className = "cb-input";
+        select.disabled = !!cbConnectorDetailState.ga4Loading;
+        const loading = cbConnectorDetailState.ga4Loading;
+        const properties = Array.isArray(cbConnectorDetailState.ga4Properties)
+          ? cbConnectorDetailState.ga4Properties
+          : [];
+        const defaultOpt = document.createElement("option");
+        defaultOpt.value = "";
+        defaultOpt.textContent = loading ? "Loading properties..." : "Select a property";
+        select.appendChild(defaultOpt);
+        properties.forEach((prop) => {
+          const opt = document.createElement("option");
+          opt.value = prop.propertyId || prop.id || prop.property_id || "";
+          const label = prop.displayName || prop.name || opt.value;
+          opt.textContent = label ? `${label} (${opt.value})` : opt.value;
+          select.appendChild(opt);
+        });
+	        if (state.propertyId) select.value = state.propertyId;
+	
+	        const saveBtn = document.createElement("button");
+	        saveBtn.type = "button";
+	        saveBtn.className = "btn btn-primary";
+	        saveBtn.textContent = cbConnectorDetailState.ga4Loading ? "Saving..." : "Save";
+	        const updateSaveState = () => {
+	          saveBtn.disabled = cbConnectorDetailState.ga4Loading || !select.value;
+	        };
+	        updateSaveState();
+	        select.addEventListener("change", updateSaveState);
+	        saveBtn.addEventListener("click", () => {
+	          const value = select.value;
+	          if (!value) return;
+	          cbSaveGa4Property(value);
+	        });
+
+        propsWrap.appendChild(select);
+        propsWrap.appendChild(saveBtn);
+        accountLine.appendChild(propsWrap);
+
+        if (cbConnectorDetailState.ga4Error) {
+          const err = document.createElement("p");
+          err.className = "cb-form-error";
+          err.textContent = cbConnectorDetailState.ga4Error;
+          accountLine.appendChild(err);
+        } else if (!loading && !properties.length) {
+          const none = document.createElement("p");
+          none.className = "cb-modal-note";
+          none.textContent = "No properties found. Check your GA4 access.";
+          accountLine.appendChild(none);
+        }
+      } else {
+        const hint = document.createElement("p");
+        hint.className = "cb-modal-note";
+        hint.textContent = "Connect GA4 first to select a property.";
+        accountLine.appendChild(hint);
+      }
     } else {
       accountLine.textContent =
-        connector.category === "agency" ? "Account / MCC: —" : "Account: —";
+        connector.category === "agency" ? "Account / MCC: -" : "Account: -";
     }
   }
 };
@@ -6787,8 +11210,37 @@ function cbOpenConnectorDetail(connectorKey) {
     console.warn("[CB_CONNECTOR_DETAIL] Connector not found", connectorKey);
     return;
   }
+  cbConnectorDetailState.ga4Properties = [];
+  cbConnectorDetailState.ga4Error = null;
+  cbConnectorDetailState.ga4Loading = false;
+  cbConnectorDetailState.googleAdsCustomers = [];
+  cbConnectorDetailState.googleAdsError = null;
+  cbConnectorDetailState.googleAdsLoading = false;
+  cbConnectorDetailState.googleAdsClients = [];
+  cbConnectorDetailState.googleAdsClientsError = null;
+  cbConnectorDetailState.googleAdsClientsLoading = false;
+  cbConnectorDetailState.googleAdsSelectedManagerId = null;
+  cbConnectorDetailState.googleAdsSelectedClientId = null;
   cbConnectorDetailState.connector = connector;
   cbRenderConnectorDetail(connector);
+  if (connector.key === "ga4") {
+    const state = cbConnectorState.ga4 || {};
+    if (state.status === "connected") {
+      cbLoadGa4Properties();
+    }
+	  } else if (connector.key === "googleads") {
+	    const state = cbConnectorState.googleads || {};
+	    if (state.status === "connected") {
+	      const selectedManagerId = state.loginCustomerId || state.customerId || null;
+	      cbConnectorDetailState.googleAdsSelectedManagerId = selectedManagerId ? String(selectedManagerId) : null;
+	      cbConnectorDetailState.googleAdsSelectedClientId =
+	        state.loginCustomerId && state.customerId ? String(state.customerId) : null;
+	      cbLoadGoogleAdsCustomers();
+	      if (selectedManagerId) {
+	        cbLoadGoogleAdsClients(selectedManagerId);
+	      }
+	    }
+	  }
   openModal("cb-connector-detail-modal");
 }
 
@@ -6903,9 +11355,12 @@ function cbRenderAccountBilling(summary, { loading = false, error = null } = {})
   }
 
   if (planNextChargeEl) {
-    const nextCharge = cbFormatFriendlyDate(summary?.stripe?.currentPeriodEnd);
-    if (nextCharge) {
-      planNextChargeEl.textContent = `Next charge on ${nextCharge}`;
+    const periodText = cbFormatPeriodRange(
+      summary?.usage?.periodStart || summary?.usage?.period_start,
+      summary?.usage?.periodEnd || summary?.usage?.period_end
+    );
+    if (periodText) {
+      planNextChargeEl.textContent = `Current period: ${periodText}`;
       planNextChargeEl.hidden = false;
     } else {
       planNextChargeEl.textContent = "";
@@ -6934,13 +11389,35 @@ function cbRenderAccountBilling(summary, { loading = false, error = null } = {})
       typeof tokensRemaining === "number"
         ? formatTokens(Math.max(0, tokensRemaining))
         : "n/a";
-    usageEl.textContent = `Used: ${usedText} – Remaining: ${remainingText}`;
+    const pctUsed = tokensIncluded
+      ? Math.min(100, Math.max(0, (tokensUsed / tokensIncluded) * 100))
+      : null;
+    const pctLabel = pctUsed !== null && Number.isFinite(pctUsed) ? ` (${pctUsed.toFixed(1)}%)` : "";
+    usageEl.textContent = `Used: ${usedText}${tokensIncluded ? ` / ${formatTokens(tokensIncluded)}` : ""} cbT${pctLabel} · Remaining: ${remainingText}`;
   }
   if (progressFill) {
-    progressFill.style.width = `${Math.round((progressRatio || 0) * 100)}%`;
+    const pct = Math.round((progressRatio || 0) * 100);
+    progressFill.style.width = `${pct}%`;
+    progressFill.classList.remove("is-warning", "is-danger");
+    if (pct >= 100) {
+      progressFill.classList.add("is-danger");
+    } else if (pct >= 80) {
+      progressFill.classList.add("is-warning");
+    }
   }
   if (warningEl) {
-    warningEl.hidden = !showLowTokens;
+    const pct = Math.round((progressRatio || 0) * 100);
+    if (pct >= 100) {
+      warningEl.textContent =
+        "Limit reached for this period. New messages are blocked until the next reset.";
+      warningEl.hidden = false;
+    } else if (pct >= 80) {
+      warningEl.textContent =
+        "You have used more than 80% of your cbT for this period.";
+      warningEl.hidden = false;
+    } else {
+      warningEl.hidden = true;
+    }
   }
 
   const formatLimitLine = (currentValue, limitValue) => {
@@ -7043,8 +11520,7 @@ const cbAccountBillingNeedsRefresh = () => {
 const cbOpenAccountBilling = async ({ view = "overview" } = {}) => {
   cbSetAccountView(view);
   cbRenderConnectorsPanel();
-  cbRefreshConnectorStatuses();
-  cbLoadBillingSummaryCard();
+   cbRefreshConnectorStatuses();
   openModal("cb-account-billing");
   cbRenderAccountBilling(cbLatestBillingSummary, {
     loading: cbAccountBillingState.loading || !cbLatestBillingSummary,
@@ -7184,23 +11660,49 @@ const cbHandleConnectorReturn = async () => {
     const params = new URLSearchParams(window.location.search || "");
     const connector = (params.get("connector") || "").toLowerCase();
     const status = (params.get("status") || "").toLowerCase();
+    const errorCode = (params.get("error") || "").trim();
     const message = params.get("message") || "";
-    if (connector !== "googleads") return;
+    if (connector !== "googleads" && connector !== "ga4") return;
 
     params.delete("connector");
     params.delete("status");
+    params.delete("error");
     params.delete("message");
     const newQuery = params.toString();
     const newUrl = `${window.location.pathname}${newQuery ? `?${newQuery}` : ""}${window.location.hash}`;
     window.history.replaceState({}, "", newUrl);
 
+    const isGoogleAds = connector === "googleads";
+    const connectorLabel = isGoogleAds ? "Google Ads" : "GA4";
     if (status === "success") {
-      cbShowBillingToast("success", "Google Ads was connected successfully.");
+      cbShowBillingToast("success", `${connectorLabel} was connected successfully.`);
       await cbRefreshConnectorStatuses();
     } else if (status === "error") {
-      cbShowBillingToast("cancel", "We could not connect Google Ads. Please try again.");
-      if (message) {
-        console.error("[CONNECTOR_GOOGLE_ADS]", message);
+      let toastMessage = `We could not connect ${connectorLabel}${errorCode ? ` (${errorCode})` : ""}. Please try again.`;
+      if (errorCode === "not_configured") {
+        toastMessage = `${connectorLabel} is not configured on the server (not_configured).`;
+	      } else if (errorCode === "missing_code") {
+	        toastMessage = `Google did not return an authorization code (missing_code). Please try again.`;
+	      } else if (errorCode === "token_exchange_failed") {
+	        toastMessage = `Google token exchange failed (token_exchange_failed). Please try again.`;
+	      } else if (errorCode === "storage_failed") {
+	        toastMessage = `${connectorLabel} connected at Google, but the server could not save the token (storage_failed). Please try again.`;
+	      } else if (errorCode === "missing_refresh_token") {
+	        toastMessage = `Google did not return a refresh token (missing_refresh_token). Please try again (and make sure you grant consent).`;
+	      } else if (errorCode === "invalid_grant") {
+	        toastMessage = `Google returned invalid_grant (invalid_grant). Please try again; if it persists, verify the OAuth redirect URI configuration.`;
+	      } else if (errorCode === "access_denied") {
+	        toastMessage = `Authorization was cancelled (access_denied).`;
+	      } else if (errorCode === "redirect_uri_mismatch") {
+	        toastMessage = `Redirect URI mismatch (redirect_uri_mismatch). Please confirm the authorized redirect URI.`;
+	      }
+      cbShowBillingToast("cancel", toastMessage);
+
+      const logPayload = {};
+      if (errorCode) logPayload.error = errorCode;
+      if (message) logPayload.message = message;
+      if (Object.keys(logPayload).length > 0) {
+        console.error(isGoogleAds ? "[CONNECTOR_GOOGLE_ADS]" : "[CONNECTOR_GA4]", logPayload);
       }
       await cbRefreshConnectorStatuses();
     }
@@ -7603,6 +12105,21 @@ const setupCouncilControls = () => {
     });
     button.dataset.councilBound = "true";
   }
+  const agentsButton =
+    shellElements.councilAgentsButton || document.getElementById("cb-council-agents-btn");
+  if (agentsButton && agentsButton.dataset.councilAgentsBound !== "true") {
+    agentsButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      const url = cbBuildAgentsDirectoryUrl({ includeWorkspace: true });
+      if (typeof cbOnCouncilModalClose === "function") {
+        cbOnCouncilModalClose();
+      } else if (typeof closeModal === "function") {
+        closeModal("cb-council-popover", { silentFocus: true });
+      }
+      window.location.href = url;
+    });
+    agentsButton.dataset.councilAgentsBound = "true";
+  }
   cbRenderCouncilList();
   cbInitCouncilChip();
   cbSyncCouncilUI();
@@ -7617,6 +12134,82 @@ const cbEnsureAgentsViewInitialized = () => {
   if (cbIsAuthenticated() && !cbAgentsState.registryLoaded) {
     cbFetchAgentsRegistry();
   }
+};
+
+const cbDashboardRouterState = {
+  bound: false,
+  current: "chat",
+};
+
+const cbNormalizeDashboardViewParam = (value) => {
+  const v = (value || "").toString().trim().toLowerCase();
+  if (v === "ga4") return "ga4";
+  if (v === "googleads") return "googleads";
+  if (v === "agents") return "agents";
+  return "chat";
+};
+
+const cbViewParamToMainView = (param) => {
+  const view = cbNormalizeDashboardViewParam(param);
+  if (view === "ga4") return "ga4-dashboard";
+  if (view === "googleads") return "googleads-dashboard";
+  if (view === "agents") return "agents";
+  return "chat";
+};
+
+const cbUpdateSidebarViewHighlight = (activeParam) => {
+  const normalized = cbNormalizeDashboardViewParam(activeParam);
+  const buttons = document.querySelectorAll("[data-sidebar-view]");
+  buttons.forEach((btn) => {
+    const target = cbNormalizeDashboardViewParam(btn.dataset.sidebarView);
+    const isActive = target === normalized;
+    btn.classList.toggle("is-active", isActive);
+  });
+
+  const connectorsToggle = shellElements.connectorsToggle || document.getElementById("cb-connectors-toggle");
+  const connectorsActive = normalized === "ga4" || normalized === "googleads";
+  if (connectorsToggle) {
+    connectorsToggle.classList.toggle("is-active", connectorsActive);
+  }
+
+  const agentsButton =
+    shellElements.agentsButton || document.querySelector("[data-sidebar-agents]");
+  if (agentsButton) {
+    agentsButton.classList.toggle("is-active", normalized === "agents");
+  }
+};
+
+const cbApplyDashboardView = (viewParam) => {
+  const normalized = cbNormalizeDashboardViewParam(viewParam);
+  const mainView = cbViewParamToMainView(normalized);
+  cbDashboardRouterState.current = normalized;
+  cbSwitchMainView(mainView);
+  cbUpdateSidebarViewHighlight(normalized);
+  if (normalized === "ga4" && typeof cbInitGa4Dashboard === "function") {
+    cbInitGa4Dashboard();
+  } else if (normalized === "googleads" && typeof cbInitGoogleAdsDashboard === "function") {
+    cbInitGoogleAdsDashboard();
+  }
+};
+
+const cbSetDashboardView = (viewParam, { replace = false } = {}) => {
+  const normalized = cbNormalizeDashboardViewParam(viewParam);
+  const params = new URLSearchParams(window.location.search || "");
+  if (normalized === "chat") {
+    params.delete("view");
+  } else {
+    params.set("view", normalized);
+  }
+  const newQuery = params.toString();
+  const newUrl = `${window.location.pathname}${newQuery ? `?${newQuery}` : ""}${window.location.hash || ""}`;
+  window.history[replace ? "replaceState" : "pushState"]({}, "", newUrl);
+  cbApplyDashboardView(normalized);
+};
+
+const cbSyncDashboardViewFromUrl = () => {
+  const params = new URLSearchParams(window.location.search || "");
+  const view = params.get("view");
+  cbApplyDashboardView(view);
 };
 
 const cbSwitchMainView = (view) => {
@@ -7709,12 +12302,27 @@ const initCoolBitsUI = () => {
   setupSidebarInteractions();
   syncWorkspaceShell();
   setupCouncilControls();
+  cbInitModelMenu();
+  cbEnsurePublicAgentsRegistry().then(() => cbRenderCouncilList());
   setupMainTabs();
   cbRenderCouncilBar();
+  cbUpdateChatHeader();
+  cbUpdateComposerSendState();
+  cbLoadActiveContext().catch((error) => console.warn("[ACTIVE_CONTEXT] init failed", error));
+
+  if (!cbDashboardRouterState.bound) {
+    window.addEventListener("popstate", cbSyncDashboardViewFromUrl);
+    cbDashboardRouterState.bound = true;
+  }
+  cbSyncDashboardViewFromUrl();
 };
 
 const renderMessages = () => {
   if (!elements.messages) return;
+  cbBindChatScrollToBottomButton();
+  const scrollContainer = cbGetChatScrollContainer();
+  const shouldAutoScroll = cbChatForceScrollToBottom || cbIsChatNearBottom(scrollContainer, 140);
+  cbChatForceScrollToBottom = false;
   elements.messages.innerHTML = "";
 
   if (!messages.length) {
@@ -7725,6 +12333,11 @@ const renderMessages = () => {
       ? "Start a new chat from the sidebar to begin."
       : "No conversation yet. Share your idea to begin.";
     elements.messages.appendChild(placeholder);
+    if (shouldAutoScroll) {
+      scrollToBottom();
+    } else {
+      cbUpdateChatScrollToBottomButton();
+    }
     return;
   }
 
@@ -7762,7 +12375,11 @@ const renderMessages = () => {
     elements.messages.appendChild(bubble);
   });
 
-  scrollToBottom();
+  if (shouldAutoScroll) {
+    scrollToBottom();
+  } else {
+    cbUpdateChatScrollToBottomButton();
+  }
 };
 
 function cbRenderCouncilBar() {
@@ -7886,6 +12503,7 @@ const addMessage = (role, content, { persistHistory = true } = {}) => {
     }
   }
   saveHistory();
+  cbChatForceScrollToBottom = true;
   renderMessages();
 };
 
@@ -7901,6 +12519,12 @@ async function sendMessage(prefilledValue) {
   }
 
   if (!cbRequireAuthForChat("send-message")) {
+    return;
+  }
+
+  if (cbActiveContextState.status !== "active") {
+    showComposerError("Select agent/model and wait for green status before sending.");
+    cbUpdateComposerSendState();
     return;
   }
 
@@ -7973,7 +12597,7 @@ async function sendMessage(prefilledValue) {
     }
   } finally {
     isSending = false;
-    elements.button?.removeAttribute("disabled");
+    cbUpdateComposerSendState();
     elements.input?.removeAttribute("disabled");
     elements.input?.focus();
   }
@@ -8021,6 +12645,7 @@ function cbAppendCouncilDecisionMessage(result) {
     createdAt: new Date().toISOString(),
   };
   messages.push(msg);
+  cbChatForceScrollToBottom = true;
   renderMessages();
 }
 
@@ -8324,14 +12949,8 @@ const bootstrap = () => {
   if (!elements.form || !elements.messages) return;
 
   messages = loadHistory();
+  cbChatForceScrollToBottom = true;
   renderMessages();
-  
-  // Force scroll to bottom after render completes
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      scrollToBottom();
-    }, 100);
-  });
   
   ensureProfile()
     .then(() => updateLevelBadge())
@@ -8358,7 +12977,6 @@ const bootstrap = () => {
     if (elements.input) {
       elements.input.value = seedMessage;
       cbResizeComposerInput();
-      cbUpdatePromptMeter();
     }
     if (cbIsAuthenticated()) {
       sendMessage(seedMessage);

@@ -1380,7 +1380,7 @@ const cbBuildActiveAgentSummary = () => {
           : cbActiveContextState.status === "error"
             ? "Error"
             : "Idle";
-    const tooltip = `Active agent: ${label}\n${cbBuildActiveContextTooltip(cbActiveContextState.context)}`;
+    const tooltip = `Active context: ${label}\n${cbBuildActiveContextTooltip(cbActiveContextState.context)}`;
     return { label, meta: status, tooltip };
   }
   const selected = cbResolveCouncilSelections();
@@ -1388,7 +1388,7 @@ const cbBuildActiveAgentSummary = () => {
     return {
       label: "Solo chat",
       meta: "Council off",
-      tooltip: "Active agent: Solo chat\nCouncil off\nNo agents selected. Open Council to add agents.",
+      tooltip: "Active context: Solo chat\nCouncil off\nNo agents selected. Open Council to add agents.",
     };
   }
   const resolved = selected.map((id) => cbResolveCouncilAgentProfile(id));
@@ -1399,7 +1399,7 @@ const cbBuildActiveAgentSummary = () => {
   const detailLines = resolved
     .map((item) => (item.description ? `${item.label}: ${item.description}` : item.label))
     .join("\n");
-  const tooltip = `Active agent: ${label}\n${meta}${detailLines ? `\n${detailLines}` : ""}`;
+  const tooltip = `Active context: ${label}\n${meta}${detailLines ? `\n${detailLines}` : ""}`;
   return { label, meta, tooltip };
 };
 
@@ -2339,7 +2339,10 @@ const cbFormatModelLabel = (value) => {
 const cbGetActiveContextElements = () => ({
   bar: document.getElementById("cb-active-context-bar"),
   led: document.getElementById("cb-active-context-led"),
-  name: document.getElementById("cb-active-context-name"),
+  mode: document.getElementById("cb-active-context-mode"),
+  primary: document.getElementById("cb-active-context-primary"),
+  chips: document.getElementById("cb-active-context-chips"),
+  detail: document.getElementById("cb-active-context-detail"),
 });
 
 const cbUpdateComposerSendState = () => {
@@ -2360,21 +2363,141 @@ const cbFormatActiveAgentName = (context) => {
   return role ? `${role} · ${name}` : name;
 };
 
-const cbBuildActiveContextTooltip = (context) => {
-  if (!context) return "Active agent not confirmed yet.";
+const cbBuildShortAgentLabel = (label) => {
+  const raw = String(label || "").trim();
+  if (!raw) return "";
+  const normalized = cbNormalizeAgentLabel(raw) || raw;
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (words.length > 1) {
+    const first = words[0];
+    if (/^[A-Z0-9]{2,5}$/.test(first)) {
+      return first;
+    }
+    const acronym = words.map((word) => word[0]).join("").toUpperCase();
+    if (acronym.length >= 2 && acronym.length <= 5) {
+      return acronym;
+    }
+  }
+  return normalized;
+};
+
+const cbResolveCouncilDisplayAgent = (agentKey) => {
+  if (!agentKey) return null;
+  const agent =
+    cbFindAgentByKey(agentKey, cbCurrentWorkspaceId) || cbFindAgentByKey(agentKey);
+  const registry = cbResolvePublicRegistryAgent(agent);
+  const legacy = CB_COUNCIL_MEMBERS.find((member) => member.id === agentKey);
+  const fullLabel =
+    registry?.label || agent?.label || legacy?.label || legacy?.shortLabel || agentKey;
+  const shortSource =
+    registry?.shortLabel ||
+    registry?.role ||
+    registry?.label ||
+    agent?.label ||
+    legacy?.shortLabel ||
+    legacy?.label ||
+    agentKey;
+  const shortLabel = cbBuildShortAgentLabel(shortSource || fullLabel);
+  return {
+    key: agentKey,
+    shortLabel: shortLabel || String(fullLabel || agentKey),
+    fullLabel: String(fullLabel || shortLabel || agentKey),
+  };
+};
+
+const cbBuildActiveContextTooltip = (context, extraLines = []) => {
+  const lines = Array.isArray(extraLines) ? extraLines.filter(Boolean) : [];
+  if (!context) {
+    return lines.length ? lines.join("\n") : "Active context not confirmed yet.";
+  }
   const providerLabel = cbFormatProviderLabel(context.provider || "auto");
   const modelLabel = cbFormatModelLabel(context.model || "auto");
   const billingLabel = context.billingSource === "byok" ? "BYOK" : "CoolBits";
-  return `Provider: ${providerLabel}\nModel: ${modelLabel}\nBilling: ${billingLabel}`;
+  lines.push(`Provider: ${providerLabel}`);
+  lines.push(`Model: ${modelLabel}`);
+  lines.push(`Billing: ${billingLabel}`);
+  return lines.join("\n");
 };
 
 const cbUpdateActiveContextBar = () => {
-  const { bar, led, name } = cbGetActiveContextElements();
-  if (!bar || !led || !name) return;
+  const { bar, led, mode, primary, chips, detail } = cbGetActiveContextElements();
+  if (!bar || !led) return;
   const status = cbActiveContextState.status || "idle";
-  led.setAttribute("data-status", status);
-  name.textContent = cbFormatActiveAgentName(cbActiveContextState.context);
-  bar.title = cbBuildActiveContextTooltip(cbActiveContextState.context);
+  const context = cbActiveContextState.context;
+  const confirmed = status === "active" && context?.contextId;
+  const ledStatus =
+    status === "error" ? "error" : status === "pending" ? "pending" : confirmed ? "active" : "idle";
+  led.setAttribute("data-status", ledStatus);
+
+  const selected = cbResolveCouncilSelections();
+  const councilArmed = !!cbCouncilState?.armed;
+  const councilEnabled = selected.length > 0 || councilArmed;
+  const agents = selected.map((key) => cbResolveCouncilDisplayAgent(key)).filter(Boolean);
+  const primaryAgent = agents[0] || null;
+
+  if (mode) {
+    mode.textContent = councilEnabled
+      ? agents.length
+        ? "Council mode"
+        : "Council (no agents selected)"
+      : "Solo mode";
+  }
+
+  if (primary) {
+    if (councilEnabled) {
+      primary.textContent = primaryAgent ? `Primary: ${primaryAgent.shortLabel}` : "Primary: -";
+      primary.title = primaryAgent?.fullLabel || "";
+    } else {
+      const activeName = context ? cbFormatActiveAgentName(context) : "-";
+      primary.textContent = `Agent: ${activeName}`;
+      primary.title = activeName === "-" ? "" : activeName;
+    }
+  }
+
+  if (chips) {
+    chips.textContent = "";
+    if (agents.length) {
+      const visible = agents.slice(0, 4);
+      visible.forEach((agent) => {
+        const chip = document.createElement("span");
+        chip.className = "cb-active-context-chip";
+        chip.textContent = agent.shortLabel;
+        chip.title = agent.fullLabel || agent.shortLabel;
+        chips.appendChild(chip);
+      });
+      const remaining = agents.length - visible.length;
+      if (remaining > 0) {
+        const more = document.createElement("span");
+        more.className = "cb-active-context-chip cb-active-context-chip--more";
+        more.textContent = `+${remaining}`;
+        more.title = `${remaining} more`;
+        chips.appendChild(more);
+      }
+      chips.hidden = false;
+    } else {
+      chips.hidden = true;
+    }
+  }
+
+  let detailLine = "";
+  if (agents.length) {
+    detailLine = agents
+      .map((agent) => agent.fullLabel || agent.shortLabel)
+      .filter(Boolean)
+      .join(", ");
+  }
+  if (detail) {
+    detail.textContent = detailLine;
+    detail.hidden = !detailLine;
+  }
+
+  const tooltipLines = [];
+  if (councilEnabled) {
+    tooltipLines.push(
+      agents.length ? `Council: ${detailLine}` : "Council: no agents selected"
+    );
+  }
+  bar.title = cbBuildActiveContextTooltip(context, tooltipLines);
 };
 
 const cbApplyActiveContextToUi = (context) => {
