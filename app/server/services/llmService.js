@@ -205,7 +205,7 @@ export async function runAgent({ agentId, messages = [], scenario = null, extraC
       maxTokens: profile.maxTokens || undefined,
     },
     extraContext?.userId
-      ? {
+        ? {
           userId: extraContext.userId,
           workspaceId: extraContext.workspaceId,
           projectId: extraContext.projectId,
@@ -214,6 +214,7 @@ export async function runAgent({ agentId, messages = [], scenario = null, extraC
           scenarioId: (scenario && scenario.id) || scenario || extraContext.scenarioId,
           planCode: extraContext.planCode,
           autonomyLevel: effectiveAutonomy,
+          contextId: extraContext.contextId || null,
         }
       : null,
   );

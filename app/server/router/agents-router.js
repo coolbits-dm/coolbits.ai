@@ -10,6 +10,7 @@ import {
 } from '../services/billingService.js';
 import { rateLimitAgentsUserWorkspace } from '../middleware/rateLimit.js';
 import { findRunsForWorkspace } from '../repositories/agentRunsRepo.js';
+import { getActiveContext } from '../services/activeContextService.js';
 
 const router = express.Router();
 
@@ -52,6 +53,11 @@ router.post('/run', ensureAuth, rateLimitAgentsUserWorkspace, async (req, res) =
     const user = await getUserByEmail(req.authEmail);
     if (!user) return respondError(res, 401, 'UNAUTHORIZED', 'User not found.');
 
+    const activeContext = getActiveContext(user.id);
+    if (!activeContext || activeContext.status !== 'active') {
+      return respondError(res, 409, 'ACTIVE_CONTEXT_REQUIRED', 'Activate context before running agents.');
+    }
+
     const { planCode, limits } = await getPlanForUser(user.id || user.email);
     const period = await getCurrentPeriodForUser(user.id, planCode);
     const usageState = await getUsageStateForUser(user.id);
@@ -86,6 +92,7 @@ router.post('/run', ensureAuth, rateLimitAgentsUserWorkspace, async (req, res) =
         userId: user.id,
         workspaceId,
         planCode,
+        contextId: activeContext?.contextId || null,
       });
 
       const usedAfter = await getTokensUsed(user.id, period);

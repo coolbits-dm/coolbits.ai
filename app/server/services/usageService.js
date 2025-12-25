@@ -10,6 +10,7 @@ export async function recordUsage({
   chatId = null,
   agentId = null,
   scenarioId = null,
+  contextId = null,
   provider,
   modelId,
   rawUsage,
@@ -31,6 +32,7 @@ export async function recordUsage({
     chatId,
     agentId,
     scenarioId,
+    contextId,
     provider: provider || modelConfig.provider,
     model: modelId || modelConfig.id,
     providerModelId: normalized.providerModelId,
@@ -47,6 +49,7 @@ export async function recordUsage({
   if (!shouldPersist) return payload;
 
   try {
+    // TODO: persist contextId once token_usage schema supports it.
     await insertTokenUsage(payload);
     if (normalized.totalTokens > 0) {
       await incrementTokensUsed(userId, resolvedPeriod, normalized.totalTokens, activePlan);

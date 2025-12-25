@@ -14,6 +14,7 @@ import { recordTokenUsage } from './middleware/rateLimit.js';
 import { loadAgentSystemPrompt } from './services/promptService.js';
 import { getChatAgentOrNull } from './config/chatAgents.js';
 import { normalizeCouncil } from './utils/councilUtils.js';
+import { getActiveContext } from './services/activeContextService.js';
 
 const GUARDRAIL_RESPONSE =
   'I can help you only with CoolBits business, agency or devops topics.\nLet’s get back on track.';
@@ -254,17 +255,26 @@ export async function handleChat(optionsOrReq, maybeRes) {
       }
     }
 
-    const userPayload = () =>
-      authedUser
-        ? {
-            user: {
-              email: authedUser.email,
-              plan: planMeta?.planCode || authedUser.planId,
-              tokensRemaining: Math.max((tokensAllowance || 0) - (tokensUsedThisPeriod || 0), 0),
-              totalUsed: tokensUsedThisPeriod,
-            },
-          }
-        : {};
+    if (!authedUser) {
+      return res.status(401).json({ error: 'Unauthorized', errorCode: 'UNAUTHENTICATED' });
+    }
+
+    const activeContext = getActiveContext(authedUser.id);
+    if (!activeContext || activeContext.status !== 'active') {
+      return res.status(409).json({
+        error: 'ACTIVE_CONTEXT_REQUIRED',
+        message: 'Select an agent/model and wait for active status before sending.',
+      });
+    }
+
+    const userPayload = () => ({
+      user: {
+        email: authedUser.email,
+        plan: planMeta?.planCode || authedUser.planId,
+        tokensRemaining: Math.max((tokensAllowance || 0) - (tokensUsedThisPeriod || 0), 0),
+        totalUsed: tokensUsedThisPeriod,
+      },
+    });
 
     const respond = (payload) => res.json({ ...sharedResponse, ...payload, ...userPayload() });
 
@@ -286,9 +296,9 @@ export async function handleChat(optionsOrReq, maybeRes) {
       return respond({ intent, ...buildMockPayload(userMessage) });
     }
 
-    let model = chatAgent?.config?.modelId
+    let model = activeContext?.model || (chatAgent?.config?.modelId
       ? chatAgent.config.modelId
-      : selectModel(intent, userMessage, Boolean(reasoning?.active));
+      : selectModel(intent, userMessage, Boolean(reasoning?.active)));
 
     let systemPrompt = SYSTEM_PROMPT;
 
@@ -330,16 +340,15 @@ export async function handleChat(optionsOrReq, maybeRes) {
         temperature: 0.3,
         maxTokens: DEFAULT_MAX_TOKENS,
       },
-      authedUser
-        ? {
-            userId: authedUser.id,
-            workspaceId: req.body?.workspaceId || 'business',
-            chatId: null,
-            agentId: chatAgent?.config?.id || null,
-            scenarioId: chatAgent ? 'council-pill' : null,
-            planCode: planMeta?.planCode,
-          }
-        : null,
+      {
+        userId: authedUser.id,
+        workspaceId: req.body?.workspaceId || 'business',
+        chatId: null,
+        agentId: activeContext?.agentId || chatAgent?.config?.id || null,
+        scenarioId: chatAgent ? 'council-pill' : null,
+        planCode: planMeta?.planCode,
+        contextId: activeContext?.contextId || null,
+      },
     );
 
     if (authedUser && aiContent?.usage?.totalTokens) {

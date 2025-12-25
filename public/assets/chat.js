@@ -62,6 +62,9 @@ const API_BILLING_DOWNGRADE = `${API_BASE}/billing/downgrade`;
 const API_BILLING_SUMMARY = `${API_BASE}/billing/summary`;
 const API_AGENTS_REGISTRY = `${API_BASE}/agents/registry`;
 const API_AGENTS_RUN = `${API_BASE}/agents/run`;
+const API_CONTEXT_ACTIVE = `${API_BASE}/context/active`;
+const API_CONTEXT_ACTIVATE = `${API_BASE}/context/activate`;
+const PUBLIC_AGENTS_REGISTRY_URL = "/api/public/agents-registry";
 const API_AUTH_GOOGLE_START = `${API_BASE}/auth/google/start`;
 const API_PROJECTS = `${API_BASE}/projects`;
 
@@ -129,12 +132,53 @@ const PLAN_DEFINITIONS = {
 const PLAN_CODES = Object.keys(PLAN_DEFINITIONS);
 
 const CONNECTOR_CATEGORIES = [
+  { id: "personal", label: "Personal connectors" },
   { id: "business", label: "Business connectors" },
   { id: "agency", label: "Agency connectors" },
   { id: "dev", label: "Developer connectors" },
 ];
 
 const CONNECTORS_CONFIG = [
+  {
+    key: "google_docs",
+    label: "Google Docs",
+    category: "personal",
+    status: "coming_soon",
+    description: "Capture docs, notes, and meeting summaries from Google Docs.",
+    icon: "docs",
+  },
+  {
+    key: "gmail",
+    label: "Gmail",
+    category: "personal",
+    status: "coming_soon",
+    description: "Sync inbox signals and follow-ups from Gmail.",
+    icon: "gmail",
+  },
+  {
+    key: "google_calendar",
+    label: "Google Calendar",
+    category: "personal",
+    status: "coming_soon",
+    description: "Track schedule focus blocks, meetings, and habit cadence.",
+    icon: "gcal",
+  },
+  {
+    key: "notion",
+    label: "Notion",
+    category: "personal",
+    status: "coming_soon",
+    description: "Pull personal knowledge base, tasks, and daily notes from Notion.",
+    icon: "notion",
+  },
+  {
+    key: "todoist",
+    label: "Todoist",
+    category: "personal",
+    status: "coming_soon",
+    description: "Measure task completion velocity and planning rhythm from Todoist.",
+    icon: "todoist",
+  },
   {
     key: "googleads",
     label: "Google Ads",
@@ -321,11 +365,137 @@ const cbPromptMeterState = {
   outcomeHint: "General reasoning",
 };
 
+const cbPublicAgentsRegistryState = {
+  loaded: false,
+  loading: false,
+  items: [],
+  byId: new Map(),
+};
+
 const cbNormalizeAgentWorkspace = (workspaceId) => {
   if (!workspaceId) return "business";
   const key = workspaceId.toString().toLowerCase();
   if (key === "dev" || key === "developer") return "developer";
   return key;
+};
+
+const cbSlugifyText = (value) =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const cbNormalizeAgentLabel = (label) => {
+  const raw = String(label || "");
+  const trimmed = raw.split(" – ")[0].split(" - ")[0];
+  return trimmed.trim();
+};
+
+const cbEncodeAgentNameSegment = (value) =>
+  encodeURIComponent(String(value || "").trim().replace(/\s+/g, "-"));
+
+const cbRegistryWorkspacePrefix = (workspaceId) => {
+  const normalized = cbNormalizeAgentWorkspace(workspaceId);
+  if (normalized === "business") return "-B-";
+  if (normalized === "agency") return "-A-";
+  if (normalized === "developer") return "-D-";
+  if (normalized === "personal") return "-P-";
+  return "";
+};
+
+const cbEnsurePublicAgentsRegistry = async () => {
+  if (cbPublicAgentsRegistryState.loading || cbPublicAgentsRegistryState.loaded) {
+    return cbPublicAgentsRegistryState;
+  }
+  cbPublicAgentsRegistryState.loading = true;
+  try {
+    const res = await fetch(PUBLIC_AGENTS_REGISTRY_URL, { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error("registry_unavailable");
+    }
+    const data = await res.json().catch(() => ({}));
+    const list = Array.isArray(data?.agents) ? data.agents : [];
+    cbPublicAgentsRegistryState.items = list;
+    cbPublicAgentsRegistryState.byId = new Map(list.map((agent) => [agent.id, agent]));
+    cbPublicAgentsRegistryState.loaded = true;
+  } catch (error) {
+    cbPublicAgentsRegistryState.loaded = false;
+    cbPublicAgentsRegistryState.items = [];
+    cbPublicAgentsRegistryState.byId = new Map();
+  } finally {
+    cbPublicAgentsRegistryState.loading = false;
+  }
+  return cbPublicAgentsRegistryState;
+};
+
+const cbResolvePublicRegistryAgent = (agent) => {
+  if (!cbPublicAgentsRegistryState.loaded) {
+    return null;
+  }
+  if (agent?.cbAgentId && cbPublicAgentsRegistryState.byId.has(agent.cbAgentId)) {
+    return cbPublicAgentsRegistryState.byId.get(agent.cbAgentId) || null;
+  }
+  const label = cbNormalizeAgentLabel(agent?.label || agent?.key);
+  if (!label) return null;
+  const slugLabel = cbSlugifyText(label);
+  const prefix = cbRegistryWorkspacePrefix(agent?.workspace);
+  return (
+    cbPublicAgentsRegistryState.items.find((item) => {
+      if (!item || !item.id || !item.label) return false;
+      if (prefix && !item.id.includes(prefix)) return false;
+      return cbSlugifyText(item.label) === slugLabel;
+    }) || null
+  );
+};
+
+const cbBuildCouncilAgentProfile = (agent, registryAgent = null) => {
+  const registry = registryAgent || cbResolvePublicRegistryAgent(agent);
+  const workspaceSlug = cbNormalizeAgentWorkspace(agent?.workspace);
+  const label = cbNormalizeAgentLabel(registry?.label || agent?.label || agent?.key || "Agent");
+  const roleSlug = cbSlugifyText(registry?.label || label);
+  const agentId = registry?.id || agent?.cbAgentId || null;
+  return {
+    agentId,
+    workspaceSlug,
+    roleSlug,
+    defaultName: label,
+    summary: registry?.role || agent?.shortDescription || "",
+  };
+};
+
+const CB_COUNCIL_PREVIEW_SAMPLES = {
+  business: [
+    "Review quarterly KPIs and flag risks.",
+    "Outline growth experiments for next month.",
+    "Summarize priorities for the next 30 days.",
+  ],
+  agency: [
+    "Audit paid media performance and next steps.",
+    "Draft a cross-channel optimization plan.",
+    "Identify GA4 tracking gaps and fixes.",
+  ],
+  developer: [
+    "Assess infra risks before a release.",
+    "Outline an API integration plan.",
+    "Summarize reliability guardrails.",
+  ],
+};
+
+const cbBuildCouncilHoverPreview = (agent, registryAgent = null) => {
+  const workspace = cbNormalizeAgentWorkspace(agent?.workspace);
+  const summary =
+    (registryAgent && registryAgent.role) || agent?.shortDescription || "";
+  const samples = CB_COUNCIL_PREVIEW_SAMPLES[workspace] || [];
+  if (!summary && !samples.length) return "";
+  const lines = [];
+  if (summary) lines.push(summary);
+  if (samples.length) {
+    lines.push("Samples:");
+    samples.slice(0, 3).forEach((sample) => {
+      lines.push(`- ${sample}`);
+    });
+  }
+  return lines.join("\n");
 };
 
 const cbGetWorkspaceLabel = (workspaceId) => {
@@ -392,6 +562,7 @@ const AGENTS_CONFIG = [
     workspace: "business",
     key: "ceo",
     label: "CEO \u2013 Strategy",
+    cbAgentId: "cbAgent-B-001-ceo",
     shortDescription: "Executive view on priorities, ROI, and trade-offs.",
     connectors: [],
     showInCouncil: true,
@@ -400,6 +571,7 @@ const AGENTS_CONFIG = [
     workspace: "business",
     key: "cmo",
     label: "CMO \u2013 Growth",
+    cbAgentId: "cbAgent-B-007-cmo",
     shortDescription: "Acquisition, paid media, and performance marketing (Google Ads, Meta, etc.).",
     connectors: ["googleads", "meta_ads", "tiktok_ads", "linkedin_ads", "ga4", "tracking_debugger"],
     showInCouncil: true,
@@ -408,6 +580,7 @@ const AGENTS_CONFIG = [
     workspace: "business",
     key: "cfo",
     label: "CFO \u2013 Finance",
+    cbAgentId: "cbAgent-B-003-cfo",
     shortDescription: "Budgets, forecasts, and performance guardrails.",
     connectors: ["stripe", "googleads"],
     showInCouncil: true,
@@ -416,6 +589,7 @@ const AGENTS_CONFIG = [
     workspace: "business",
     key: "coo",
     label: "COO \u2013 Ops",
+    cbAgentId: "cbAgent-B-004-coo",
     shortDescription: "Execution, processes, and cross-team alignment.",
     connectors: ["ga4", "google_ads_mcc"],
     showInCouncil: true,
@@ -424,6 +598,7 @@ const AGENTS_CONFIG = [
     workspace: "business",
     key: "cto",
     label: "CTO \u2013 Tech",
+    cbAgentId: "cbAgent-B-002-cto",
     shortDescription: "Architecture, delivery, and technical risk.",
     connectors: ["git", "google_cloud", "error_event_stream"],
     showInCouncil: true,
@@ -549,6 +724,7 @@ function syncCouncilStateFromUi() {
   cbSyncLegacyCouncilFromState();
 
   console.log("[CB_COUNCIL] sync", { ...cbCouncilState });
+  cbQueueActivateContextFromUi("council-selection-sync");
 }
 
 const cbGetCouncilSummaryLabel = () => {
@@ -767,6 +943,7 @@ function cbUpdateCouncilPill() {
     classes: wrapper.className,
     computed: window.getComputedStyle(wrapper).background
   });
+  cbUpdateChatHeader();
 }
 
 // --- Council compatibility shim (older callers expect this) ---
@@ -1093,6 +1270,7 @@ const cbSetBillingSummary = (summary) => {
     cbRenderAccountBilling(cbLatestBillingSummary);
   }
   cbUpdatePromptMeter();
+  cbUpdateChatHeader();
 };
 
 const cbRenderPlanAndUsageFromSummary = (summary) => {
@@ -1138,6 +1316,204 @@ const cbRenderPlanAndUsageFromSummary = (summary) => {
     cbRenderPlansModal();
   }
 };
+
+const cbGetChatHeaderElements = () => {
+  const modelValue = document.getElementById("cb-active-model");
+  const contextValue = document.getElementById("cb-active-context");
+  const usageValue = document.getElementById("cb-active-usage");
+  return {
+    agentTile: document.getElementById("cb-active-agent-tile"),
+    agentName: document.getElementById("cb-active-agent-name"),
+    agentMeta: document.getElementById("cb-active-agent-meta"),
+    modelTile: modelValue ? modelValue.closest(".cb-smart-tile") : null,
+    modelValue,
+    modelMeta: document.getElementById("cb-active-model-meta"),
+    contextTile: contextValue ? contextValue.closest(".cb-smart-tile") : null,
+    contextValue,
+    contextMeta: document.getElementById("cb-active-context-meta"),
+    usageTile: usageValue ? usageValue.closest(".cb-smart-tile") : null,
+    usageValue,
+    usageMeta: document.getElementById("cb-active-usage-meta"),
+  };
+};
+
+const cbResolveCouncilSelections = () => {
+  cbSyncCouncilStateFromLegacy();
+  const selected =
+    Array.isArray(cbCouncilState?.selectedKeys) && cbCouncilState.selectedKeys.length
+      ? cbCouncilState.selectedKeys.slice()
+      : [];
+  if (!selected.length && cbCouncilSelectedIds && cbCouncilSelectedIds.size) {
+    return Array.from(cbCouncilSelectedIds);
+  }
+  return selected;
+};
+
+const cbResolveCouncilAgentProfile = (agentId) => {
+  const agent =
+    cbFindAgentByKey(agentId, cbCurrentWorkspaceId) || cbFindAgentByKey(agentId);
+  if (agent) {
+    return {
+      label: agent.label || agent.key || agentId,
+      description: agent.shortDescription || "",
+    };
+  }
+  const legacy = CB_COUNCIL_MEMBERS.find((member) => member.id === agentId);
+  if (legacy) {
+    return {
+      label: legacy.label || legacy.shortLabel || legacy.id,
+      description: legacy.description || "",
+    };
+  }
+  const fallback = String(agentId || "Agent").replace(/[_-]+/g, " ").trim();
+  return { label: fallback || "Agent", description: "" };
+};
+
+const cbBuildActiveAgentSummary = () => {
+  if (cbActiveContextState.context) {
+    const label = cbFormatActiveAgentName(cbActiveContextState.context);
+    const status =
+      cbActiveContextState.status === "active"
+        ? "Active"
+        : cbActiveContextState.status === "pending"
+          ? "Pending"
+          : cbActiveContextState.status === "error"
+            ? "Error"
+            : "Idle";
+    const tooltip = `Active agent: ${label}\n${cbBuildActiveContextTooltip(cbActiveContextState.context)}`;
+    return { label, meta: status, tooltip };
+  }
+  const selected = cbResolveCouncilSelections();
+  if (!selected.length) {
+    return {
+      label: "Solo chat",
+      meta: "Council off",
+      tooltip: "Active agent: Solo chat\nCouncil off\nNo agents selected. Open Council to add agents.",
+    };
+  }
+  const resolved = selected.map((id) => cbResolveCouncilAgentProfile(id));
+  const primary = resolved[0];
+  const extraCount = Math.max(0, resolved.length - 1);
+  const label = extraCount ? `${primary.label} +${extraCount}` : primary.label;
+  const meta = `Council on - ${resolved.length} agent${resolved.length === 1 ? "" : "s"}`;
+  const detailLines = resolved
+    .map((item) => (item.description ? `${item.label}: ${item.description}` : item.label))
+    .join("\n");
+  const tooltip = `Active agent: ${label}\n${meta}${detailLines ? `\n${detailLines}` : ""}`;
+  return { label, meta, tooltip };
+};
+
+const cbBuildModelSummary = () => {
+  if (cbActiveContextState.context) {
+    const providerLabel = cbFormatProviderLabel(cbActiveContextState.context.provider || "auto");
+    const modelLabel = cbFormatModelLabel(cbActiveContextState.context.model || "");
+    const meta = modelLabel ? `Model: ${modelLabel}` : "Model: auto";
+    return { label: providerLabel, meta };
+  }
+  const providerSelect = document.getElementById("cb-model-selector");
+  const searchInput = document.getElementById("cb-model-search");
+  const providerValue = providerSelect?.value || "auto";
+  const providerLabel =
+    providerSelect?.selectedOptions?.[0]?.textContent || providerValue || "Auto";
+  const modelHint = searchInput?.value ? searchInput.value.trim() : "";
+  let meta = "";
+  if (providerValue === "auto") {
+    meta = modelHint ? `Model hint: ${modelHint}` : "Routing: auto";
+  } else {
+    meta = modelHint ? `Model hint: ${modelHint}` : "Model hint: none";
+  }
+  return { label: providerLabel, meta };
+};
+
+const cbBuildContextSummary = () => {
+  const workspace =
+    cbWorkspaces.find((item) => item.id === cbCurrentWorkspaceId) || cbWorkspaces[0];
+  const activeProject =
+    cbCurrentProjectId && cbProjects.find((proj) => proj && proj.id === cbCurrentProjectId);
+  const value = `${workspace?.label || "Workspace"} / ${activeProject?.name || "All projects"}`;
+  const connected = Object.keys(cbConnectorState || {})
+    .filter((key) => (cbConnectorState[key]?.status || "").toLowerCase() === "connected")
+    .map((key) => cbResolveConnectorByKey(key))
+    .filter(Boolean)
+    .map((connector) => connector.label || connector.key);
+  const connectorLabel = connected.length
+    ? `Connectors: ${connected.join(", ")}`
+    : "Connectors: none";
+  const councilState = cbResolveCouncilSelections().length ? "Council on" : "Council off";
+  return { value, meta: `${councilState} | ${connectorLabel}` };
+};
+
+const cbBuildUsageSummary = () => {
+  const summary = cbLatestBillingSummary || null;
+  const usageMetrics = summary ? cbDeriveUsageMetrics(summary) : null;
+  const tokensLine = usageMetrics
+    ? cbFormatTokenShortText(usageMetrics.tokensRemaining)
+    : "Tokens: n/a";
+  const promptTokens = Math.max(0, Math.round(cbPromptMeterState.tokensEffective || 0));
+  const size = cbPromptMeterState.sizeClass
+    ? cbPromptMeterState.sizeClass.toUpperCase()
+    : "";
+  const outcome = cbPromptMeterState.outcomeHint || "";
+  const promptMeta = promptTokens
+    ? `Prompt: ${promptTokens.toLocaleString()} tokens${size ? ` (${size})` : ""}${
+        outcome ? ` - ${outcome}` : ""
+      }`
+    : "Prompt: empty";
+  return { value: tokensLine, meta: promptMeta };
+};
+
+const cbUpdateChatHeader = () => {
+  const elements = cbGetChatHeaderElements();
+  if (!elements.agentName && !elements.modelValue && !elements.contextValue) {
+    return;
+  }
+
+  const agentSummary = cbBuildActiveAgentSummary();
+  if (elements.agentName) {
+    elements.agentName.textContent = agentSummary.label;
+  }
+  if (elements.agentMeta) {
+    elements.agentMeta.textContent = agentSummary.meta;
+  }
+  if (elements.agentTile) {
+    elements.agentTile.title = agentSummary.tooltip;
+  }
+
+  const modelSummary = cbBuildModelSummary();
+  if (elements.modelValue) {
+    elements.modelValue.textContent = modelSummary.label;
+  }
+  if (elements.modelMeta) {
+    elements.modelMeta.textContent = modelSummary.meta;
+  }
+  if (elements.modelTile) {
+    elements.modelTile.title = `Model: ${modelSummary.label}\n${modelSummary.meta}`;
+  }
+
+  const contextSummary = cbBuildContextSummary();
+  if (elements.contextValue) {
+    elements.contextValue.textContent = contextSummary.value;
+  }
+  if (elements.contextMeta) {
+    elements.contextMeta.textContent = contextSummary.meta;
+  }
+  if (elements.contextTile) {
+    elements.contextTile.title = `Context: ${contextSummary.value}\n${contextSummary.meta}`;
+  }
+
+  const usageSummary = cbBuildUsageSummary();
+  if (elements.usageValue) {
+    elements.usageValue.textContent = usageSummary.value;
+  }
+  if (elements.usageMeta) {
+    elements.usageMeta.textContent = usageSummary.meta;
+  }
+  if (elements.usageTile) {
+    elements.usageTile.title = `Usage: ${usageSummary.value}\n${usageSummary.meta}`;
+  }
+};
+
+window.cbUpdateChatHeader = cbUpdateChatHeader;
 
 const cbGetAgentsElements = () => ({
   view: document.getElementById("cb-agents-view"),
@@ -1720,6 +2096,7 @@ const shellElements = {
   sidebarClose: document.querySelector("[data-sidebar-close]"),
   sidebarBackdrop: document.querySelector("[data-sidebar-backdrop]"),
   newChatButton: document.querySelector("[data-sidebar-new-chat]"),
+  agentsButton: document.querySelector("[data-sidebar-agents]"),
   chatsList: document.querySelector("[data-sidebar-chat-list]"),
   featureButtons: Array.from(document.querySelectorAll("[data-sidebar-feature]")),
   accountViewButtons: Array.from(document.querySelectorAll("[data-account-view-btn]")),
@@ -1756,6 +2133,7 @@ const shellElements = {
   composerForm: document.getElementById("cb-composer"),
   chatInput: document.getElementById("chat-input"),
   councilButton: document.getElementById("cb-council-pill"),
+  councilAgentsButton: document.getElementById("cb-council-agents-btn"),
   councilActive: document.getElementById("cb-council-active"),
   councilPopover: document.getElementById("cb-council-popover"),
   councilList: document.getElementById("cb-council-list"),
@@ -1859,6 +2237,15 @@ let cbChatsUnsupported = false;
 let cbCurrentProjectId = null;
 let cbProjectMenuOpen = false;
 let cbSidebarMenuOutsideBound = false;
+const cbActiveContextState = {
+  status: "idle",
+  context: null,
+  error: null,
+  pendingReason: null,
+};
+let cbActiveContextRequestId = 0;
+let cbActiveContextDebounce = null;
+let cbSuppressContextActivation = false;
 const WORKSPACE_STORAGE_KEY = "coolbits:workspace";
 const cbWorkspaces = [
   { id: "business", label: "Business" },
@@ -1886,6 +2273,264 @@ const cbNormalizeWorkspaceId = (workspaceId) => {
     return workspaceId;
   }
   return "business";
+};
+
+const CB_PROVIDER_API_MAP = {
+  auto: "auto",
+  chatgpt: "openai",
+  claude: "anthropic",
+  gemini: "google",
+  grok: "xai",
+  copilot: "openai",
+  openai: "openai",
+  anthropic: "anthropic",
+  google: "google",
+  xai: "xai",
+  deepseek: "deepseek",
+};
+
+const CB_PROVIDER_UI_MAP = {
+  openai: "chatgpt",
+  anthropic: "claude",
+  google: "gemini",
+  xai: "grok",
+  deepseek: "auto",
+  auto: "auto",
+};
+
+const CB_PROVIDER_LABELS = {
+  auto: "Auto",
+  chatgpt: "ChatGPT",
+  claude: "Claude",
+  gemini: "Gemini",
+  grok: "Grok",
+  copilot: "Copilot",
+  openai: "ChatGPT",
+  anthropic: "Claude",
+  google: "Gemini",
+  xai: "Grok",
+  deepseek: "DeepSeek",
+};
+
+const cbNormalizeProviderForApi = (value) => {
+  if (!value) return "auto";
+  const key = String(value).trim().toLowerCase();
+  return CB_PROVIDER_API_MAP[key] || "auto";
+};
+
+const cbNormalizeProviderForUi = (value) => {
+  if (!value) return "auto";
+  const key = String(value).trim().toLowerCase();
+  return CB_PROVIDER_UI_MAP[key] || (CB_PROVIDER_API_MAP[key] ? key : "auto");
+};
+
+const cbFormatProviderLabel = (value) => {
+  if (!value) return "Auto";
+  const key = String(value).trim().toLowerCase();
+  return CB_PROVIDER_LABELS[key] || value;
+};
+
+const cbFormatModelLabel = (value) => {
+  if (!value) return "Auto";
+  const trimmed = String(value).trim();
+  return trimmed.replace(/^vertex-/, "").replace(/^openai-/, "");
+};
+
+const cbGetActiveContextElements = () => ({
+  bar: document.getElementById("cb-active-context-bar"),
+  led: document.getElementById("cb-active-context-led"),
+  name: document.getElementById("cb-active-context-name"),
+});
+
+const cbUpdateComposerSendState = () => {
+  const sendButton = elements.button;
+  if (!sendButton) return;
+  const shouldDisable = isSending || cbActiveContextState.status !== "active";
+  if (shouldDisable) {
+    sendButton.setAttribute("disabled", "true");
+  } else {
+    sendButton.removeAttribute("disabled");
+  }
+};
+
+const cbFormatActiveAgentName = (context) => {
+  if (!context) return "Not active";
+  const name = context.customName || context.defaultName || context.role || context.agentId || "Agent";
+  const role = context.role && context.role !== name ? context.role : "";
+  return role ? `${role} · ${name}` : name;
+};
+
+const cbBuildActiveContextTooltip = (context) => {
+  if (!context) return "Active agent not confirmed yet.";
+  const providerLabel = cbFormatProviderLabel(context.provider || "auto");
+  const modelLabel = cbFormatModelLabel(context.model || "auto");
+  const billingLabel = context.billingSource === "byok" ? "BYOK" : "CoolBits";
+  return `Provider: ${providerLabel}\nModel: ${modelLabel}\nBilling: ${billingLabel}`;
+};
+
+const cbUpdateActiveContextBar = () => {
+  const { bar, led, name } = cbGetActiveContextElements();
+  if (!bar || !led || !name) return;
+  const status = cbActiveContextState.status || "idle";
+  led.setAttribute("data-status", status);
+  name.textContent = cbFormatActiveAgentName(cbActiveContextState.context);
+  bar.title = cbBuildActiveContextTooltip(cbActiveContextState.context);
+};
+
+const cbApplyActiveContextToUi = (context) => {
+  if (!context) return;
+  const providerSelect = document.getElementById("cb-model-selector");
+  const searchInput = document.getElementById("cb-model-search");
+  const listEl = document.getElementById("cb-model-search-list");
+  if (!providerSelect && !searchInput) return;
+  cbSuppressContextActivation = true;
+  const uiProvider = cbNormalizeProviderForUi(context.provider);
+  if (providerSelect && uiProvider && providerSelect.value !== uiProvider) {
+    providerSelect.value = uiProvider;
+  }
+  if (searchInput) {
+    const label = cbFormatModelLabel(context.model || "");
+    if (label && searchInput.value !== label) {
+      searchInput.value = label;
+    }
+  }
+  if (providerSelect && searchInput && listEl) {
+    cbUpdateModelSearch(providerSelect.value || "auto", searchInput, listEl);
+  }
+  cbSuppressContextActivation = false;
+};
+
+const cbSetActiveContextState = ({ status, context = null, error = null, reason = null } = {}) => {
+  if (status) cbActiveContextState.status = status;
+  cbActiveContextState.context = context;
+  cbActiveContextState.error = error;
+  cbActiveContextState.pendingReason = reason;
+  if (context) {
+    cbApplyActiveContextToUi(context);
+  }
+  cbUpdateActiveContextBar();
+  cbUpdateChatHeader();
+  cbUpdateComposerSendState();
+};
+
+const cbBuildActiveContextRequestFromUi = (overrides = {}) => {
+  const selected = cbResolveCouncilSelections();
+  const primaryKey = selected.length ? selected[0] : null;
+  const agentProfile = primaryKey ? cbFindAgentByKey(primaryKey, cbCurrentWorkspaceId) : null;
+  const agentId = agentProfile?.cbAgentId || agentProfile?.agentId || null;
+  const providerSelect = document.getElementById("cb-model-selector");
+  const searchInput = document.getElementById("cb-model-search");
+  const providerValue = providerSelect?.value || "auto";
+  const provider = cbNormalizeProviderForApi(providerValue);
+  const modelHint = searchInput?.value ? searchInput.value.trim() : "";
+  const model = modelHint || "auto";
+
+  return {
+    workspace: cbNormalizeWorkspaceId(cbCurrentWorkspaceId),
+    agentId,
+    provider,
+    model,
+    billingSource: "coolbits",
+    ...overrides,
+  };
+};
+
+const cbActivateContext = async (requested = {}, { reason = null } = {}) => {
+  if (!cbIsAuthenticated()) {
+    return null;
+  }
+  const requestId = ++cbActiveContextRequestId;
+  cbSetActiveContextState({ status: "pending", context: cbActiveContextState.context, error: null, reason });
+  const { ok, status, json } = await cbFetchJson(API_CONTEXT_ACTIVATE, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(requested || {}),
+  });
+  if (requestId !== cbActiveContextRequestId) {
+    return null;
+  }
+  if (!ok || !json?.ok) {
+    const message = json?.error?.message || json?.error || "Unable to activate context.";
+    cbSetActiveContextState({
+      status: "error",
+      context: cbActiveContextState.context,
+      error: json?.error || { message },
+      reason,
+    });
+    showComposerError(message);
+    return null;
+  }
+  cbSetActiveContextState({ status: "active", context: json.context, error: null, reason });
+  clearComposerError();
+  return json.context;
+};
+
+const cbActivateContextFromUi = (reason) => {
+  if (cbSuppressContextActivation) return;
+  const payload = cbBuildActiveContextRequestFromUi();
+  return cbActivateContext(payload, { reason });
+};
+
+const cbQueueActivateContextFromUi = (reason, delay = 350) => {
+  if (cbSuppressContextActivation) return;
+  if (cbActiveContextDebounce) {
+    clearTimeout(cbActiveContextDebounce);
+  }
+  cbActiveContextDebounce = setTimeout(() => {
+    cbActivateContextFromUi(reason);
+  }, delay);
+};
+
+const cbLoadActiveContext = async () => {
+  if (!cbIsAuthenticated()) {
+    cbSetActiveContextState({ status: "idle", context: null, error: null });
+    return null;
+  }
+  const { ok, json } = await cbFetchJson(API_CONTEXT_ACTIVE, { method: "GET" });
+  if (ok && json?.context) {
+    cbSetActiveContextState({ status: json.context.status || "active", context: json.context, error: null });
+    return json.context;
+  }
+  cbSetActiveContextState({ status: "idle", context: null, error: null });
+  cbActivateContextFromUi("context-bootstrap");
+  return null;
+};
+
+window.cbActivateContext = cbActivateContext;
+window.cbActiveContextState = cbActiveContextState;
+
+const CB_AGENTS_WORKSPACE_PARAM = {
+  business: "cbB",
+  agency: "cbA",
+  developer: "cbD",
+  personal: "cbP",
+};
+
+const cbBuildAgentsDirectoryUrl = ({ includeWorkspace = false, workspaceId = null } = {}) => {
+  const base = "/agents/";
+  if (!includeWorkspace) {
+    return base;
+  }
+  const resolved = cbNormalizeWorkspaceId(workspaceId || cbCurrentWorkspaceId);
+  const param = CB_AGENTS_WORKSPACE_PARAM[resolved];
+  if (!param) {
+    return base;
+  }
+  const params = new URLSearchParams({ workspace: param });
+  return `${base}?${params.toString()}`;
+};
+
+const cbBuildAgentProfileUrl = (profile, { fromCouncil = false } = {}) => {
+  if (!profile || !profile.agentId) {
+    return cbBuildAgentsDirectoryUrl({ includeWorkspace: true, workspaceId: profile?.workspaceSlug });
+  }
+  const nameSegment = cbEncodeAgentNameSegment(profile.defaultName);
+  const base = `/agents/${profile.workspaceSlug}/${profile.roleSlug}/${profile.agentId}/${nameSegment}`;
+  if (!fromCouncil) {
+    return base;
+  }
+  const params = new URLSearchParams({ fromCouncil: "true" });
+  return `${base}?${params.toString()}`;
 };
 
 const cbSyncCurrentWorkspaceChatsCache = () => {
@@ -2010,6 +2655,7 @@ const cbApplyAuthPayload = (data, { persist = true } = {}) => {
     cbFetchAgentsRegistry();
   }
   closeOnboardingModal();
+  cbLoadActiveContext().catch((error) => console.warn("[ACTIVE_CONTEXT] load failed", error));
 };
 
 async function cbFetchAndApplyAuthMe() {
@@ -2268,7 +2914,13 @@ const cbUpdateGuestHint = () => {
   if (!hint) {
     return;
   }
-  hint.hidden = cbIsAuthenticated();
+  const hasUser = Boolean(cbCurrentUser && cbCurrentUser.email);
+  const badgeEmail = document
+    .querySelector(".cb-user-badge-email")
+    ?.textContent?.trim()
+    .toLowerCase();
+  const hasBadgeUser = Boolean(badgeEmail && badgeEmail !== "guest");
+  hint.hidden = cbIsAuthenticated() || hasUser || hasBadgeUser;
 };
 
 const cbMaybeSendPendingSeed = () => {
@@ -3249,6 +3901,7 @@ const updateUserBadge = () => {
     usageLine,
   });
   cbSetTokenLimitBannerVisible(cbIsTokenExhaustedFromSummary());
+  cbUpdateGuestHint();
 };
 
 const loadSidebarCollapsedFromStorage = () => {
@@ -3559,6 +4212,7 @@ const cbUpdatePromptMeter = () => {
     cbPromptMeterState.sizeClass = "xs";
     cbPromptMeterState.outcomeHint = "General reasoning";
     cbRenderPromptMeter();
+    cbUpdateChatHeader();
     return;
   }
 
@@ -3597,6 +4251,7 @@ const cbUpdatePromptMeter = () => {
   cbPromptMeterState.sizeClass = cbClassifyPromptSize(effectiveTokens);
   cbPromptMeterState.outcomeHint = cbClassifyOutcomeHint(text, ctx);
   cbRenderPromptMeter();
+  cbUpdateChatHeader();
 };
 
 const cbResizeComposerInput = () => {
@@ -3855,6 +4510,7 @@ const cbRenderProjects = () => {
   if (cbProjectMenuOpen && !projectMenu.hidden && projectSelector) {
     cbPositionSidebarMenu(projectMenu, projectSelector);
   }
+  cbUpdateChatHeader();
 };
 
 const cbApplyChatTitleLocally = (chatId, title) => {
@@ -3924,6 +4580,7 @@ const cbRenderWorkspaces = () => {
   } else if (workspaceSelector && cbWorkspaceMenuOpen) {
     cbPositionSidebarMenu(workspaceMenu, workspaceSelector);
   }
+  cbUpdateChatHeader();
 };
 
 const cbRenderCouncilActive = () => {
@@ -3998,6 +4655,13 @@ const cbRenderCouncilList = () => {
       toggle.appendChild(role);
       toggle.appendChild(desc);
 
+      const registryAgent = cbResolvePublicRegistryAgent(agent);
+      const profile = cbBuildCouncilAgentProfile(agent, registryAgent);
+      const preview = cbBuildCouncilHoverPreview(agent, registryAgent);
+      if (preview) {
+        toggle.title = preview;
+      }
+
       const detailsBtn = document.createElement("button");
       detailsBtn.type = "button";
       detailsBtn.className = "cb-council-detail-btn";
@@ -4005,7 +4669,11 @@ const cbRenderCouncilList = () => {
       detailsBtn.addEventListener("click", (event) => {
         event?.preventDefault?.();
         event?.stopPropagation?.();
-        cbOpenAgentDetail(agent.workspace, agent.key);
+        const url = cbBuildAgentProfileUrl(profile, { fromCouncil: true });
+        if (typeof cbOnCouncilModalClose === "function") {
+          cbOnCouncilModalClose();
+        }
+        window.location.href = url;
       });
 
       row.appendChild(toggle);
@@ -5320,6 +5988,7 @@ const clearAuthState = ({ showOnboarding = false } = {}) => {
   if (showOnboarding) {
     openOnboardingModal();
   }
+  cbSetActiveContextState({ status: "idle", context: null, error: null });
 };
 
 const loadAuthFromStorage = () => {
@@ -5376,6 +6045,16 @@ const focusChatInput = () => {
   }
 };
 
+const cbIsChatShellPage = () =>
+  !!document.querySelector("[data-chat-form]") ||
+  !!document.querySelector("[data-chat-messages]");
+
+const cbNavigateToChatView = (view) => {
+  const target = view && view !== "chat" ? view : "";
+  const query = target ? `?view=${encodeURIComponent(target)}` : "";
+  window.location.href = `/chat${query}`;
+};
+
 const setupSidebarInteractions = () => {
   const {
     sidebar,
@@ -5385,6 +6064,7 @@ const setupSidebarInteractions = () => {
     sidebarClose,
     sidebarBackdrop,
     newChatButton,
+    agentsButton,
   } = shellElements;
   if (!sidebar) {
     return;
@@ -5435,6 +6115,10 @@ const setupSidebarInteractions = () => {
   if (newChatButton) {
     newChatButton.addEventListener("click", (event) => {
       event.preventDefault();
+      if (!cbIsChatShellPage()) {
+        cbNavigateToChatView("chat");
+        return;
+      }
       if (!cbRequireAuthForChat("new-chat")) {
         return;
       }
@@ -5447,12 +6131,26 @@ const setupSidebarInteractions = () => {
     });
   }
 
+  if (agentsButton && agentsButton.dataset.sidebarAgentsBound !== "true") {
+    agentsButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      const url = cbBuildAgentsDirectoryUrl();
+      closeMobileSidebar();
+      window.location.href = url;
+    });
+    agentsButton.dataset.sidebarAgentsBound = "true";
+  }
+
   const dashboardButtons = document.querySelectorAll("[data-sidebar-view]");
   dashboardButtons.forEach((button) => {
     if (!button || button.dataset.sidebarViewBound === "true") return;
     button.addEventListener("click", (event) => {
       event.preventDefault();
       const target = button.dataset.sidebarView;
+      if (!cbIsChatShellPage()) {
+        cbNavigateToChatView(target);
+        return;
+      }
       cbToggleConnectorsMenu(false);
       cbSetDashboardView(target);
       closeMobileSidebar();
@@ -6013,6 +6711,7 @@ const cbUpdateConnectorState = (key, partial = {}) => {
     ...partial,
   };
   cbRenderConnectorsPanel();
+  cbUpdateChatHeader();
   if (cbConnectorDetailState.connector && cbConnectorDetailState.connector.key === key) {
     cbRenderConnectorDetail(cbConnectorDetailState.connector);
   }
@@ -9532,6 +10231,116 @@ const cbAgentDetailState = {
   ga4SummaryError: null,
 };
 
+const CB_PROVIDER_MODEL_MATRIX = {
+  auto: {
+    label: "Auto",
+    models: [
+      "gpt-4o",
+      "claude-3.5-sonnet",
+      "gemini-2.5-pro",
+      "gemini-2.5-flash",
+      "grok-2",
+      "copilot-pro",
+    ],
+  },
+  chatgpt: {
+    label: "ChatGPT",
+    models: [
+      "gpt-4o",
+      "gpt-4o-mini",
+      "gpt-4.1",
+      "gpt-4.1-mini",
+      "o1",
+      "o1-mini",
+    ],
+  },
+  claude: {
+    label: "Claude",
+    models: [
+      "claude-3.5-sonnet",
+      "claude-3.5-haiku",
+      "claude-3-opus",
+      "claude-3-sonnet",
+    ],
+  },
+  gemini: {
+    label: "Gemini",
+    models: [
+      "gemini-1.5-pro",
+      "gemini-1.5-flash",
+      "gemini-2.5-pro",
+      "gemini-2.5-flash",
+      "gemini-2.0-pro",
+      "gemini-2.0-flash",
+    ],
+  },
+  grok: {
+    label: "Grok",
+    models: [
+      "grok-2",
+      "grok-2-mini",
+      "grok-vision-beta",
+    ],
+  },
+  copilot: {
+    label: "Copilot",
+    models: [
+      "copilot-pro",
+      "copilot-vision",
+      "copilot-enterprise",
+    ],
+  },
+};
+
+const cbGetProviderConfig = (providerValue) => {
+  const key = String(providerValue || "auto").toLowerCase();
+  return CB_PROVIDER_MODEL_MATRIX[key] || CB_PROVIDER_MODEL_MATRIX.auto;
+};
+
+const cbRenderModelList = (listEl, models) => {
+  if (!listEl) return;
+  listEl.innerHTML = "";
+  models.forEach((model) => {
+    const option = document.createElement("option");
+    option.value = model;
+    listEl.appendChild(option);
+  });
+};
+
+const cbUpdateModelSearch = (providerValue, searchInput, listEl) => {
+  if (!searchInput || !listEl) return;
+  const config = cbGetProviderConfig(providerValue);
+  const placeholder =
+    providerValue === "auto" ? "Search models" : `Search ${config.label} models`;
+  cbRenderModelList(listEl, config.models);
+  searchInput.placeholder = placeholder;
+  const prevProvider = searchInput.dataset.provider || "";
+  if (prevProvider !== providerValue) {
+    searchInput.value = "";
+  }
+  searchInput.dataset.provider = providerValue;
+};
+
+const cbInitModelMenu = () => {
+  const providerSelect = document.getElementById("cb-model-selector");
+  const searchInput = document.getElementById("cb-model-search");
+  const listEl = document.getElementById("cb-model-search-list");
+  if (!providerSelect || !searchInput || !listEl) return;
+  if (providerSelect.dataset.modelMenuBound === "true") return;
+  const update = () => {
+    cbUpdateModelSearch(providerSelect.value || "auto", searchInput, listEl);
+    cbUpdateChatHeader();
+    cbActivateContextFromUi("model-provider-change");
+  };
+  providerSelect.addEventListener("change", update);
+  searchInput.addEventListener("input", () => {
+    cbUpdateChatHeader();
+    cbQueueActivateContextFromUi("model-hint-change");
+  });
+  update();
+  providerSelect.dataset.modelMenuBound = "true";
+};
+
 const cbPopulateAgentModelSelect = (selectEl) => {
   if (!selectEl) return;
   selectEl.innerHTML = "";
@@ -11173,6 +11982,21 @@ const setupCouncilControls = () => {
     });
     button.dataset.councilBound = "true";
   }
+  const agentsButton =
+    shellElements.councilAgentsButton || document.getElementById("cb-council-agents-btn");
+  if (agentsButton && agentsButton.dataset.councilAgentsBound !== "true") {
+    agentsButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      const url = cbBuildAgentsDirectoryUrl({ includeWorkspace: true });
+      if (typeof cbOnCouncilModalClose === "function") {
+        cbOnCouncilModalClose();
+      } else if (typeof closeModal === "function") {
+        closeModal("cb-council-popover", { silentFocus: true });
+      }
+      window.location.href = url;
+    });
+    agentsButton.dataset.councilAgentsBound = "true";
+  }
   cbRenderCouncilList();
   cbInitCouncilChip();
   cbSyncCouncilUI();
@@ -11223,6 +12047,12 @@ const cbUpdateSidebarViewHighlight = (activeParam) => {
   const connectorsActive = normalized === "ga4" || normalized === "googleads";
   if (connectorsToggle) {
     connectorsToggle.classList.toggle("is-active", connectorsActive);
+  }
+
+  const agentsButton =
+    shellElements.agentsButton || document.querySelector("[data-sidebar-agents]");
+  if (agentsButton) {
+    agentsButton.classList.toggle("is-active", normalized === "agents");
   }
 };
 
@@ -11349,8 +12179,13 @@ const initCoolBitsUI = () => {
   setupSidebarInteractions();
   syncWorkspaceShell();
   setupCouncilControls();
+  cbInitModelMenu();
+  cbEnsurePublicAgentsRegistry().then(() => cbRenderCouncilList());
   setupMainTabs();
   cbRenderCouncilBar();
+  cbUpdateChatHeader();
+  cbUpdateComposerSendState();
+  cbLoadActiveContext().catch((error) => console.warn("[ACTIVE_CONTEXT] init failed", error));
 
   if (!cbDashboardRouterState.bound) {
     window.addEventListener("popstate", cbSyncDashboardViewFromUrl);
@@ -11564,6 +12399,12 @@ async function sendMessage(prefilledValue) {
     return;
   }
 
+  if (cbActiveContextState.status !== "active") {
+    showComposerError("Select agent/model and wait for green status before sending.");
+    cbUpdateComposerSendState();
+    return;
+  }
+
   if (typeof prefilledValue === "string" && input) {
     input.value = prefilledValue;
     cbResizeComposerInput();
@@ -11633,7 +12474,7 @@ async function sendMessage(prefilledValue) {
     }
   } finally {
     isSending = false;
-    elements.button?.removeAttribute("disabled");
+    cbUpdateComposerSendState();
     elements.input?.removeAttribute("disabled");
     elements.input?.focus();
   }

@@ -17,6 +17,7 @@ import { getUserByEmail } from '../userStore.js';
 import { getPlanForUser, isPaidPlan, getCurrentPeriodForUser, getTokensUsed } from '../services/billingService.js';
 import { buildCouncilMeta } from '../chat.js';
 import { getChatAgentOrNull } from '../config/chatAgents.js';
+import { getActiveContext } from '../services/activeContextService.js';
 import {
   normalizeCouncil,
   isCouncilIntrospection,
@@ -129,14 +130,24 @@ router.post('/', requireUser, async (req, res) => {
       });
     }
 
-    const { chat, userMessage } = await createChat(req.userEmail, firstMessage, { model, temperature, projectId, workspaceId, councilMembers });
+    const activeContext = getActiveContext(user.id);
+    if (!activeContext || activeContext.status !== 'active') {
+      return res.status(409).json({
+        error: 'ACTIVE_CONTEXT_REQUIRED',
+        message: 'Select an agent/model and wait for active status before sending.',
+        errorCode: 'ACTIVE_CONTEXT_REQUIRED',
+      });
+    }
+
+    const modelFromContext = activeContext?.model || model;
+    const { chat, userMessage } = await createChat(req.userEmail, firstMessage, { model: modelFromContext, temperature, projectId, workspaceId, councilMembers });
 
     const councilSystem = buildCouncilSystem(chat.workspaceId || workspaceId || 'agency', chat.councilMembers || councilMembers);
     const history = [];
     if (councilSystem) history.push(councilSystem);
 
     const resolvedAgent = council.armed && council.agents.length ? getChatAgentOrNull(council.agents[0]) : null;
-    const modelToUse = resolvedAgent?.modelId || chat.model;
+    const modelToUse = activeContext?.model || resolvedAgent?.modelId || chat.model;
     const systemPrompt = councilMeta ? `${SYSTEM_PROMPT}\n\n${councilMeta}` : SYSTEM_PROMPT;
 
     const aiContent = await callLlm(modelToUse, {
@@ -151,8 +162,9 @@ router.post('/', requireUser, async (req, res) => {
       projectId,
       chatId: chat.id,
       planCode,
-      agentId: resolvedAgent?.id || null,
+      agentId: activeContext?.agentId || resolvedAgent?.id || null,
       scenarioId: resolvedAgent ? 'council-pill' : null,
+      contextId: activeContext?.contextId || null,
     });
 
     const assistantMessage = await saveAssistantMessage(chat.id, aiContent.text || aiContent, aiContent?.usage?.inputTokens || null, aiContent?.usage?.outputTokens || null);
@@ -201,6 +213,15 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
       });
     }
 
+    const activeContext = getActiveContext(user.id);
+    if (!activeContext || activeContext.status !== 'active') {
+      return res.status(409).json({
+        error: 'ACTIVE_CONTEXT_REQUIRED',
+        message: 'Select an agent/model and wait for active status before sending.',
+        errorCode: 'ACTIVE_CONTEXT_REQUIRED',
+      });
+    }
+
     const userMessage = await appendUserMessage(req.userEmail, req.params.chatId, content, councilMembers);
 
     const combo = await getChatWithMessages(req.userEmail, req.params.chatId);
@@ -236,7 +257,7 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
     history.push(...buildHistory(null, historyMessages));
 
     const resolvedAgent = council.armed && council.agents.length ? getChatAgentOrNull(council.agents[0]) : null;
-    const modelToUse = resolvedAgent?.modelId || combo.chat.model;
+    const modelToUse = activeContext?.model || resolvedAgent?.modelId || combo.chat.model;
     const systemPrompt = councilMeta ? `${SYSTEM_PROMPT}\n\n${councilMeta}` : SYSTEM_PROMPT;
 
     const aiContent = await callLlm(modelToUse, {
@@ -251,8 +272,9 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
       projectId: combo.chat.projectId || null,
       chatId: combo.chat.id,
       planCode,
-      agentId: resolvedAgent?.id || null,
+      agentId: activeContext?.agentId || resolvedAgent?.id || null,
       scenarioId: resolvedAgent ? 'council-pill' : null,
+      contextId: activeContext?.contextId || null,
     });
 
     const assistantMessage = await saveAssistantMessage(combo.chat.id, aiContent.text || aiContent, aiContent?.usage?.inputTokens || null, aiContent?.usage?.outputTokens || null);

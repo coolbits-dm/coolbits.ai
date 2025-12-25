@@ -137,13 +137,17 @@
     }
     /* Prompt meter (composer payload preview) */
     #cb-prompt-meter {
-      margin: 10px 0 4px;
+      margin: 16px auto 4px;
+      max-width: 1000px;
+      width: 100%;
+      align-self: center;
     }
     .cb-prompt-meter {
       display: flex;
       gap: 12px;
-      align-items: center;
+      align-items: flex-start;
       padding: 12px 14px;
+      width: 100%;
     }
     .cb-prompt-meter-left,
     .cb-prompt-meter-middle,
@@ -152,6 +156,7 @@
       flex-direction: column;
       gap: 6px;
       min-width: 0;
+      flex: 1 1 0;
     }
     .cb-prompt-meter-title,
     .cb-prompt-meter-label {
@@ -441,6 +446,64 @@
             <span class="cb-sidebar-label">New Chat</span>
           </button>
         </div>
+        <div class="cb-sidebar-section">
+          <button type="button" class="cb-sidebar-item" data-sidebar-agents aria-label="Agents">
+            <span class="cb-sidebar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M7 15c0-2.2 2.2-4 5-4s5 1.8 5 4M4.5 20c0-2.4 3.1-4.5 7.5-4.5s7.5 2.1 7.5 4.5"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  fill="none"
+                  stroke-linecap="round"
+                ></path>
+                <circle cx="9" cy="7" r="3" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+                <circle cx="16.5" cy="6.5" r="2.5" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+              </svg>
+            </span>
+            <span class="cb-sidebar-label">Agents</span>
+          </button>
+        </div>
+        <div class="cb-sidebar-section">
+          <a class="cb-sidebar-item" href="/maturity" aria-label="Maturity Index">
+            <span class="cb-sidebar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M4 14a8 8 0 0 1 16 0"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  fill="none"
+                  stroke-linecap="round"
+                ></path>
+                <path
+                  d="M12 14l3.5-3.5"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  fill="none"
+                  stroke-linecap="round"
+                ></path>
+                <circle cx="12" cy="14" r="1.5" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+              </svg>
+            </span>
+            <span class="cb-sidebar-label">Maturity Index</span>
+          </a>
+        </div>
+        <div class="cb-sidebar-section">
+          <a class="cb-sidebar-item" href="/pricing/" aria-label="Pricing">
+            <span class="cb-sidebar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M5 7h14M7 11h10M9 15h6M12 19h0"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  fill="none"
+                  stroke-linecap="round"
+                ></path>
+              </svg>
+            </span>
+            <span class="cb-sidebar-label">Pricing</span>
+          </a>
+        </div>
         <div class="cb-sidebar-section cb-sidebar-workspace">
           <div class="cb-sidebar-section-header">Workspace</div>
           <button type="button" class="cb-sidebar-select" id="cb-workspace-selector" aria-haspopup="listbox" aria-expanded="false" aria-label="Select workspace">
@@ -485,10 +548,10 @@
 	              Connector settings
 	            </button>
 	            <button type="button" class="cb-sidebar-menu-button" role="option" data-sidebar-view="ga4">
-	              <span>GA4 Dashboard</span>
+	              <span>GA4</span>
 	            </button>
 	            <button type="button" class="cb-sidebar-menu-button" role="option" data-sidebar-view="googleads">
-	              <span>Google Ads Dashboard</span>
+	              <span>Google Ads</span>
 	            </button>
 	            <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
 	              <span>Meta Ads</span>
@@ -528,6 +591,26 @@
 	            </button>
 	            <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
 	              <span>Mailchimp</span>
+	              <span class="cb-menu-soon">Soon</span>
+	            </button>
+	            <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+	              <span>Google Docs</span>
+	              <span class="cb-menu-soon">Soon</span>
+	            </button>
+	            <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+	              <span>Gmail</span>
+	              <span class="cb-menu-soon">Soon</span>
+	            </button>
+	            <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+	              <span>Google Calendar</span>
+	              <span class="cb-menu-soon">Soon</span>
+	            </button>
+	            <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+	              <span>Notion</span>
+	              <span class="cb-menu-soon">Soon</span>
+	            </button>
+	            <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+	              <span>Todoist</span>
 	              <span class="cb-menu-soon">Soon</span>
 	            </button>
 	          </div>
@@ -611,32 +694,22 @@
             <button type="button" class="cb-user-menu-item" id="cb-menu-signout" data-menu-action="signout">Sign out</button>
           </div>
         </div>
-      </div>
-    </div>
-    <div class="cb-model-selector-wrapper">
-      <select class="cb-model-selector" id="cb-model-selector">
-        <option value="auto" selected>Auto</option>
-        <option value="chatgpt">ChatGPT</option>
-        <option value="claude">Claude</option>
-        <option value="gemini">Gemini</option>
-        <option value="grok">Grok</option>
-        <option value="copilot">Copilot</option>
-      </select>
-      <div class="cb-chat-actions">
-        <button type="button" class="cb-chat-action-btn" aria-label="Share conversation">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 13.5L9 19.5M9 4.5L3 10.5M9 4.5L17.5 9.5M9 4.5V19.5M9 19.5L17.5 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="19.5" cy="9.5" r="2.5" stroke="currentColor" stroke-width="2"/>
-            <circle cx="19.5" cy="14.5" r="2.5" stroke="currentColor" stroke-width="2"/>
-          </svg>
-        </button>
-        <button type="button" class="cb-chat-action-btn cb-chat-menu-btn" aria-label="Chat options">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="5" r="2" fill="currentColor"/>
-            <circle cx="12" cy="12" r="2" fill="currentColor"/>
-            <circle cx="12" cy="19" r="2" fill="currentColor"/>
-          </svg>
-        </button>
+        <div class="cb-chat-actions-bar" aria-label="Chat actions">
+          <button type="button" class="cb-chat-action-btn" aria-label="Share conversation">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 13.5L9 19.5M9 4.5L3 10.5M9 4.5L17.5 9.5M9 4.5V19.5M9 19.5L17.5 14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="19.5" cy="9.5" r="2.5" stroke="currentColor" stroke-width="2"/>
+              <circle cx="19.5" cy="14.5" r="2.5" stroke="currentColor" stroke-width="2"/>
+            </svg>
+          </button>
+          <button type="button" class="cb-chat-action-btn cb-chat-menu-btn" aria-label="Chat options">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="5" r="2" fill="currentColor"/>
+              <circle cx="12" cy="12" r="2" fill="currentColor"/>
+              <circle cx="12" cy="19" r="2" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
     <div id="cb-chat-view" class="cb-main-view is-active" data-view="chat">
@@ -647,7 +720,30 @@
         </p>
         <p id="cb-upgrade-error" class="cb-upgrade-error" hidden></p>
       </div>
-      <div id="chat-header"></div>
+      <div id="chat-header" class="chat-header cb-smart-header" aria-live="polite">
+        <div class="cb-smart-toolbar">
+          <div class="cb-smart-tile cb-smart-tile--agent" id="cb-active-agent-tile" title="No agents selected. Open Council to add agents.">
+            <div class="cb-smart-label">Active agent</div>
+            <div class="cb-smart-value" id="cb-active-agent-name">Solo chat</div>
+            <div class="cb-smart-meta" id="cb-active-agent-meta">Council off</div>
+          </div>
+          <div class="cb-smart-tile">
+            <div class="cb-smart-label">Model</div>
+            <div class="cb-smart-value" id="cb-active-model">Auto</div>
+            <div class="cb-smart-meta" id="cb-active-model-meta">Routing: auto</div>
+          </div>
+          <div class="cb-smart-tile">
+            <div class="cb-smart-label">Context</div>
+            <div class="cb-smart-value" id="cb-active-context">Business / All projects</div>
+            <div class="cb-smart-meta" id="cb-active-context-meta">Connectors: none</div>
+          </div>
+          <div class="cb-smart-tile">
+            <div class="cb-smart-label">Usage</div>
+            <div class="cb-smart-value" id="cb-active-usage">Tokens: n/a</div>
+            <div class="cb-smart-meta" id="cb-active-usage-meta">Prompt: empty</div>
+          </div>
+        </div>
+      </div>
       <main id="chat-scroll" class="chat-container">
         <div class="chat-panel">
           <div class="chat-body">
@@ -665,6 +761,11 @@
       <div id="cb-prompt-meter"></div>
       <div id="chat-composer" class="chat-composer" data-chat-composer>
         <div id="cb-council-active" class="cb-council-active" hidden></div>
+        <div class="cb-active-context-bar" id="cb-active-context-bar" role="status" aria-live="polite">
+          <span class="cb-active-context-label">Active Agent</span>
+          <span class="cb-active-context-led" id="cb-active-context-led" data-status="idle" aria-hidden="true"></span>
+          <span class="cb-active-context-name" id="cb-active-context-name">Not active</span>
+        </div>
         <form id="cb-composer" class="cb-composer" data-chat-form autocomplete="off">
               <textarea
               id="chat-input"
@@ -675,17 +776,39 @@
               aria-label="Chat message"
             ></textarea>
             <div class="cb-composer-controls">
-              <button
-                type="button"
-                id="cb-council-pill"
-                class="cb-council-pill cb-composer-pill"
-                data-role="council-button"
-                onclick="cbOnCouncilPillClick()"
-                title="No agents selected"
-              >
-                <span class="cb-council-pill-label" data-role="council-label">Council</span>
-                <span class="cb-council-pill-count"></span>
-              </button>
+              <div class="cb-composer-left">
+                <button
+                  type="button"
+                  id="cb-council-pill"
+                  class="cb-council-pill cb-composer-pill"
+                  data-role="council-button"
+                  onclick="cbOnCouncilPillClick()"
+                  title="No agents selected"
+                >
+                  <span class="cb-council-pill-label" data-role="council-label">Council</span>
+                  <span class="cb-council-pill-count"></span>
+                </button>
+                <div class="cb-agent-menu" id="cb-agent-menu" role="group" aria-label="Agent model menu">
+                  <select class="cb-model-selector cb-agent-menu-select" id="cb-model-selector" aria-label="Model selection">
+                    <option value="auto" selected>Auto</option>
+                    <option value="chatgpt">ChatGPT</option>
+                    <option value="claude">Claude</option>
+                    <option value="gemini">Gemini</option>
+                    <option value="grok">Grok</option>
+                    <option value="copilot">Copilot</option>
+                  </select>
+                  <span class="cb-agent-menu-divider" aria-hidden="true"></span>
+                  <input
+                    class="cb-agent-menu-search"
+                    id="cb-model-search"
+                    type="search"
+                    list="cb-model-search-list"
+                    placeholder="Search models"
+                    aria-label="Search models"
+                  />
+                  <datalist id="cb-model-search-list"></datalist>
+                </div>
+              </div>
               <button type="submit" class="btn cb-composer-send" aria-label="Send message">
                 <span class="cb-composer-send-icon" aria-hidden="true"></span>
               </button>
@@ -1262,15 +1385,25 @@
     >
       <div class="cb-modal-header cb-council-header">
         <h2 class="cb-modal-title" id="cb-council-title">Council</h2>
-        <button
-          type="button"
-          class="cb-modal-close"
-          aria-label="Close council selector"
-          data-modal-id="cb-council-popover"
-          onclick="cbOnCouncilModalClose()"
-        >
-          ×
-        </button>
+        <div class="cb-council-header-actions">
+          <button
+            type="button"
+            class="cb-council-agents-btn"
+            id="cb-council-agents-btn"
+            title="View and manage available agents in this workspace"
+          >
+            Agents
+          </button>
+          <button
+            type="button"
+            class="cb-modal-close"
+            aria-label="Close council selector"
+            data-modal-id="cb-council-popover"
+            onclick="cbOnCouncilModalClose()"
+          >
+            ×
+          </button>
+        </div>
       </div>
       <div class="cb-modal-body cb-council-body">
         <p class="cb-council-subtitle">
