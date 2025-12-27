@@ -18,6 +18,25 @@
   flex-wrap: wrap;
 }
 
+.cb-connectors-header-text {
+  max-width: 560px;
+}
+
+.cb-connectors-header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.cb-connectors-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+
 .cb-connectors-header h1 {
   margin: 8px 0 6px;
   font-size: 2rem;
@@ -180,6 +199,14 @@
 @media (max-width: 900px) {
   .cb-connectors-main {
     padding: 24px 20px 32px;
+  }
+  .cb-connectors-header-actions {
+    align-items: flex-start;
+    width: 100%;
+  }
+  .cb-connectors-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
   .cb-connectors-grid {
     grid-template-columns: 1fr;

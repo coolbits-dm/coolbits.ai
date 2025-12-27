@@ -136,6 +136,20 @@
             </button>
             <div class="cb-sidebar-menu" id="cb-workspace-menu" role="listbox" aria-label="Select workspace" hidden></div>
           </div>
+
+          <div class="cb-sidebar-section">
+            <div class="cb-sidebar-section-header">Bits Orchestrator</div>
+            <button type="button" class="cb-sidebar-item" data-sidebar-feature="orchestrator" data-sidebar-tooltip="Coming soon" aria-label="Bits Orchestrator">
+              <span class="cb-sidebar-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M5 12a7 7 0 0114 0" stroke="currentColor" stroke-width="1.5" fill="none"></path>
+                  <path d="M12 5v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+                </svg>
+              </span>
+              <span class="cb-sidebar-label">Bits Orchestrator</span>
+              <span class="cb-sidebar-pill">Soon</span>
+            </button>
+          </div>
           <div class="cb-sidebar-section cb-sidebar-projects" data-projects-section>
             <div class="cb-sidebar-section-header">Projects</div>
             <button type="button" class="cb-sidebar-select" id="cb-project-selector" aria-haspopup="listbox" aria-expanded="false" aria-label="Select project">
@@ -149,7 +163,7 @@
             <div class="cb-sidebar-menu" id="cb-project-menu" role="listbox" aria-label="Project list" hidden></div>
             <div class="cb-sidebar-error" id="cb-projects-error" hidden>Unable to load projects.</div>
             <p class="cb-sidebar-hint cb-projects-guest-hint" id="cb-projects-guest-hint" hidden>
-              Sign in to organize chats by project.
+              Sign in to manage projects and attach them to payloads.
             </p>
             <button type="button" class="cb-sidebar-button-secondary" id="cb-project-create-open">
               <span class="cb-sidebar-button-icon" aria-hidden="true">+</span>
@@ -162,23 +176,60 @@
             <div class="cb-sidebar-empty" data-sidebar-empty hidden>No chats yet</div>
           </div>
           <div class="cb-sidebar-footer">
-            <div class="cb-sidebar-user" id="cb-sidebar-user-slot" aria-live="polite" hidden></div>
+            <div id="cb-user-area">
+              <div class="user-plan-label" id="cb-user-badge">
+                <span class="cb-user-badge-line cb-user-badge-email">Guest</span>
+                <span class="cb-user-badge-line cb-user-badge-plan"></span>
+                <span class="cb-user-badge-line cb-user-badge-tokens"></span>
+              </div>
+              <button class="user-avatar-button" id="cb-user-button" type="button" aria-label="User menu" aria-haspopup="menu" aria-expanded="false">
+                <span class="user-avatar-icon"></span>
+              </button>
+              <div id="cb-user-menu" class="cb-user-menu" aria-hidden="true">
+                <div class="cb-user-menu-plan-row">
+                  <div class="cb-user-menu-plan-copy">
+                    <span id="cb-user-menu-name">Guest</span>
+                    <span id="cb-user-menu-plan-short" class="cb-user-plan-tokens">Starter</span>
+                  </div>
+                  <button type="button" class="cb-user-menu-pill-btn" id="cb-user-menu-plan" data-menu-action="plan-billing">
+                    Manage plan
+                  </button>
+                </div>
+                <div class="cb-user-menu-divider" role="separator"></div>
+                <button type="button" class="cb-user-menu-item" id="cb-user-menu-account" data-menu-action="account-billing">Account</button>
+                <button type="button" class="cb-user-menu-item" id="cb-user-menu-profile" data-menu-action="profile">Profile</button>
+                <button type="button" class="cb-user-menu-item" id="cb-user-menu-settings" data-menu-action="settings">Settings</button>
+                <div class="cb-user-menu-divider" role="separator"></div>
+                <button type="button" class="cb-user-menu-item" id="cb-menu-signout" data-menu-action="signout">Sign out</button>
+              </div>
+            </div>
           </div>
         </div>
       </aside>
-      <main class="cb-connectors-main">
-        <header class="cb-connectors-header">
-          <div>
-            <div class="cb-connectors-kicker">CONNECTORS REGISTRY</div>
-            <h1>Connectors</h1>
-            <p>Browse available integrations for the active workspace. Coming soon connectors are visible but inactive.</p>
-          </div>
-          <div class="cb-connectors-workspaces" id="cb-connectors-workspaces"></div>
-        </header>
-        <section class="cb-connectors-grid" id="cb-connectors-grid"></section>
-        <div class="cb-connectors-empty" id="cb-connectors-empty" hidden>Unable to load connectors.</div>
-      </main>
+      <div class="cb-main">
+        <main class="cb-connectors-main">
+          <header class="cb-connectors-header">
+            <div class="cb-connectors-header-text">
+              <div class="cb-connectors-kicker">CONNECTORS REGISTRY</div>
+              <h1>Connectors</h1>
+              <p>Browse available integrations for the active workspace. Coming soon connectors are visible but inactive.</p>
+            </div>
+            <div class="cb-connectors-header-actions">
+              <div class="cb-connectors-actions">
+                <a class="cb-overview-button" href="/chat">Go to Chat</a>
+                <a class="cb-overview-button is-secondary" href="/payload/">Payloads</a>
+              </div>
+              <div class="cb-connectors-workspaces" id="cb-connectors-workspaces"></div>
+            </div>
+          </header>
+          <section class="cb-connectors-grid" id="cb-connectors-grid"></section>
+          <div class="cb-connectors-empty" id="cb-connectors-empty" hidden>Unable to load connectors.</div>
+        </main>
+        <footer data-cb-footer></footer>
+      </div>
     </div>
+    <script src="/assets/site-footer.js"></script>
+    <script src="/assets/chat.js?v=2025-12-27-01" type="module"></script>
     <script src="/assets/connectors.js?v=connectors-v1" defer></script>
   </body>
 </html>
