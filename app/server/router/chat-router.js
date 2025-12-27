@@ -11,11 +11,13 @@ import { rateLimitChatUserWorkspace } from '../middleware/rateLimit.js';
 const router = express.Router();
 
 router.post('/', requireUserOptional, rateLimitChatUserWorkspace, (req, res) => {
-  const { message, content } = req.body || {};
-  const text = (message ?? content ?? '').trim();
-  if (!message || !String(message).trim()) {
+  const { message, content, text } = req.body || {};
+  const normalized = String(message ?? text ?? content ?? '').trim();
+  if (!normalized) {
     return res.status(400).json({ error: 'Missing message' });
   }
+  if (!req.body) req.body = {};
+  if (!req.body.message) req.body.message = normalized;
 
   // Normalize optional agent key from the frontend pill
   const agentKey =
@@ -50,11 +52,13 @@ router.post('/', requireUserOptional, rateLimitChatUserWorkspace, (req, res) => 
 });
 
 router.post('/stream', requireUserOptional, rateLimitChatUserWorkspace, (req, res) => {
-  const { message, content } = req.body || {};
-  const text = (message ?? content ?? '').trim();
-  if (!message || !String(message).trim()) {
+  const { message, content, text } = req.body || {};
+  const normalized = String(message ?? text ?? content ?? '').trim();
+  if (!normalized) {
     return res.status(400).json({ error: 'Missing message' });
   }
+  if (!req.body) req.body = {};
+  if (!req.body.message) req.body.message = normalized;
 
   const agentKey =
     (typeof req.body?.agentKey === 'string' && req.body.agentKey) ||

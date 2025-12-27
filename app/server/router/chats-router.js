@@ -272,7 +272,7 @@ router.get('/:chatId', requireUser, async (req, res, next) => {
 // POST /api/chats
 router.post('/', requireUser, async (req, res) => {
   try {
-    const { firstMessage, model, temperature, projectId } = req.body || {};
+    const { firstMessage, message, content, text, model, temperature, projectId } = req.body || {};
     const council = normalizeCouncil(req.body);
     const councilMeta = buildCouncilMeta(council);
     const traceId = resolveTraceId(req);
@@ -280,9 +280,12 @@ router.post('/', requireUser, async (req, res) => {
 
     const workspaceId = typeof req.body?.workspaceId === 'string' && req.body.workspaceId.trim() ? req.body.workspaceId.trim() : 'business';
     const councilMembers = Array.isArray(req.body?.councilMembers) ? req.body.councilMembers : [];
-    if (!firstMessage || typeof firstMessage !== 'string') {
+    const normalizedFirst = String(firstMessage ?? message ?? text ?? content ?? '').trim();
+    if (!normalizedFirst) {
       return res.status(400).json({ error: 'firstMessage is required', errorCode: 'INVALID_INPUT' });
     }
+    if (!req.body) req.body = {};
+    if (!req.body.firstMessage) req.body.firstMessage = normalizedFirst;
 
     const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return res.status(401).json({ error: 'Unauthorized', errorCode: 'UNAUTHENTICATED' });
@@ -333,7 +336,7 @@ router.post('/', requireUser, async (req, res) => {
     const wantsStream = isSseRequest(req);
 
     const modelFromContext = activeContext?.model || model;
-    const { chat, userMessage } = await createChat(req.userEmail, firstMessage, { model: modelFromContext, temperature, projectId, workspaceId, councilMembers });
+    const { chat, userMessage } = await createChat(req.userEmail, normalizedFirst, { model: modelFromContext, temperature, projectId, workspaceId, councilMembers });
 
     const councilSystem = buildCouncilSystem(chat.workspaceId || workspaceId || 'agency', chat.councilMembers || councilMembers);
     const history = [];
@@ -439,16 +442,18 @@ router.post('/', requireUser, async (req, res) => {
 // POST /api/chats/:chatId/messages
 router.post('/:chatId/messages', requireUser, async (req, res) => {
   try {
-    const { message, content } = req.body || {};
-    const text = (message ?? content ?? '').trim();
+    const { message, content, text } = req.body || {};
+    const normalizedText = String(message ?? text ?? content ?? '').trim();
     const council = normalizeCouncil(req.body);
     const councilMeta = buildCouncilMeta(council);
     const traceId = resolveTraceId(req);
     req.traceId = traceId;
     const councilMembers = Array.isArray(req.body?.councilMembers) ? req.body.councilMembers : [];
-    if (!content || typeof content !== 'string') {
+    if (!normalizedText) {
       return res.status(400).json({ error: 'content is required', errorCode: 'INVALID_INPUT' });
     }
+    if (!req.body) req.body = {};
+    if (!req.body.content) req.body.content = normalizedText;
 
     const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return res.status(401).json({ error: 'Unauthorized', errorCode: 'UNAUTHENTICATED' });
@@ -481,7 +486,7 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
     const requestedContext = buildRequestedContext({ body: req.body, council, activeContext });
     const wantsStream = isSseRequest(req);
 
-    const userMessage = await appendUserMessage(req.userEmail, req.params.chatId, content, councilMembers);
+    const userMessage = await appendUserMessage(req.userEmail, req.params.chatId, normalizedText, councilMembers);
 
     const combo = await getChatWithMessages(req.userEmail, req.params.chatId);
     if (!combo) return res.status(404).json({ error: 'Chat not found', errorCode: 'NOT_FOUND' });
@@ -506,7 +511,7 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
       });
     }
 
-    if (isCouncilIntrospection({ text, council })) {
+    if (isCouncilIntrospection({ text: normalizedText, council })) {
       const answer = buildCouncilIntrospectionAnswer(council);
       console.log('[COUNCIL_INTROSPECTION]', {
         route: req.originalUrl,
@@ -541,7 +546,7 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
           resolved: meta.resolved,
           reason: meta.reason,
         });
-        await streamTextChunks(res, traceId, answer, { promptTokens: estimateTokens(text) });
+        await streamTextChunks(res, traceId, answer, { promptTokens: estimateTokens(normalizedText) });
         sendSse(res, 'chat.final', {
           traceId,
           text: answer,
