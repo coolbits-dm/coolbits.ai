@@ -1,4 +1,0 @@
-]633;E;echo "== router dir listing (filtered) ==";50de4d16-5492-4f63-be92-0cf64c4dc856]633;C== router dir listing (filtered) ==
--rw-r--r--  1 cblm cblm 11289 Dec 13 05:19 auth-router.js
--rw-rw-r--  1 cblm cblm 11577 Dec 11 00:02 ga4-router.js
--rw-rw-r--  1 cblm cblm 16891 Dec 14 00:16 googleads-router.js

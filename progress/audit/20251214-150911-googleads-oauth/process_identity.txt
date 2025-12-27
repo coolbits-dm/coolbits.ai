@@ -1,7 +1,0 @@
-== ps output (user, group, uid, gid, pid, etime, args) ==
-USER     GROUP      UID   GID     PID     ELAPSED COMMAND
-cblm     cblm      1000  1000 2263310       00:00 node /opt/coolbits.ai/app/server/server.js
-
-== /proc/2263310/status (Uid/Gid) ==
-Uid:	1000	1000	1000	1000
-Gid:	1000	1000	1000	1000
