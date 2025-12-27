@@ -91,7 +91,13 @@ function ensureSha256(sha256) {
 }
 
 function ensureReadableArtifact(artifact) {
-  if (!artifact) throw buildArtifactError('artifact_not_found', 'Artifact not found.', 404);
+  if (!artifact) {
+    throw buildArtifactError(
+      'workspace_mismatch',
+      'Artifact does not belong to this workspace.',
+      403,
+    );
+  }
   if (artifact.status !== 'ready') {
     throw buildArtifactError('artifact_not_ready', 'Artifact is not ready for download.', 409);
   }

@@ -9,6 +9,7 @@ import {
   completeArtifact,
   getDownloadStream,
 } from '../services/artifactService.js';
+import { assertWorkspaceAccess } from '../services/workspaceService.js';
 
 const router = express.Router();
 
@@ -35,7 +36,12 @@ router.post('/initiate', requireUser, async (req, res) => {
     const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
-    const workspaceId = getWorkspaceId(req);
+    const requestedWorkspaceId = getWorkspaceId(req);
+    const workspace = await assertWorkspaceAccess({
+      ownerId: user.id || user.email,
+      workspaceId: requestedWorkspaceId,
+    });
+    const workspaceId = workspace.id;
     const { name, contentType, bytes, sha256 } = req.body || {};
 
     const result = await initiateArtifact({
@@ -61,7 +67,12 @@ router.put('/:id/upload', requireUser, async (req, res) => {
     const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
-    const workspaceId = getWorkspaceId(req);
+    const requestedWorkspaceId = getWorkspaceId(req);
+    const workspace = await assertWorkspaceAccess({
+      ownerId: user.id || user.email,
+      workspaceId: requestedWorkspaceId,
+    });
+    const workspaceId = workspace.id;
     const id = req.params.id;
 
     const contentLength = req.headers['content-length'] ? Number(req.headers['content-length']) : null;
@@ -83,7 +94,12 @@ router.post('/:id/complete', requireUser, async (req, res) => {
     const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
-    const workspaceId = getWorkspaceId(req);
+    const requestedWorkspaceId = getWorkspaceId(req);
+    const workspace = await assertWorkspaceAccess({
+      ownerId: user.id || user.email,
+      workspaceId: requestedWorkspaceId,
+    });
+    const workspaceId = workspace.id;
     const id = req.params.id;
 
     const artifact = await completeArtifact({ workspaceId, id });
@@ -98,10 +114,20 @@ router.get('/:id', requireUser, async (req, res) => {
     const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
-    const workspaceId = getWorkspaceId(req);
+    const requestedWorkspaceId = getWorkspaceId(req);
+    const workspace = await assertWorkspaceAccess({
+      ownerId: user.id || user.email,
+      workspaceId: requestedWorkspaceId,
+    });
+    const workspaceId = workspace.id;
     const id = req.params.id;
     const artifact = await getArtifact({ workspaceId, id });
-    if (!artifact) return res.status(404).json({ error: 'artifact_not_found' });
+    if (!artifact) {
+      return res.status(403).json({
+        error: 'workspace_mismatch',
+        message: 'Artifact does not belong to this workspace.',
+      });
+    }
     return res.json({ artifact });
   } catch (err) {
     return respondError(res, err);
@@ -113,7 +139,12 @@ router.get('/:id/download', requireUser, async (req, res) => {
     const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
-    const workspaceId = getWorkspaceId(req);
+    const requestedWorkspaceId = getWorkspaceId(req);
+    const workspace = await assertWorkspaceAccess({
+      ownerId: user.id || user.email,
+      workspaceId: requestedWorkspaceId,
+    });
+    const workspaceId = workspace.id;
     const id = req.params.id;
     const { artifact, filePath, stat } = await getDownloadStream({ workspaceId, id });
 

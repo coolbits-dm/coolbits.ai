@@ -10,6 +10,7 @@ import {
   decodeCursor,
   encodeCursor,
 } from '../services/payloadService.js';
+import { assertWorkspaceAccess } from '../services/workspaceService.js';
 
 const router = express.Router();
 const MAX_PAGE_SIZE = 50;
@@ -37,7 +38,12 @@ router.post('/', requireUser, async (req, res) => {
     const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
-    const workspaceId = getWorkspaceId(req);
+    const requestedWorkspaceId = getWorkspaceId(req);
+    const workspace = await assertWorkspaceAccess({
+      ownerId: user.id || user.email,
+      workspaceId: requestedWorkspaceId,
+    });
+    const workspaceId = workspace.id;
     const { name, kind, cbpl } = req.body || {};
 
     const result = await createPayload({
@@ -63,7 +69,12 @@ router.get('/', requireUser, async (req, res) => {
     const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
-    const workspaceId = getWorkspaceId(req);
+    const requestedWorkspaceId = getWorkspaceId(req);
+    const workspace = await assertWorkspaceAccess({
+      ownerId: user.id || user.email,
+      workspaceId: requestedWorkspaceId,
+    });
+    const workspaceId = workspace.id;
     const kind = typeof req.query.kind === 'string' && req.query.kind.trim() ? req.query.kind.trim() : null;
     const q = typeof req.query.q === 'string' && req.query.q.trim() ? req.query.q.trim() : null;
     const limitRaw = parseInt(req.query.limit || '20', 10);
@@ -86,7 +97,12 @@ router.get('/:id', requireUser, async (req, res) => {
     const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
-    const workspaceId = getWorkspaceId(req);
+    const requestedWorkspaceId = getWorkspaceId(req);
+    const workspace = await assertWorkspaceAccess({
+      ownerId: user.id || user.email,
+      workspaceId: requestedWorkspaceId,
+    });
+    const workspaceId = workspace.id;
     const id = req.params.id;
     const payload = await getPayload({ workspaceId, id });
     if (!payload) {
@@ -103,7 +119,12 @@ router.delete('/:id', requireUser, async (req, res) => {
     const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
-    const workspaceId = getWorkspaceId(req);
+    const requestedWorkspaceId = getWorkspaceId(req);
+    const workspace = await assertWorkspaceAccess({
+      ownerId: user.id || user.email,
+      workspaceId: requestedWorkspaceId,
+    });
+    const workspaceId = workspace.id;
     const id = req.params.id;
     const deleted = await deletePayload({ workspaceId, id });
     if (!deleted) {
@@ -120,7 +141,12 @@ router.patch('/:id', requireUser, async (req, res) => {
     const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
-    const workspaceId = getWorkspaceId(req);
+    const requestedWorkspaceId = getWorkspaceId(req);
+    const workspace = await assertWorkspaceAccess({
+      ownerId: user.id || user.email,
+      workspaceId: requestedWorkspaceId,
+    });
+    const workspaceId = workspace.id;
     const id = req.params.id;
     const name = req.body?.name ?? '';
     const payload = await renamePayload({ workspaceId, id, name });

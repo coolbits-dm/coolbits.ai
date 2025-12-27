@@ -37,6 +37,7 @@ import {
 import { normalizeUsage } from '../services/tokenUsageHelper.js';
 import { PRICING_VERSION, FX_VERSION } from '../config/pricingConfig.js';
 import { resolvePayloadAttachments } from '../services/payloadService.js';
+import { assertWorkspaceAccess } from '../services/workspaceService.js';
 
 const router = express.Router();
 
@@ -249,8 +250,17 @@ router.get('/', requireUser, async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit || '20', 10);
     const offset = parseInt(req.query.offset || '0', 10);
-    const workspaceId = typeof req.query.workspaceId === 'string' && req.query.workspaceId.trim() ? req.query.workspaceId.trim() : 'business';
-    console.debug('[WORKSPACE]', { route: '/api/chats', email: req.userEmail, workspaceId });
+    const requestedWorkspaceId = typeof req.query.workspaceId === 'string' && req.query.workspaceId.trim()
+      ? req.query.workspaceId.trim()
+      : 'business';
+    console.debug('[WORKSPACE]', { route: '/api/chats', email: req.userEmail, workspaceId: requestedWorkspaceId });
+    const user = await getUserByEmail(req.userEmail || req.user?.email);
+    if (!user) return res.status(401).json({ error: 'Unauthorized', errorCode: 'UNAUTHENTICATED' });
+    const workspace = await assertWorkspaceAccess({
+      ownerId: user.id || user.email,
+      workspaceId: requestedWorkspaceId,
+    });
+    const workspaceId = workspace.id;
     const chats = await listChatsForUser(req.userEmail, { limit, offset, workspaceId });
     res.json({ chats });
   } catch (err) {
@@ -278,7 +288,9 @@ router.post('/', requireUser, async (req, res) => {
     const traceId = resolveTraceId(req);
     req.traceId = traceId;
 
-    const workspaceId = typeof req.body?.workspaceId === 'string' && req.body.workspaceId.trim() ? req.body.workspaceId.trim() : 'business';
+    const requestedWorkspaceId = typeof req.body?.workspaceId === 'string' && req.body.workspaceId.trim()
+      ? req.body.workspaceId.trim()
+      : 'business';
     const councilMembers = Array.isArray(req.body?.councilMembers) ? req.body.councilMembers : [];
     const normalizedFirst = String(firstMessage ?? message ?? text ?? content ?? '').trim();
     if (!normalizedFirst) {
@@ -314,6 +326,11 @@ router.post('/', requireUser, async (req, res) => {
         errorCode: 'ACTIVE_CONTEXT_REQUIRED',
       });
     }
+    const workspace = await assertWorkspaceAccess({
+      ownerId: user.id || user.email,
+      workspaceId: requestedWorkspaceId,
+    });
+    const workspaceId = workspace.id;
 
     const payloadIds = Array.isArray(req.body?.payloadIds) ? req.body.payloadIds : null;
     let payloadMeta = [];
@@ -491,9 +508,19 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
     const combo = await getChatWithMessages(req.userEmail, req.params.chatId);
     if (!combo) return res.status(404).json({ error: 'Chat not found', errorCode: 'NOT_FOUND' });
 
-    const workspaceId = typeof req.body?.workspaceId === 'string' && req.body.workspaceId.trim()
-      ? req.body.workspaceId.trim()
-      : combo?.chat?.workspaceId || 'business';
+    let workspaceId = combo?.chat?.workspaceId || 'business';
+    const requestedWorkspace =
+      typeof req.body?.workspaceId === 'string' && req.body.workspaceId.trim()
+        ? req.body.workspaceId.trim()
+        : null;
+    if (requestedWorkspace && requestedWorkspace !== workspaceId) {
+      return res.status(403).json({ error: 'workspace_mismatch', message: 'Workspace mismatch for chat.' });
+    }
+    const workspace = await assertWorkspaceAccess({
+      ownerId: user.id || user.email,
+      workspaceId,
+    });
+    workspaceId = workspace.id;
     const payloadIds = Array.isArray(req.body?.payloadIds) ? req.body.payloadIds : null;
     let payloadMeta = [];
     let hasPayloadRequest = false;

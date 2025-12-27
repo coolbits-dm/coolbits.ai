@@ -4,6 +4,7 @@ import { getUserByEmail } from '../userStore.js';
 import { resolvePayloadAttachments } from '../services/payloadService.js';
 import { createRunPreview, consumeRunPreview } from '../services/runPreviewService.js';
 import { PRICING_VERSION, FX_VERSION } from '../config/pricingConfig.js';
+import { assertWorkspaceAccess } from '../services/workspaceService.js';
 
 const router = express.Router();
 
@@ -24,7 +25,12 @@ router.post('/preview', requireUser, async (req, res) => {
     const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
-    const workspaceId = getWorkspaceId(req);
+    const requestedWorkspaceId = getWorkspaceId(req);
+    const workspace = await assertWorkspaceAccess({
+      ownerId: user.id || user.email,
+      workspaceId: requestedWorkspaceId,
+    });
+    const workspaceId = workspace.id;
     const objective = typeof req.body?.objective === 'string' ? req.body.objective.trim() : '';
     if (!objective) {
       return res.status(400).json({ error: 'objective_required', message: 'Objective is required.' });
@@ -67,7 +73,12 @@ router.post('/commit', requireUser, async (req, res) => {
     const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
-    const workspaceId = getWorkspaceId(req);
+    const requestedWorkspaceId = getWorkspaceId(req);
+    const workspace = await assertWorkspaceAccess({
+      ownerId: user.id || user.email,
+      workspaceId: requestedWorkspaceId,
+    });
+    const workspaceId = workspace.id;
     const previewId = typeof req.body?.previewId === 'string' ? req.body.previewId.trim() : '';
     if (!previewId) {
       return res.status(400).json({ error: 'preview_required', message: 'previewId is required.' });

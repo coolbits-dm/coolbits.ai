@@ -363,7 +363,11 @@ export async function resolvePayloadAttachments({ workspaceId, payloadIds }) {
 
   const rows = await getPayloadsByIds(workspaceId, ids);
   if (rows.length !== ids.length) {
-    throw buildPayloadError('payload_not_found', 'One or more payloads not found.', 404);
+    throw buildPayloadError(
+      'workspace_mismatch',
+      'Payloads do not belong to this workspace.',
+      403,
+    );
   }
 
   for (const row of rows) {

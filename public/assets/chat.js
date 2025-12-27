@@ -65,6 +65,7 @@ const API_AGENTS_RUN = `${API_BASE}/agents/run`;
 const API_CONTEXT_ACTIVE = `${API_BASE}/context/active`;
 const API_CONTEXT_ACTIVATE = `${API_BASE}/context/activate`;
 const API_PAYLOADS = `${API_BASE}/payloads`;
+const API_WORKSPACES = `${API_BASE}/workspaces`;
 const PUBLIC_AGENTS_REGISTRY_URL = "/api/public/agents-registry";
 const API_AUTH_GOOGLE_START = `${API_BASE}/auth/google/start`;
 const API_PROJECTS = `${API_BASE}/projects`;
@@ -380,6 +381,12 @@ const cbNormalizeAgentWorkspace = (workspaceId) => {
   return key;
 };
 
+const cbTitleize = (value) =>
+  String(value || "")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+
 const cbSlugifyText = (value) =>
   String(value || "")
     .toLowerCase()
@@ -505,8 +512,10 @@ const cbGetWorkspaceLabel = (workspaceId) => {
     (Array.isArray(cbWorkspaces) &&
       cbWorkspaces.find((ws) => cbNormalizeAgentWorkspace(ws.id) === normalized)) ||
     null;
-  if (match) return match.label;
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  if (match?.name) return match.name;
+  if (match?.label) return match.label;
+  if (!normalized) return "Workspace";
+  return cbTitleize(normalized);
 };
 
 const cbFindAgentByKey = (agentKey, workspaceId = null) => {
@@ -680,6 +689,7 @@ window.cbCouncilSelectedIds = window.cbCouncilSelectedIds || new Set();
 let cbCouncilSelectedIds = window.cbCouncilSelectedIds;
 let cbCouncilSendStatus = {};
 let cbCouncilEnabled = false;
+let cbCouncilMissingWarned = false;
 
 function cbGetCouncilElements() {
   const wrapper =
@@ -904,11 +914,18 @@ function cbOnCouncilModalClose() {
 }
 
 function cbUpdateCouncilPill() {
-  const { wrapper, labelEl, countEl } = cbGetCouncilElements();
-  if (!wrapper || !labelEl || !countEl) {
-    console.warn("[CB_COUNCIL] pill elements missing");
+  if (!cbIsChatShellPage()) {
     return;
   }
+  const { wrapper, labelEl, countEl } = cbGetCouncilElements();
+  if (!wrapper || !labelEl || !countEl) {
+    if (!cbCouncilMissingWarned) {
+      console.warn("[CB_COUNCIL] pill elements missing");
+      cbCouncilMissingWarned = true;
+    }
+    return;
+  }
+  cbCouncilMissingWarned = false;
 
   const selectedCount = Array.isArray(cbCouncilState.selectedKeys)
     ? cbCouncilState.selectedKeys.length
@@ -1431,7 +1448,7 @@ const cbBuildContextSummary = () => {
     cbWorkspaces.find((item) => item.id === cbCurrentWorkspaceId) || cbWorkspaces[0];
   const activeProject =
     cbCurrentProjectId && cbProjects.find((proj) => proj && proj.id === cbCurrentProjectId);
-  const value = `${workspace?.label || "Workspace"} / ${activeProject?.name || "All projects"}`;
+  const value = `${workspace?.name || workspace?.label || "Workspace"} / ${activeProject?.name || "All projects"}`;
   const connected = Object.keys(cbConnectorState || {})
     .filter((key) => (cbConnectorState[key]?.status || "").toLowerCase() === "connected")
     .map((key) => cbResolveConnectorByKey(key))
@@ -2261,12 +2278,11 @@ let cbActiveContextRequestId = 0;
 let cbActiveContextDebounce = null;
 let cbSuppressContextActivation = false;
 const WORKSPACE_STORAGE_KEY = "coolbits:workspace";
-const cbWorkspaces = [
-  { id: "business", label: "Business" },
-  { id: "agency", label: "Agency" },
-  { id: "developer", label: "Developer" },
-];
-let cbCurrentWorkspaceId = "business";
+let cbWorkspaces = [];
+let cbWorkspacesLoaded = false;
+let cbWorkspacesLoading = false;
+let cbWorkspacesPromise = null;
+let cbCurrentWorkspaceId = null;
 let cbWorkspaceMenuOpen = false;
 let cbConnectorsMenuOpen = false;
 let cbPendingDeleteChatId = null;
@@ -2284,9 +2300,16 @@ const cbFeatureFlags = {
 let cbPendingFirstMessage = null;
 const cbNormalizeWorkspaceId = (workspaceId) => {
   if (typeof workspaceId === "string" && workspaceId.trim()) {
-    return workspaceId;
+    const trimmed = workspaceId.trim();
+    if (trimmed.toLowerCase() === "dev") {
+      return "developer";
+    }
+    return trimmed;
   }
-  return "business";
+  if (cbCurrentWorkspaceId) {
+    return cbCurrentWorkspaceId;
+  }
+  return cbWorkspaces[0]?.id || "business";
 };
 
 const CB_PROVIDER_API_MAP = {
@@ -3073,6 +3096,7 @@ const CB_AGENTS_WORKSPACE_PARAM = {
   business: "cbB",
   agency: "cbA",
   developer: "cbD",
+  dev: "cbD",
   personal: "cbP",
 };
 
@@ -3111,6 +3135,9 @@ const cbSyncCurrentWorkspaceChatsCache = () => {
 };
 
 const cbGetEffectiveSelectedWorkspaces = (user) => {
+  if (Array.isArray(cbWorkspaces) && cbWorkspaces.length) {
+    return cbWorkspaces.map((ws) => ws.id).filter(Boolean);
+  }
   if (Array.isArray(user?.workspacesSelected) && user.workspacesSelected.length) {
     return user.workspacesSelected.slice();
   }
@@ -3120,14 +3147,11 @@ const cbGetEffectiveSelectedWorkspaces = (user) => {
   if (Array.isArray(user?.capabilities?.workspacesAllowed) && user.capabilities.workspacesAllowed.length) {
     return user.capabilities.workspacesAllowed.slice();
   }
-  return ["business"];
+  return [];
 };
 
 const cbEnsureWorkspaceSelectionFromUser = (userOverride) => {
   const user = userOverride || cbCurrentUser;
-  if (!user) {
-    return;
-  }
   const effective = cbGetEffectiveSelectedWorkspaces(user);
   if (!effective.length) {
     return;
@@ -3206,7 +3230,11 @@ const cbApplyAuthPayload = (data, { persist = true } = {}) => {
 
   cbCurrentUser = merged;
   cbUpdateUsageState(cbCurrentUser);
-  if (typeof cbEnsureWorkspaceSelectionFromUser === "function") {
+  if (cbIsAuthenticated()) {
+    cbFetchWorkspaces()
+      .then(() => cbEnsureWorkspaceSelectionFromUser(cbCurrentUser))
+      .catch((error) => console.warn("[WORKSPACE] load failed", error));
+  } else if (typeof cbEnsureWorkspaceSelectionFromUser === "function") {
     cbEnsureWorkspaceSelectionFromUser(cbCurrentUser);
   }
 
@@ -3439,14 +3467,108 @@ const cbIsAuthenticated = () => {
 
 const cbLoadWorkspaceFromStorage = () => {
   try {
-    const stored = window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
+    const raw = window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
+    const stored = cbNormalizeWorkspaceId(raw);
     if (stored && cbWorkspaces.some((ws) => ws.id === stored)) {
       return stored;
+    }
+    if (stored) {
+      const normalized = cbNormalizeAgentWorkspace(stored);
+      const match = cbWorkspaces.find(
+        (ws) => cbNormalizeAgentWorkspace(ws.id) === normalized
+      );
+      if (match) {
+        return match.id;
+      }
     }
   } catch (error) {
     console.warn("[WORKSPACE] Unable to read stored workspace", error);
   }
-  return "business";
+  return cbWorkspaces[0]?.id || null;
+};
+
+const cbSetWorkspaces = (items = []) => {
+  cbWorkspaces = Array.isArray(items) ? items.filter(Boolean) : [];
+  cbWorkspacesLoaded = true;
+  cbWorkspacesLoading = false;
+  cbWorkspacesPromise = null;
+
+  const hasCurrent = cbWorkspaces.some((ws) => ws.id === cbCurrentWorkspaceId);
+  const stored = cbLoadWorkspaceFromStorage();
+  const fallback = hasCurrent ? cbCurrentWorkspaceId : stored || cbWorkspaces[0]?.id || null;
+  if (fallback && fallback !== cbCurrentWorkspaceId) {
+    cbOnWorkspaceChanged(fallback);
+    return;
+  }
+  cbRenderWorkspaces();
+};
+
+const cbFetchWorkspaces = async ({ force = false } = {}) => {
+  if (cbWorkspacesLoaded && !force) {
+    return cbWorkspaces;
+  }
+  if (cbWorkspacesLoading && cbWorkspacesPromise) {
+    return cbWorkspacesPromise;
+  }
+  if (!cbIsAuthenticated()) {
+    cbSetWorkspaces([]);
+    return cbWorkspaces;
+  }
+  cbWorkspacesLoading = true;
+  cbWorkspacesPromise = (async () => {
+    const { ok, json } = await cbFetchJson(API_WORKSPACES, { method: "GET" });
+    if (ok && Array.isArray(json?.items)) {
+      cbSetWorkspaces(json.items);
+      return cbWorkspaces;
+    }
+    cbSetWorkspaces([]);
+    return cbWorkspaces;
+  })();
+  return cbWorkspacesPromise;
+};
+
+const cbCreateWorkspace = async () => {
+  if (!cbRequireAuthForChat("workspace-create")) {
+    return;
+  }
+  const name = window.prompt("Workspace name");
+  if (!name) {
+    return;
+  }
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return;
+  }
+  const { ok, status, json } = await cbFetchJson(API_WORKSPACES, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: trimmed }),
+  });
+  if (!ok) {
+    const errorCode = json?.error || json?.code || "workspace_create_failed";
+    if (errorCode === "workspace_limit_reached" && typeof cbOpenPlansModal === "function") {
+      cbOpenPlansModal({ source: "workspace-limit" });
+      return;
+    }
+    const message =
+      json?.message ||
+      (status === 403
+        ? "Workspace limit reached for your plan."
+        : "Unable to create workspace.");
+    if (typeof window.cbShowInfoToast === "function") {
+      window.cbShowInfoToast(message);
+    } else {
+      showComposerError(message);
+    }
+    return;
+  }
+  const workspace = json?.workspace;
+  if (workspace && workspace.id) {
+    cbSetWorkspaces([...cbWorkspaces.filter((ws) => ws.id !== workspace.id), workspace]);
+    cbOnWorkspaceChanged(workspace.id);
+    return;
+  }
+  cbFetchWorkspaces({ force: true });
 };
 
 const cbSaveWorkspaceToStorage = (workspaceId) => {
@@ -3457,7 +3579,6 @@ const cbSaveWorkspaceToStorage = (workspaceId) => {
   }
 };
 
-cbCurrentWorkspaceId = cbLoadWorkspaceFromStorage();
 
 function cbRequireAuthForChat(actionLabel = "chat-action") {
   if (cbIsAuthenticated()) {
@@ -5098,56 +5219,61 @@ const cbApplyChatTitleLocally = (chatId, title) => {
 
 const cbRenderWorkspaces = () => {
   const { workspaceLabel, workspaceMenu, workspaceSelector } = shellElements;
+  const isAuthed = cbIsAuthenticated();
   const active =
     cbWorkspaces.find((workspace) => workspace.id === cbCurrentWorkspaceId) || cbWorkspaces[0];
   if (workspaceLabel) {
-    workspaceLabel.textContent = active?.label || "Workspace";
+    workspaceLabel.textContent = active?.name || active?.label || "Workspace";
   }
   if (workspaceSelector) {
+    if (isAuthed) {
+      workspaceSelector.removeAttribute("disabled");
+    } else {
+      workspaceSelector.setAttribute("disabled", "disabled");
+    }
     workspaceSelector.setAttribute("aria-expanded", cbWorkspaceMenuOpen ? "true" : "false");
     workspaceSelector.setAttribute("data-open", cbWorkspaceMenuOpen ? "true" : "false");
   }
   if (!workspaceMenu) {
     return;
   }
+  workspaceMenu.hidden = !isAuthed || !cbWorkspaceMenuOpen;
+  if (workspaceMenu.hidden) {
+    cbResetFloatingMenuStyles(workspaceMenu);
+  }
   workspaceMenu.innerHTML = "";
-  const allowedList =
-    (Array.isArray(cbCurrentUser?.capabilities?.workspacesAllowed) &&
-      cbCurrentUser.capabilities.workspacesAllowed.length &&
-      cbCurrentUser.capabilities.workspacesAllowed) ||
-    (Array.isArray(cbCurrentUser?.workspacesAllowed) &&
-      cbCurrentUser.workspacesAllowed.length &&
-      cbCurrentUser.workspacesAllowed) ||
-    cbWorkspaces.map((workspace) => workspace.id);
-  const allowedSet = new Set(allowedList);
+  if (!isAuthed) {
+    return;
+  }
 
   cbWorkspaces.forEach((workspace) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "cb-sidebar-menu-button";
-    button.textContent = workspace.label;
+    button.textContent = workspace.name || workspace.label || cbTitleize(workspace.id);
     button.setAttribute("role", "option");
     button.setAttribute("aria-selected", workspace.id === cbCurrentWorkspaceId ? "true" : "false");
-    const isAllowed = allowedSet.has(workspace.id);
     if (workspace.id === cbCurrentWorkspaceId) {
       button.classList.add("is-active");
     }
-    if (!isAllowed) {
-      button.disabled = true;
-      button.classList.add("cb-sidebar-item--locked");
-      button.setAttribute("aria-disabled", "true");
-      button.title = "Not available on your current plan.";
-    } else {
-      button.disabled = false;
-      button.title = `Switch to ${workspace.label}`;
-      button.addEventListener("click", () => cbSelectWorkspace(workspace.id));
-    }
+    button.disabled = false;
+    button.title = `Switch to ${workspace.name || workspace.label || cbTitleize(workspace.id)}`;
+    button.addEventListener("click", () => cbSelectWorkspace(workspace.id));
     workspaceMenu.appendChild(button);
   });
-  workspaceMenu.hidden = !cbWorkspaceMenuOpen;
-  if (workspaceMenu.hidden) {
-    cbResetFloatingMenuStyles(workspaceMenu);
-  } else if (workspaceSelector && cbWorkspaceMenuOpen) {
+
+  const newOption = document.createElement("button");
+  newOption.type = "button";
+  newOption.className = "cb-sidebar-menu-button cb-project-menu-new";
+  newOption.innerHTML = `<span aria-hidden="true">+</span><span>Add workspace</span>`;
+  newOption.addEventListener("click", (event) => {
+    event.preventDefault();
+    cbToggleWorkspaceMenu(false);
+    cbCreateWorkspace();
+  });
+  workspaceMenu.appendChild(newOption);
+
+  if (workspaceSelector && cbWorkspaceMenuOpen && !workspaceMenu.hidden) {
     cbPositionSidebarMenu(workspaceMenu, workspaceSelector);
   }
   cbUpdateChatHeader();
@@ -5341,6 +5467,9 @@ const cbSelectProject = (projectId) => {
 };
 
 const cbSelectWorkspace = (workspaceId) => {
+  if (!Array.isArray(cbWorkspaces) || cbWorkspaces.length === 0) {
+    return;
+  }
   const nextWorkspaceId =
     cbWorkspaces.find((workspace) => workspace.id === workspaceId)?.id || cbWorkspaces[0].id;
   cbToggleWorkspaceMenu(false);

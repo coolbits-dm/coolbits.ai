@@ -4,6 +4,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { signUser, verifyToken } from '../jwtService.js';
 import { PLANS, getPlanConfig, getCapabilities } from '../config/plans.js';
 import { getUserByEmail, upsertUser, updateUser, repairStarterFreeCbt } from '../userStore.js';
+import { ensureSystemWorkspaces } from '../services/workspaceService.js';
 import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI } from '../config/googleAuth.js';
 
 const router = express.Router();
@@ -191,6 +192,7 @@ router.post('/mock-login', async (req, res) => {
           ? existing.tokensRemaining
           : PLANS.STARTER_FREE.tokensIncluded,
     });
+    await ensureSystemWorkspaces({ ownerId: user.id || user.email, createdBy: user.id || user.email });
     const token = signUser({ email: user.email, plan: user.planId });
     return res.json({
       token,

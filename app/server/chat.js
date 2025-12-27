@@ -29,6 +29,7 @@ import { PRICING_VERSION, FX_VERSION } from './config/pricingConfig.js';
 import { normalizeUsage } from './services/tokenUsageHelper.js';
 import { initSse, sendSse, endSse } from './utils/sse.js';
 import { resolvePayloadAttachments } from './services/payloadService.js';
+import { assertWorkspaceAccess } from './services/workspaceService.js';
 
 const GUARDRAIL_RESPONSE =
   'I can help you only with CoolBits business, agency or devops topics.\nLet’s get back on track.';
@@ -282,7 +283,12 @@ export async function handleChat(optionsOrReq, maybeRes) {
     let tokensUsedThisPeriod = 0;
     let tokensAllowance = 0;
 
-    const workspaceId = req.workspaceId || 'business';
+    const bodyWorkspace =
+      typeof req.body?.workspaceId === 'string' && req.body.workspaceId.trim()
+        ? req.body.workspaceId.trim()
+        : null;
+    let workspaceId = bodyWorkspace || req.workspaceId || 'business';
+    req.workspaceId = workspaceId;
 
     if (req.userEmail) {
       authedUser = await resolveUser(req.userEmail);
@@ -340,6 +346,12 @@ export async function handleChat(optionsOrReq, maybeRes) {
     if (!authedUser) {
       return res.status(401).json({ error: 'Unauthorized', errorCode: 'UNAUTHENTICATED' });
     }
+    const workspace = await assertWorkspaceAccess({
+      ownerId: authedUser.id || authedUser.email,
+      workspaceId,
+    });
+    workspaceId = workspace.id;
+    req.workspaceId = workspaceId;
 
     const activeContext = getActiveContext(authedUser.id);
     if (!activeContext || activeContext.status !== 'active') {
@@ -573,7 +585,7 @@ export async function handleChat(optionsOrReq, maybeRes) {
     console.log('[CHAT_USAGE]', JSON.stringify({
       traceId,
       userId: authedUser.id,
-      workspaceId: req.body?.workspaceId || 'business',
+      workspaceId,
       requested: requestedContext,
       resolved: resolvedContext,
       reason: routingReason,
@@ -646,7 +658,12 @@ export async function handleChatStream(optionsOrReq, maybeRes) {
     let tokensUsedThisPeriod = 0;
     let tokensAllowance = 0;
 
-    const workspaceId = req.workspaceId || 'business';
+    const bodyWorkspace =
+      typeof req.body?.workspaceId === 'string' && req.body.workspaceId.trim()
+        ? req.body.workspaceId.trim()
+        : null;
+    let workspaceId = bodyWorkspace || req.workspaceId || 'business';
+    req.workspaceId = workspaceId;
 
     if (req.userEmail) {
       authedUser = await resolveUser(req.userEmail);
@@ -660,6 +677,12 @@ export async function handleChatStream(optionsOrReq, maybeRes) {
       sendSse(res, 'error', { traceId, errorCode: 'UNAUTHENTICATED', message: 'Unauthorized' });
       return endSse(res);
     }
+    const workspace = await assertWorkspaceAccess({
+      ownerId: authedUser.id || authedUser.email,
+      workspaceId,
+    });
+    workspaceId = workspace.id;
+    req.workspaceId = workspaceId;
 
     const activeContext = getActiveContext(authedUser.id);
     if (!activeContext || activeContext.status !== 'active') {
@@ -867,7 +890,7 @@ export async function handleChatStream(optionsOrReq, maybeRes) {
     console.log('[CHAT_USAGE]', JSON.stringify({
       traceId,
       userId: authedUser.id,
-      workspaceId: req.body?.workspaceId || 'business',
+      workspaceId,
       requested: requestedContext,
       resolved: resolvedContext,
       reason: routingReason,
