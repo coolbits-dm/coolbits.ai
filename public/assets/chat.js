@@ -64,6 +64,7 @@ const API_AGENTS_REGISTRY = `${API_BASE}/agents/registry`;
 const API_AGENTS_RUN = `${API_BASE}/agents/run`;
 const API_CONTEXT_ACTIVE = `${API_BASE}/context/active`;
 const API_CONTEXT_ACTIVATE = `${API_BASE}/context/activate`;
+const API_PAYLOADS = `${API_BASE}/payloads`;
 const PUBLIC_AGENTS_REGISTRY_URL = "/api/public/agents-registry";
 const API_AUTH_GOOGLE_START = `${API_BASE}/auth/google/start`;
 const API_PROJECTS = `${API_BASE}/projects`;
@@ -2137,6 +2138,15 @@ const shellElements = {
   councilActive: document.getElementById("cb-council-active"),
   councilPopover: document.getElementById("cb-council-popover"),
   councilList: document.getElementById("cb-council-list"),
+  payloadStack: document.getElementById("cb-payload-stack"),
+  payloadStackBtn: document.getElementById("cb-payload-stack-btn"),
+  payloadStackBadge: document.getElementById("cb-payload-stack-badge"),
+  payloadStackBars: document.getElementById("cb-payload-stack-bars"),
+  payloadStackRisk: document.getElementById("cb-payload-stack-risk"),
+  payloadPopover: document.getElementById("cb-payload-popover"),
+  payloadPopoverList: document.getElementById("cb-payload-popover-list"),
+  payloadPopoverManage: document.getElementById("cb-payload-popover-manage"),
+  payloadPopoverClear: document.getElementById("cb-payload-popover-clear"),
 };
 
 const SIDEBAR_COLLAPSE_KEY = "coolbits:sidebar-collapsed";
@@ -2189,11 +2199,15 @@ const STARTER_TOKENS = 1000;
 const PRO_TOKENS = 10000;
 const AUTH_TOKEN_KEY = "cb_auth_token";
 const AUTH_USER_KEY = "coolbits.currentUser";
+const STAGED_PAYLOAD_STORAGE_KEY = "cb_staged_payloads";
+const STAGED_PAYLOAD_IDS_KEY = "cb_staged_payload_ids";
 let cbAuthToken = null;
 let cbCurrentUser = null;
 let cbCouncilAxisState = { mode: null, readyByAxis: {} };
 let userMenuOpen = false;
 let cbGooglePopup = null;
+let cbStagedPayloadIds = [];
+let cbStagedPayloads = [];
 const cbWorkspaceChats = new Map();
 const cbWorkspaceProjects = new Map();
 const cbChatsInitializedByWorkspace = new Map();
@@ -2353,6 +2367,439 @@ const cbUpdateComposerSendState = () => {
     sendButton.setAttribute("disabled", "true");
   } else {
     sendButton.removeAttribute("disabled");
+  }
+};
+
+const cbShortPayloadLabel = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "payload";
+  if (raw.length <= 10) return raw;
+  return `${raw.slice(0, 4)}...${raw.slice(-4)}`;
+};
+
+const cbShortHash = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (raw.length <= 12) return raw;
+  return `${raw.slice(0, 4)}...${raw.slice(-4)}`;
+};
+
+const cbNormalizePayloadIds = (ids) => {
+  if (!Array.isArray(ids)) return [];
+  const cleaned = ids
+    .map((id) => (typeof id === "string" ? id.trim() : ""))
+    .filter(Boolean);
+  return Array.from(new Set(cleaned));
+};
+
+const cbNormalizeStagedPayloads = (payloads) => {
+  if (!Array.isArray(payloads)) return [];
+  const filtered = payloads
+    .map((item) => (item && typeof item === "object" ? item : null))
+    .filter(Boolean)
+    .map((item) => {
+      const hash = typeof item.hash === "string" ? item.hash.trim() : "";
+      let hashShort = typeof item.hashShort === "string" ? item.hashShort.trim() : "";
+      if (!hashShort && hash) {
+        hashShort = cbShortHash(hash);
+      }
+      return {
+        id: typeof item.id === "string" ? item.id.trim() : "",
+        name: typeof item.name === "string" ? item.name.trim() : "",
+        kind: typeof item.kind === "string" ? item.kind.trim() : "selection",
+        hash,
+        hashShort,
+        bytes: Number.isFinite(item.bytes) ? item.bytes : null,
+        summary: item.summary && typeof item.summary === "object" ? { ...item.summary } : null,
+      };
+    })
+    .filter((item) => item.id);
+  const unique = new Map();
+  filtered.forEach((item) => {
+    if (!unique.has(item.id)) {
+      unique.set(item.id, item);
+    }
+  });
+  return Array.from(unique.values());
+};
+
+const cbBuildFallbackPayload = (id) => ({
+  id,
+  name: `Payload ${cbShortPayloadLabel(id)}`,
+  kind: "selection",
+  hash: "",
+  hashShort: cbShortPayloadLabel(id),
+  bytes: null,
+  summary: null,
+});
+
+const cbGetPayloadSummary = (content) => {
+  const selection = content?.selection || {};
+  const ads = selection.googleads || null;
+  const ga4 = selection.ga4 || null;
+  const range = ads || ga4 || {};
+  const blocks = Array.isArray(range.blocks) ? range.blocks : [];
+  const payload = content?.payload || {};
+  const metrics = Array.isArray(payload.metrics)
+    ? payload.metrics
+    : Array.isArray(payload.columns)
+      ? payload.columns
+      : Array.isArray(payload.dimensions)
+        ? payload.dimensions
+        : [];
+  const metricsCount = metrics.length;
+  const hasWriteIntent =
+    Boolean(payload.hasWriteIntent) ||
+    payload.write === true ||
+    payload.mode === "write" ||
+    content?.kind === "commit_intent";
+
+  return {
+    customerId: ads?.customerId || null,
+    propertyId: ga4?.propertyId || null,
+    from: range.from || null,
+    to: range.to || null,
+    compareMode: range.compareMode || null,
+    compareFrom: range.compareFrom || null,
+    compareTo: range.compareTo || null,
+    blocksCount: blocks.length,
+    metricsCount,
+    hasWriteIntent,
+  };
+};
+
+const cbComputePayloadBytes = (content) => {
+  try {
+    const raw = JSON.stringify(content || {});
+    if (typeof TextEncoder !== "undefined") {
+      return new TextEncoder().encode(raw).length;
+    }
+    return raw.length;
+  } catch (_err) {
+    return null;
+  }
+};
+
+const cbBuildStagedPayloadMeta = (payload) => {
+  const content = payload?.contentJson || {};
+  const hash = payload?.hash || content?.hash || "";
+  const summary = cbGetPayloadSummary(content);
+  const bytes = cbComputePayloadBytes(content);
+  return {
+    id: payload?.id,
+    name: payload?.name || "",
+    kind: payload?.kind || content?.kind || "selection",
+    hash,
+    hashShort: cbShortHash(hash),
+    bytes: Number.isFinite(bytes) ? bytes : null,
+    summary,
+  };
+};
+
+const cbGetStagedPayloadIds = () => cbStagedPayloadIds.slice();
+
+const cbSetStagedPayloads = (payloads, { persist = true } = {}) => {
+  cbStagedPayloads = cbNormalizeStagedPayloads(payloads);
+  cbStagedPayloadIds = cbNormalizePayloadIds(cbStagedPayloads.map((item) => item.id));
+  if (persist) {
+    try {
+      if (cbStagedPayloads.length) {
+        window.localStorage.setItem(
+          STAGED_PAYLOAD_STORAGE_KEY,
+          JSON.stringify(cbStagedPayloads),
+        );
+      } else {
+        window.localStorage.removeItem(STAGED_PAYLOAD_STORAGE_KEY);
+      }
+      if (cbStagedPayloadIds.length) {
+        window.localStorage.setItem(
+          STAGED_PAYLOAD_IDS_KEY,
+          JSON.stringify(cbStagedPayloadIds),
+        );
+      } else {
+        window.localStorage.removeItem(STAGED_PAYLOAD_IDS_KEY);
+      }
+    } catch (_err) {
+      // Ignore storage errors.
+    }
+  }
+  cbRenderPayloadStack();
+};
+
+const cbClearStagedPayloads = () => {
+  cbSetStagedPayloads([], { persist: true });
+  cbClosePayloadPopover();
+};
+
+const cbReadStagedPayloads = () => {
+  try {
+    const raw = window.localStorage.getItem(STAGED_PAYLOAD_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const normalized = cbNormalizeStagedPayloads(parsed);
+      if (normalized.length) return normalized;
+    }
+    const idsRaw = window.localStorage.getItem(STAGED_PAYLOAD_IDS_KEY);
+    if (!idsRaw) return [];
+    const idsParsed = JSON.parse(idsRaw);
+    const ids = cbNormalizePayloadIds(idsParsed);
+    return ids.map(cbBuildFallbackPayload);
+  } catch (_err) {
+    return [];
+  }
+};
+
+const cbComputePayloadWeight = (payloads) => {
+  let totalBytes = 0;
+  let fallbackBytes = 0;
+  payloads.forEach((payload) => {
+    if (Number.isFinite(payload.bytes)) {
+      totalBytes += payload.bytes;
+    } else if (payload.summary) {
+      const blocks = Number(payload.summary.blocksCount) || 0;
+      const metrics = Number(payload.summary.metricsCount) || 0;
+      fallbackBytes += (blocks * 1024) + (metrics * 512);
+    }
+  });
+  const bytes = totalBytes + fallbackBytes;
+  if (bytes <= 0) return 0;
+  if (bytes < 25 * 1024) return 1;
+  if (bytes <= 150 * 1024) return 2;
+  return 3;
+};
+
+const cbHasPayloadWriteIntent = (payloads) =>
+  payloads.some((payload) => payload.summary && payload.summary.hasWriteIntent);
+
+const cbBuildPayloadDetailText = (payload) => {
+  const summary = payload.summary || {};
+  const scope =
+    summary.customerId
+      ? `Customer ${summary.customerId}`
+      : summary.propertyId
+        ? `Property ${summary.propertyId}`
+        : "Scope -";
+  const range = summary.from && summary.to ? `${summary.from} to ${summary.to}` : "Dates -";
+  let compare = "Compare -";
+  if (summary.compareMode) {
+    compare = `Compare ${summary.compareMode}`;
+    if (summary.compareFrom && summary.compareTo) {
+      compare = `${compare} (${summary.compareFrom} to ${summary.compareTo})`;
+    }
+  }
+  const blocks = Number.isFinite(summary.blocksCount)
+    ? `Blocks ${summary.blocksCount}`
+    : "Blocks -";
+  const metrics = Number.isFinite(summary.metricsCount)
+    ? `Metrics ${summary.metricsCount}`
+    : "Metrics -";
+  const bytes = Number.isFinite(payload.bytes) ? `${Math.round(payload.bytes / 1024)} KB` : "Size -";
+  return `${scope} | ${range} | ${compare} | ${blocks} | ${metrics} | ${bytes}`;
+};
+
+const cbRenderPayloadStack = () => {
+  const {
+    payloadStack,
+    payloadStackBadge,
+    payloadStackRisk,
+    payloadPopoverList,
+    payloadStackBtn,
+    payloadStackBars,
+  } = shellElements;
+  if (!payloadStack || !payloadPopoverList || !payloadStackBadge) return;
+
+  const count = cbStagedPayloads.length;
+  payloadStackBadge.hidden = count === 0;
+  if (count > 0) {
+    payloadStackBadge.textContent = `+${count}`;
+  }
+  if (payloadStackBtn) {
+    const label = count ? `Payloads (${count})` : "Payloads";
+    payloadStackBtn.title = label;
+    payloadStackBtn.setAttribute("aria-label", label);
+  }
+  const weight = cbComputePayloadWeight(cbStagedPayloads);
+  payloadStack.dataset.weight = String(weight || 0);
+
+  if (payloadStackRisk) {
+    payloadStackRisk.hidden = !cbHasPayloadWriteIntent(cbStagedPayloads);
+  }
+  if (payloadStackBars) {
+    payloadStackBars.hidden = count === 0;
+  }
+
+  payloadPopoverList.innerHTML = "";
+  if (!count) {
+    const empty = document.createElement("div");
+    empty.className = "cb-payload-popover-empty";
+    empty.textContent = "No payloads staged.";
+    payloadPopoverList.appendChild(empty);
+    return;
+  }
+
+  cbStagedPayloads.forEach((payload) => {
+    const wrapper = document.createElement("div");
+    const row = document.createElement("div");
+    row.className = "cb-payload-popover-row";
+    const main = document.createElement("div");
+    main.className = "cb-payload-popover-row-main";
+    const name = document.createElement("div");
+    name.className = "cb-payload-popover-row-name";
+    name.title = payload.name || payload.id;
+    name.textContent = payload.name || `Payload ${cbShortPayloadLabel(payload.id)}`;
+    const meta = document.createElement("div");
+    meta.className = "cb-payload-popover-row-meta";
+    const hashShort = payload.hashShort || cbShortHash(payload.hash) || cbShortPayloadLabel(payload.id);
+    meta.textContent = `${payload.kind || "selection"} · ${hashShort}`;
+    main.append(name, meta);
+    const actions = document.createElement("div");
+    actions.className = "cb-payload-popover-row-actions";
+
+    const viewBtn = document.createElement("button");
+    viewBtn.type = "button";
+    viewBtn.className = "cb-icon-btn";
+    viewBtn.title = "View details";
+    viewBtn.setAttribute("aria-label", "View details");
+    viewBtn.innerHTML = `
+      <svg viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+        <path d="M16 16l4 4" stroke="currentColor" stroke-width="1.5" fill="none"></path>
+      </svg>
+    `;
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "cb-icon-btn";
+    removeBtn.title = "Remove payload";
+    removeBtn.setAttribute("aria-label", "Remove payload");
+    removeBtn.innerHTML = `
+      <svg viewBox="0 0 24 24">
+        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"></path>
+      </svg>
+    `;
+
+    actions.append(viewBtn, removeBtn);
+    row.append(main, actions);
+
+    const detail = document.createElement("div");
+    detail.className = "cb-payload-popover-row-detail";
+    detail.hidden = true;
+    detail.textContent = cbBuildPayloadDetailText(payload);
+
+    viewBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      detail.hidden = !detail.hidden;
+    });
+
+    removeBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      cbSetStagedPayloads(cbStagedPayloads.filter((item) => item.id !== payload.id));
+    });
+
+    wrapper.append(row, detail);
+    payloadPopoverList.appendChild(wrapper);
+  });
+};
+
+const cbOpenPayloadPopover = () => {
+  const { payloadPopover, payloadStack, payloadStackBtn } = shellElements;
+  if (!payloadPopover || !payloadStack) return;
+  payloadPopover.hidden = false;
+  payloadStack.dataset.open = "true";
+  if (payloadStackBtn) {
+    payloadStackBtn.setAttribute("aria-expanded", "true");
+  }
+  cbFetchStagedPayloadMeta();
+};
+
+const cbClosePayloadPopover = () => {
+  const { payloadPopover, payloadStack, payloadStackBtn } = shellElements;
+  if (!payloadPopover || !payloadStack) return;
+  payloadPopover.hidden = true;
+  payloadStack.dataset.open = "false";
+  if (payloadStackBtn) {
+    payloadStackBtn.setAttribute("aria-expanded", "false");
+  }
+};
+
+const cbTogglePayloadPopover = () => {
+  const { payloadPopover } = shellElements;
+  if (!payloadPopover) return;
+  if (payloadPopover.hidden) {
+    cbOpenPayloadPopover();
+  } else {
+    cbClosePayloadPopover();
+  }
+};
+
+const cbFetchStagedPayloadMeta = async () => {
+  if (!cbIsAuthenticated()) return;
+  const missing = cbStagedPayloads.filter((payload) => !payload.name || !payload.kind || !payload.hash);
+  if (!missing.length) return;
+  const workspaceId = cbNormalizeWorkspaceId(cbCurrentWorkspaceId || "business");
+  for (const payload of missing) {
+    try {
+      const response = await fetch(`${API_PAYLOADS}/${encodeURIComponent(payload.id)}?workspaceId=${encodeURIComponent(workspaceId)}`, {
+        method: "GET",
+        headers: cbGetAuthHeaders(),
+        credentials: "include",
+      });
+      const data = await safeJson(response);
+      if (!response.ok || !data?.payload) {
+        continue;
+      }
+      const meta = cbBuildStagedPayloadMeta(data.payload);
+      cbStagedPayloads = cbStagedPayloads.map((item) => (item.id === payload.id ? { ...item, ...meta } : item));
+    } catch (_err) {
+      continue;
+    }
+  }
+  cbSetStagedPayloads(cbStagedPayloads, { persist: true });
+};
+
+const cbInitStagedPayloads = () => {
+  cbSetStagedPayloads(cbReadStagedPayloads(), { persist: false });
+  const {
+    payloadStackBtn,
+    payloadPopover,
+    payloadPopoverManage,
+    payloadPopoverClear,
+  } = shellElements;
+  if (payloadStackBtn && !payloadStackBtn.dataset.bound) {
+    payloadStackBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      cbTogglePayloadPopover();
+    });
+    payloadStackBtn.dataset.bound = "true";
+  }
+  if (payloadPopoverManage && !payloadPopoverManage.dataset.bound) {
+    payloadPopoverManage.addEventListener("click", (event) => {
+      event.preventDefault();
+      cbClosePayloadPopover();
+      window.location.href = "/payload/";
+    });
+    payloadPopoverManage.dataset.bound = "true";
+  }
+  if (payloadPopoverClear && !payloadPopoverClear.dataset.bound) {
+    payloadPopoverClear.addEventListener("click", (event) => {
+      event.preventDefault();
+      cbClearStagedPayloads();
+    });
+    payloadPopoverClear.dataset.bound = "true";
+  }
+  if (payloadPopover && !payloadPopover.dataset.bound) {
+    document.addEventListener("click", (event) => {
+      if (!payloadPopover || payloadPopover.hidden) return;
+      const target = event.target;
+      if (target && shellElements.payloadStack?.contains(target)) return;
+      cbClosePayloadPopover();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        cbClosePayloadPopover();
+      }
+    });
+    payloadPopover.dataset.bound = "true";
   }
 };
 
@@ -4736,12 +5183,42 @@ const cbToggleCouncilPopover = (open) => {
   }
 };
 
+let cbCouncilInfoDismissBound = false;
+
+const cbCloseCouncilInfoTooltips = () => {
+  document.querySelectorAll(".cb-council-info.is-open").forEach((element) => {
+    element.classList.remove("is-open");
+    const btn = element.querySelector(".cb-council-info-btn");
+    if (btn) {
+      btn.setAttribute("aria-expanded", "false");
+    }
+  });
+  document.querySelectorAll(".cb-council-row--tooltip").forEach((row) => {
+    row.classList.remove("cb-council-row--tooltip");
+  });
+};
+
+const cbBindCouncilInfoDismiss = () => {
+  if (cbCouncilInfoDismissBound) {
+    return;
+  }
+  cbCouncilInfoDismissBound = true;
+  document.addEventListener("click", (event) => {
+    if (event.target && event.target.closest(".cb-council-info")) {
+      return;
+    }
+    cbCloseCouncilInfoTooltips();
+  });
+};
+
 const cbRenderCouncilList = () => {
   const container =
     shellElements.councilList ||
     document.getElementById("cb-council-list") ||
     document.querySelector('[data-role="council-list"]');
   if (container) {
+    cbBindCouncilInfoDismiss();
+    cbCloseCouncilInfoTooltips();
     let agents = cbGetAgentsForWorkspace(cbCurrentWorkspaceId).filter(
       (agent) => agent.showInCouncil !== false
     );
@@ -4769,14 +5246,53 @@ const cbRenderCouncilList = () => {
       }
       toggle.addEventListener("click", () => cbToggleCouncilMember(agent.key, toggle));
 
+      const descText = agent.shortDescription || "Preview agent";
       const role = document.createElement("span");
       role.className = "cb-council-pill-role";
       role.textContent = agent.label?.split(" – ")[0] || agent.label || agent.key;
-      const desc = document.createElement("span");
-      desc.className = "cb-council-pill-desc";
-      desc.textContent = agent.shortDescription || "Preview agent";
       toggle.appendChild(role);
-      toggle.appendChild(desc);
+
+      const actions = document.createElement("div");
+      actions.className = "cb-council-row-actions";
+
+      const info = document.createElement("span");
+      info.className = "cb-council-info";
+      const infoBtn = document.createElement("button");
+      infoBtn.type = "button";
+      infoBtn.className = "cb-council-info-btn";
+      infoBtn.setAttribute("aria-label", "Show agent description");
+      infoBtn.setAttribute("aria-expanded", "false");
+      infoBtn.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+        '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"></circle>' +
+        '<path d="M12 10v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>' +
+        '<circle cx="12" cy="7.5" r="1" fill="currentColor"></circle>' +
+        "</svg>";
+      const infoTip = document.createElement("span");
+      infoTip.className = "cb-council-info-tooltip";
+      infoTip.textContent = descText;
+      info.appendChild(infoBtn);
+      info.appendChild(infoTip);
+      actions.appendChild(info);
+
+      infoBtn.addEventListener("click", (event) => {
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
+        const isOpen = info.classList.contains("is-open");
+        cbCloseCouncilInfoTooltips();
+        if (!isOpen) {
+          info.classList.add("is-open");
+          row.classList.add("cb-council-row--tooltip");
+          infoBtn.setAttribute("aria-expanded", "true");
+        }
+      });
+      infoBtn.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+        event.preventDefault();
+        infoBtn.click();
+      });
 
       const registryAgent = cbResolvePublicRegistryAgent(agent);
       const profile = cbBuildCouncilAgentProfile(agent, registryAgent);
@@ -4788,10 +5304,16 @@ const cbRenderCouncilList = () => {
       const detailsBtn = document.createElement("button");
       detailsBtn.type = "button";
       detailsBtn.className = "cb-council-detail-btn";
-      detailsBtn.textContent = "Details";
+      detailsBtn.setAttribute("aria-label", "Open agent profile");
+      detailsBtn.title = "Open agent profile";
+      detailsBtn.innerHTML =
+        '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+        '<path d="M14 5h5v5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>' +
+        '<path d="M10 14l9-9" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>' +
+        '<path d="M19 14v5H5V5h5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>' +
+        "</svg>";
       detailsBtn.addEventListener("click", (event) => {
         event?.preventDefault?.();
-        event?.stopPropagation?.();
         const url = cbBuildAgentProfileUrl(profile, { fromCouncil: true });
         if (typeof cbOnCouncilModalClose === "function") {
           cbOnCouncilModalClose();
@@ -4799,8 +5321,9 @@ const cbRenderCouncilList = () => {
         window.location.href = url;
       });
 
+      actions.appendChild(detailsBtn);
       row.appendChild(toggle);
-      row.appendChild(detailsBtn);
+      row.appendChild(actions);
       container.appendChild(row);
     });
   }
@@ -5400,7 +5923,7 @@ const cbResetCouncilStatusSoon = (ids, delay = 1500) => {
   }, delay);
 };
 
-const legacyRequestChatReply = async (message) => {
+const legacyRequestChatReply = async (message, payloadIds = []) => {
   await ensureProfile();
   const councilPayload = getCouncilPayload();
   const hasCouncil = Array.isArray(councilPayload.agents) && councilPayload.agents.length > 0;
@@ -5415,6 +5938,9 @@ const legacyRequestChatReply = async (message) => {
     tier: profile?.capabilities?.tier || profile?.tier || "guest",
     visitorId,
   };
+  if (Array.isArray(payloadIds) && payloadIds.length) {
+    payload.payloadIds = payloadIds;
+  }
   if (hasCouncil) {
     payload.agents = councilMembers;
     payload.agentsArmed = true;
@@ -5906,7 +6432,7 @@ function cbHandleStartNewChat() {
   focusChatInput();
 }
 
-async function cbCreateChat(firstMessage) {
+async function cbCreateChat(firstMessage, { payloadIds = [] } = {}) {
   if (cbChatsUnsupported) {
     throw new Error("Chat persistence unavailable.");
   }
@@ -5921,6 +6447,9 @@ async function cbCreateChat(firstMessage) {
     workspaceId: workspaceKey,
     projectId: cbCurrentProjectId || null,
   };
+  if (Array.isArray(payloadIds) && payloadIds.length) {
+    payload.payloadIds = payloadIds;
+  }
   if (hasCouncil) {
     payload.agents = councilMembers;
     payload.agentsArmed = true;
@@ -5966,7 +6495,7 @@ async function cbCreateChat(firstMessage) {
   return data;
 }
 
-async function cbAppendChatMessage(chatId, content) {
+async function cbAppendChatMessage(chatId, content, { payloadIds = [] } = {}) {
   if (cbChatsUnsupported) {
     throw new Error("Chat persistence unavailable.");
   }
@@ -5976,6 +6505,9 @@ async function cbAppendChatMessage(chatId, content) {
   const useCouncil = hasCouncil;
   if (hasCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_PENDING);
   const payload = { content };
+  if (Array.isArray(payloadIds) && payloadIds.length) {
+    payload.payloadIds = payloadIds;
+  }
   if (hasCouncil) {
     payload.agents = councilMembers;
     payload.agentsArmed = true;
@@ -12308,6 +12840,7 @@ const initCoolBitsUI = () => {
   cbRenderCouncilBar();
   cbUpdateChatHeader();
   cbUpdateComposerSendState();
+  cbInitStagedPayloads();
   cbLoadActiveContext().catch((error) => console.warn("[ACTIVE_CONTEXT] init failed", error));
 
   if (!cbDashboardRouterState.bound) {
@@ -12518,6 +13051,9 @@ async function sendMessage(prefilledValue) {
     return;
   }
 
+  const stagedPayloadIds = cbGetStagedPayloadIds();
+  const shouldClearStaged = stagedPayloadIds.length > 0;
+
   if (!cbRequireAuthForChat("send-message")) {
     return;
   }
@@ -12548,7 +13084,7 @@ async function sendMessage(prefilledValue) {
     }
     let autoRenameSource = null;
     if (cbChatsUnsupported) {
-      const data = await legacyRequestChatReply(message);
+      const data = await legacyRequestChatReply(message, stagedPayloadIds);
       const reply = extractReply(data);
       if (!reply) {
         throw new Error("Chat service returned an empty reply.");
@@ -12562,7 +13098,7 @@ async function sendMessage(prefilledValue) {
     } else {
       let nextMessages = cbActiveChatMessages.slice();
       if (!cbActiveChatId) {
-        const creation = await cbCreateChat(message);
+        const creation = await cbCreateChat(message, { payloadIds: stagedPayloadIds });
         cbActiveChatId = creation?.chat?.id || null;
         nextMessages = Array.isArray(creation?.messages) ? creation.messages : [];
         const firstAssistant = nextMessages.find(
@@ -12572,7 +13108,7 @@ async function sendMessage(prefilledValue) {
           autoRenameSource = firstAssistant.content;
         }
       } else {
-        const appendResult = await cbAppendChatMessage(cbActiveChatId, message);
+        const appendResult = await cbAppendChatMessage(cbActiveChatId, message, { payloadIds: stagedPayloadIds });
         const appended = Array.isArray(appendResult?.newMessages) ? appendResult.newMessages : [];
         nextMessages = nextMessages.concat(appended);
       }
@@ -12586,6 +13122,9 @@ async function sendMessage(prefilledValue) {
       if (autoRenameSource && cbActiveChatId) {
         cbMaybeAutoRenameFromAssistant(cbActiveChatId, autoRenameSource);
       }
+    }
+    if (shouldClearStaged) {
+      cbClearStagedPayloads();
     }
   } catch (error) {
     console.error(error);

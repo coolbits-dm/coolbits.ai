@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Agent Profile - CoolBits.ai</title>
+    <title>Payload Library - CoolBits.ai</title>
     <link rel="stylesheet" href="/assets/style.css?v=2025-12-27-01" />
-    <link rel="stylesheet" href="/assets/agents.css?v=agents-v1" />
+    <link rel="stylesheet" href="/assets/payload.css?v=payload-v1" />
     <link rel="icon" href="/favicon.ico" />
   </head>
-  <body class="cb-agent-page">
+  <body class="cb-payload-page">
     <div class="cb-app-shell" data-app-shell>
       <aside class="cb-sidebar" id="cb-sidebar" data-sidebar data-collapsed="false" aria-label="CoolBits workspace navigation">
         <div class="cb-sidebar-scroll">
@@ -54,7 +54,7 @@
             </button>
           </div>
           <div class="cb-sidebar-section">
-            <a class="cb-sidebar-item" href="/payload/" aria-label="Payloads">
+            <a class="cb-sidebar-item is-active" href="/payload/" aria-label="Payloads">
               <span class="cb-sidebar-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24">
                   <path
@@ -245,39 +245,27 @@
                 </svg>
               </span>
             </button>
-            <div class="cb-sidebar-menu" id="cb-project-menu" role="listbox" aria-label="Project list" hidden></div>
-            <p class="cb-sidebar-hint" id="cb-projects-guest-hint" hidden>Sign in to organize chats by project.</p>
-            <p class="cb-sidebar-error" id="cb-projects-error" hidden></p>
+            <div class="cb-sidebar-menu" id="cb-project-menu" role="listbox" aria-label="Select project" hidden></div>
+            <div class="cb-sidebar-error" id="cb-projects-error" hidden>Unable to load projects.</div>
+            <p class="cb-sidebar-hint cb-projects-guest-hint" id="cb-projects-guest-hint" hidden>
+              Sign in to manage projects and attach them to payloads.
+            </p>
+            <button type="button" class="cb-sidebar-button-secondary" id="cb-project-create-open">
+              <span class="cb-sidebar-button-icon" aria-hidden="true">+</span>
+              <span class="cb-sidebar-button-text">New project</span>
+            </button>
           </div>
           <div class="cb-sidebar-section cb-sidebar-chats-section">
             <div class="cb-sidebar-section-header">Chats</div>
-            <ul class="cb-sidebar-chat-list" data-sidebar-chat-list></ul>
+            <div class="cb-sidebar-chat-list" data-sidebar-chat-list></div>
+            <div class="cb-sidebar-empty" data-sidebar-empty hidden>No chats yet</div>
           </div>
-        </div>
-        <div class="cb-sidebar-footer" id="cb-sidebar-user-slot" aria-live="polite" hidden></div>
-      </aside>
-      <div class="cb-sidebar-backdrop" data-sidebar-backdrop hidden aria-hidden="true"></div>
-      <div class="cb-app-main">
-        <div class="top-bar">
-          <div class="top-bar-left">
-            <button
-              type="button"
-              class="cb-mobile-menu-button"
-              data-sidebar-mobile-toggle
-              aria-label="Open navigation menu"
-              aria-controls="cb-sidebar"
-              aria-expanded="false"
-            >
-              <span class="cb-mobile-menu-icon" aria-hidden="true"></span>
-            </button>
-            <img src="/assets/coolbits-logo.svg" class="top-bar-logo" alt="CoolBits" />
-          </div>
-          <div class="top-bar-right">
+          <div class="cb-sidebar-footer">
             <div id="cb-user-area">
               <div class="user-plan-label" id="cb-user-badge">
-                <span class="cb-user-badge-line cb-user-badge-email" id="cb-header-user-email">Guest</span>
-                <span class="cb-user-badge-line cb-user-badge-plan" id="cb-header-user-plan"></span>
-                <span class="cb-user-badge-line cb-user-badge-tokens" id="cb-header-user-tokens"></span>
+                <span class="cb-user-badge-line cb-user-badge-email">Guest</span>
+                <span class="cb-user-badge-line cb-user-badge-plan"></span>
+                <span class="cb-user-badge-line cb-user-badge-tokens"></span>
               </div>
               <button class="user-avatar-button" id="cb-user-button" type="button" aria-label="User menu" aria-haspopup="menu" aria-expanded="false">
                 <span class="user-avatar-icon"></span>
@@ -302,166 +290,88 @@
             </div>
           </div>
         </div>
-        <main class="cb-agent-shell">
-      <header class="cb-agent-header">
-        <div class="cb-agent-header-left">
-          <a class="cb-agent-back" href="/chat">Back to Chat</a>
-          <a class="cb-agent-back" href="/agents/">All agents</a>
-        </div>
-        <div class="cb-agent-status-pill" id="cb-agent-status-pill">Loading...</div>
-      </header>
+      </aside>
 
-      <section class="cb-agent-hero" id="cb-agent-hero">
-        <div class="cb-agent-hero-main">
-          <div class="cb-agent-avatar" id="cb-agent-avatar" aria-hidden="true">CB</div>
-          <div class="cb-agent-identity">
-            <p class="cb-agent-workspace" id="cb-agent-workspace">Workspace</p>
-            <h1 class="cb-agent-name" id="cb-agent-name">Agent</h1>
-            <p class="cb-agent-role" id="cb-agent-role">Role</p>
-            <p class="cb-agent-description" id="cb-agent-description"></p>
-          </div>
-        </div>
-        <div class="cb-agent-hero-icon">
-          <div class="cb-agent-icon-placeholder" id="cb-agent-icon" aria-hidden="true">
-            <span class="cb-agent-icon-label">Icon</span>
-          </div>
-          <div class="cb-agent-icon-meta">
-            <div class="cb-agent-icon-title">Logotype placeholder</div>
-            <div class="cb-agent-icon-id" id="cb-agent-icon-id">Agent</div>
-          </div>
-        </div>
-      </section>
-
-      <div class="cb-agent-banner" id="cb-agent-banner" hidden>
-        Coming soon. This agent is visible but all actions are simulated.
-      </div>
-
-      <section class="cb-agent-grid" id="cb-agent-grid" hidden>
-        <article class="cb-agent-card">
-          <div class="cb-agent-card-header">
-            <h2>Active Context</h2>
-            <div class="cb-agent-active-status" id="cb-agent-active-status">
-              <span class="cb-active-context-led" id="cb-agent-active-led" data-status="idle" aria-hidden="true"></span>
-              <span class="cb-agent-active-text" id="cb-agent-active-text">Idle</span>
+      <div class="cb-main">
+        <main class="cb-payload-shell">
+          <header class="cb-payload-header">
+            <div class="cb-payload-header-text">
+              <p class="cb-payload-kicker">CBPL Library</p>
+              <h1>Payloads</h1>
+              <p class="cb-payload-subtitle">
+                Inspect, attach, and manage CoolBits payload artifacts across your workspace.
+              </p>
             </div>
-          </div>
-          <div class="cb-agent-kv" id="cb-agent-info"></div>
-        </article>
-
-        <article class="cb-agent-card">
-          <h2>Context Editor</h2>
-          <p class="cb-agent-card-note">
-            Update provider preferences here. Changes activate through the backend and update the Active Context panel.
-          </p>
-          <div class="cb-agent-model-row">
-            <select class="cb-model-selector" id="cb-agent-model-select">
-              <option value="auto" selected>Auto</option>
-              <option value="chatgpt">ChatGPT</option>
-              <option value="claude">Claude</option>
-              <option value="gemini">Gemini</option>
-              <option value="grok">Grok</option>
-              <option value="copilot">Copilot</option>
-            </select>
-            <span class="cb-agent-model-status" id="cb-agent-model-status">Ready</span>
-          </div>
-        </article>
-
-        <article class="cb-agent-card" id="cb-agent-connector-card">
-          <h2>ChatGPT Access</h2>
-          <p class="cb-agent-card-note">
-            Connect your ChatGPT account via BYOK or use CoolBits premium GPT tokens.
-            Models available in <a class="cb-agent-link" href="/pricing/">Pricing</a>.
-          </p>
-          <div class="cb-agent-connector">
-            <label class="cb-agent-connector-option" data-connector-option="byok">
-              <input type="radio" name="cb-agent-connector-mode" value="byok" />
-              <span class="cb-agent-connector-copy">
-                <span class="cb-agent-connector-title">Bring your own API key (BYOK)</span>
-                <span class="cb-agent-connector-subtitle">Use your own OpenAI billing and limits.</span>
-              </span>
-            </label>
-            <div class="cb-agent-connector-body" data-connector-mode="byok">
-              <div class="cb-agent-connector-row">
-                <input
-                  type="password"
-                  id="cb-agent-byok-key"
-                  class="cb-agent-connector-input"
-                  placeholder="sk-..."
-                  autocomplete="off"
-                />
-                <button type="button" id="cb-agent-byok-save" class="cb-agent-connector-button">
-                  Save key
-                </button>
-              </div>
-              <div class="cb-agent-connector-status" id="cb-agent-byok-status">Not connected</div>
-              <div class="cb-agent-connector-note">Stored locally for preview only.</div>
+            <div class="cb-payload-actions">
+              <button type="button" class="cb-btn cb-btn-ghost" id="cb-payload-new">New payload</button>
+              <button type="button" class="cb-btn cb-btn-primary" id="cb-payload-upload">Upload .cbpl</button>
+              <input type="file" id="cb-payload-upload-input" accept=".cbpl,application/json" hidden />
             </div>
+          </header>
 
-            <label class="cb-agent-connector-option" data-connector-option="premium">
-              <input type="radio" name="cb-agent-connector-mode" value="premium" />
-              <span class="cb-agent-connector-copy">
-                <span class="cb-agent-connector-title">Use CoolBits premium GPT tokens</span>
-                <span class="cb-agent-connector-subtitle">
-                  Charged from your plan. See models in Pricing.
-                </span>
-              </span>
-            </label>
-            <div class="cb-agent-connector-body" data-connector-mode="premium">
-              <div class="cb-agent-connector-row">
-                <button type="button" id="cb-agent-premium-toggle" class="cb-agent-connector-button">
-                  Enable premium tokens
-                </button>
-                <span class="cb-agent-connector-chip" id="cb-agent-premium-usage">
-                  Premium requests: 0 / 200
-                </span>
+          <div class="cb-payload-layout">
+            <section class="cb-payload-library">
+              <div class="cb-payload-search">
+                <input type="search" id="cb-payload-search" placeholder="Search payloads" aria-label="Search payloads" />
               </div>
-              <div class="cb-agent-connector-status" id="cb-agent-premium-status">Not enabled</div>
-              <div class="cb-agent-connector-note">
-                Renews monthly, similar to GitHub Copilot premium requests.
+              <div class="cb-payload-filters" id="cb-payload-filters">
+                <button type="button" class="cb-filter-chip is-active" data-kind="all">All</button>
+                <button type="button" class="cb-filter-chip" data-kind="selection">Selection</button>
+                <button type="button" class="cb-filter-chip" data-kind="snapshot_ref">Snapshot ref</button>
+                <button type="button" class="cb-filter-chip" data-kind="dryrun">Dry run</button>
+                <button type="button" class="cb-filter-chip" data-kind="commit_intent">Commit intent</button>
               </div>
-            </div>
-          </div>
-        </article>
+              <div class="cb-payload-list" id="cb-payload-list" role="listbox" aria-label="Payload list"></div>
+              <button type="button" class="cb-btn cb-btn-ghost cb-payload-load" id="cb-payload-load-more" hidden>
+                Load more
+              </button>
+            </section>
 
-        <article class="cb-agent-card">
-          <h2>Sample Interactions</h2>
-          <div class="cb-agent-samples" id="cb-agent-samples"></div>
-        </article>
+            <section class="cb-payload-inspector">
+              <div class="cb-payload-empty" id="cb-payload-empty">
+                Select a payload on the left to inspect its contents.
+              </div>
+              <div class="cb-payload-detail" id="cb-payload-detail" hidden>
+                <div class="cb-payload-detail-header">
+                  <div class="cb-payload-name">
+                    <label for="cb-payload-name-input">Name</label>
+                    <div class="cb-payload-name-row">
+                      <input id="cb-payload-name-input" type="text" placeholder="Untitled payload" />
+                      <button type="button" class="cb-btn cb-btn-ghost" id="cb-payload-name-save">Save</button>
+                    </div>
+                  </div>
+                  <div class="cb-payload-meta">
+                    <span class="cb-pill" id="cb-payload-kind-pill">selection</span>
+                    <button type="button" class="cb-btn cb-btn-ghost cb-payload-copy" id="cb-payload-copy-hash">
+                      Copy hash
+                    </button>
+                  </div>
+                </div>
+                <div class="cb-payload-hash" id="cb-payload-hash"></div>
 
-        <article class="cb-agent-card cb-agent-card-wide">
-          <h2>Interaction Sandbox</h2>
-          <p class="cb-agent-card-note">This is a simulated panel. No actions are executed.</p>
-          <div class="cb-agent-sandbox">
-            <textarea id="cb-agent-sandbox-input" placeholder="Ask this agent a question..." rows="4"></textarea>
-            <button type="button" id="cb-agent-sandbox-send">Simulate response</button>
-          </div>
-          <div class="cb-agent-sandbox-output" id="cb-agent-sandbox-output">
-            Responses will appear here once simulation is enabled.
-          </div>
-        </article>
+                <div class="cb-payload-actions-row">
+                  <button type="button" class="cb-btn cb-btn-ghost" id="cb-payload-download">Download .cbpl</button>
+                  <button type="button" class="cb-btn cb-btn-ghost" id="cb-payload-send">Send to Chat</button>
+                  <button type="button" class="cb-btn cb-btn-danger" id="cb-payload-delete">Delete</button>
+                </div>
 
-        <article class="cb-agent-card cb-agent-card-wide" id="cb-agent-payload-card">
-          <h2>Payload History</h2>
-          <p class="cb-agent-card-note">
-            Coming soon. Task trees, snapshots, and token costs will appear here.
-          </p>
-          <div class="cb-agent-payload-placeholder" aria-hidden="true">
-            <span></span>
-            <span></span>
-            <span></span>
+                <div class="cb-payload-tabs">
+                  <button type="button" class="cb-tab is-active" data-tab="summary">Summary</button>
+                  <button type="button" class="cb-tab" data-tab="raw">Raw CBPL</button>
+                  <button type="button" class="cb-tab" data-tab="usage">Usage / Links</button>
+                </div>
+                <div class="cb-payload-panel" data-tab-panel="summary"></div>
+                <div class="cb-payload-panel" data-tab-panel="raw" hidden>
+                  <pre class="cb-payload-raw" id="cb-payload-raw"></pre>
+                </div>
+                <div class="cb-payload-panel" data-tab-panel="usage" hidden>
+                  <div class="cb-payload-placeholder">
+                    Usage links will appear once payloads are attached to chats and runs.
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
-        </article>
-      </section>
-
-      <section class="cb-agent-directory" id="cb-agent-directory" hidden>
-        <div class="cb-agent-directory-header">
-          <h2 id="cb-agent-directory-title">Agent Directory</h2>
-          <p id="cb-agent-directory-subtitle">
-            Pick an agent to preview its profile and mocked interface.
-          </p>
-        </div>
-        <div class="cb-agent-directory-grid" id="cb-agent-directory-grid"></div>
-      </section>
         </main>
         <footer data-cb-footer></footer>
       </div>
@@ -469,6 +379,6 @@
 
     <script src="/assets/site-footer.js"></script>
     <script src="/assets/chat.js?v=2025-12-27-01" type="module"></script>
-    <script src="/assets/agents.js" type="module"></script>
+    <script src="/assets/payload.js" type="module"></script>
   </body>
 </html>
