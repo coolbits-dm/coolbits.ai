@@ -6,3 +6,9 @@ coverage/
 .DS_Store
 npm-debug.log*
 yarn-error.log*
+
+# local audits/log dumps
+progress/audit/
+
+# personal/public profiles
+public/coolbits/CEO/
