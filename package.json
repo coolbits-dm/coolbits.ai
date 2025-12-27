@@ -1,14 +1,15 @@
 {
   "name": "coolbits.ai",
   "version": "1.0.0",
-  "description": "CoolBits.ai — staging environment for the CoolBits landing page and portal.",
+  "description": "CoolBits.ai \u2014 staging environment for the CoolBits landing page and portal.",
   "main": "ecosystem.config.cjs",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
     "dev": "node app/server/server.js",
-    "start": "node app/server/server.js"
+    "start": "node app/server/server.js",
+    "test:registry": "node tools/connectors-registry-test.js"
   },
   "keywords": [],
   "author": "",
