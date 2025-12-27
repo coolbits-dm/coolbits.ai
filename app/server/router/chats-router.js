@@ -17,12 +17,26 @@ import { getUserByEmail } from '../userStore.js';
 import { getPlanForUser, isPaidPlan, getCurrentPeriodForUser, getTokensUsed } from '../services/billingService.js';
 import { buildCouncilMeta } from '../chat.js';
 import { getChatAgentOrNull } from '../config/chatAgents.js';
+import { getModelConfig } from '../config/modelRegistry.js';
 import { getActiveContext } from '../services/activeContextService.js';
 import {
   normalizeCouncil,
   isCouncilIntrospection,
   buildCouncilIntrospectionAnswer,
 } from '../utils/councilUtils.js';
+import { resolveTraceId } from '../utils/trace.js';
+import { initSse, sendSse, endSse } from '../utils/sse.js';
+import {
+  buildRequestedContext,
+  buildResolvedContext,
+  deriveRoutingReason,
+  classifyFallbackReason,
+  getFallbackModelId,
+  shouldFallbackToDefault,
+} from '../services/chatRoutingService.js';
+import { normalizeUsage } from '../services/tokenUsageHelper.js';
+import { PRICING_VERSION, FX_VERSION } from '../config/pricingConfig.js';
+import { resolvePayloadAttachments } from '../services/payloadService.js';
 
 const router = express.Router();
 
@@ -38,6 +52,153 @@ function buildUsagePayload(aiContent) {
   };
 }
 
+const STREAM_CHUNK_SIZE = 48;
+
+const isSseRequest = (req) => {
+  const accept = req.headers.accept || '';
+  return accept.includes('text/event-stream') || String(req.query.stream || '') === '1';
+};
+
+const estimateTokens = (text) => {
+  if (!text) return 0;
+  return Math.max(1, Math.ceil(String(text).length / 4));
+};
+
+async function streamTextChunks(res, traceId, text, { promptTokens = 0, modelId = null } = {}) {
+  let cursor = 0;
+  let completionTokens = 0;
+  const modelConfig = modelId ? getModelConfig(modelId) : null;
+  while (cursor < text.length) {
+    const chunk = text.slice(cursor, cursor + STREAM_CHUNK_SIZE);
+    cursor += STREAM_CHUNK_SIZE;
+    completionTokens = estimateTokens(text.slice(0, cursor));
+    const usageUpdate = {
+      traceId,
+      promptTokens,
+      completionTokens,
+      isEstimate: true,
+    };
+    if (modelConfig) {
+      const normalized = normalizeUsage(modelConfig.provider, { promptTokens, completionTokens }, modelConfig);
+      usageUpdate.totalTokens = normalized.totalTokens;
+      usageUpdate.costUsd = normalized.totalCost || 0;
+      usageUpdate.costCbT = normalized.cbtDelta || 0;
+    }
+    sendSse(res, 'chat.delta', { traceId, delta: chunk });
+    sendSse(res, 'usage.update', usageUpdate);
+  }
+}
+
+async function callLlmWithFallback({
+  modelId,
+  systemPrompt,
+  userMessage,
+  history,
+  usageContext,
+  activeContext,
+  council,
+  requestedContext,
+}) {
+  let resolvedContext = buildResolvedContext({
+    modelId,
+    provider: activeContext?.provider,
+    council,
+  });
+  let routingReason = deriveRoutingReason({
+    activeContext,
+    requested: requestedContext,
+    resolved: resolvedContext,
+  });
+
+  let aiContent = null;
+  try {
+    aiContent = await callLlm(
+      modelId,
+      {
+        system: systemPrompt,
+        user: userMessage,
+        history,
+        temperature: usageContext?.temperature ?? 0.35,
+        maxTokens: usageContext?.maxTokens || Number(process.env.OPENAI_MAX_TOKENS) || 4096,
+      },
+      {
+        ...usageContext,
+        traceId: usageContext?.traceId,
+        requested: requestedContext,
+        resolved: resolvedContext,
+        reason: routingReason,
+      },
+    );
+  } catch (error) {
+    const fallbackReason = classifyFallbackReason(error);
+    if (shouldFallbackToDefault(modelId)) {
+      const fallbackModel = getFallbackModelId(modelId);
+      resolvedContext = buildResolvedContext({
+        modelId: fallbackModel,
+        provider: activeContext?.provider,
+        council,
+      });
+      routingReason = fallbackReason;
+      aiContent = await callLlm(
+        fallbackModel,
+        {
+          system: systemPrompt,
+          user: userMessage,
+          history,
+          temperature: usageContext?.temperature ?? 0.35,
+          maxTokens: usageContext?.maxTokens || Number(process.env.OPENAI_MAX_TOKENS) || 4096,
+        },
+        {
+          ...usageContext,
+          traceId: usageContext?.traceId,
+          requested: requestedContext,
+          resolved: resolvedContext,
+          reason: routingReason,
+        },
+      );
+    } else {
+      throw error;
+    }
+  }
+
+  return { aiContent, resolvedContext, routingReason };
+}
+
+function buildEmptyUsageMeta() {
+  return {
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+    toolTokens: 0,
+    costUsd: 0,
+    costCbT: 0,
+    pricingVersion: PRICING_VERSION,
+    fxVersion: FX_VERSION,
+    isEstimate: false,
+  };
+}
+
+function buildMeta({ traceId, requested, resolved, reason, accounting, payloads }) {
+  const usage = accounting?.usage && typeof accounting.usage === 'object'
+    ? { ...accounting.usage }
+    : buildEmptyUsageMeta();
+  usage.isEstimate = false;
+  if (!usage.pricingVersion) usage.pricingVersion = PRICING_VERSION;
+  if (!usage.fxVersion) usage.fxVersion = FX_VERSION;
+  const meta = {
+    traceId,
+    requested,
+    resolved,
+    reason,
+    usage,
+    wallet: accounting?.wallet || null,
+  };
+  if (payloads !== undefined) {
+    meta.payloads = payloads;
+  }
+  return meta;
+}
+
 function handleChatError(req, res, err) {
   console.error('[CHAT_ERROR]', {
     route: `${req.method} ${req.originalUrl}`,
@@ -48,6 +209,16 @@ function handleChatError(req, res, err) {
     stack: err?.stack,
     councilMembers: Array.isArray(req.body?.councilMembers) ? req.body.councilMembers : [],
   });
+
+  if (isSseRequest(req)) {
+    initSse(res);
+    sendSse(res, 'error', {
+      traceId: req.traceId || null,
+      errorCode: err?.code || 'CHAT_ERROR',
+      message: err?.message || 'Chat error.',
+    });
+    return endSse(res);
+  }
 
   const code = err?.code || err?.message;
   switch (code) {
@@ -104,6 +275,8 @@ router.post('/', requireUser, async (req, res) => {
     const { firstMessage, model, temperature, projectId } = req.body || {};
     const council = normalizeCouncil(req.body);
     const councilMeta = buildCouncilMeta(council);
+    const traceId = resolveTraceId(req);
+    req.traceId = traceId;
 
     const workspaceId = typeof req.body?.workspaceId === 'string' && req.body.workspaceId.trim() ? req.body.workspaceId.trim() : 'business';
     const councilMembers = Array.isArray(req.body?.councilMembers) ? req.body.councilMembers : [];
@@ -139,6 +312,26 @@ router.post('/', requireUser, async (req, res) => {
       });
     }
 
+    const payloadIds = Array.isArray(req.body?.payloadIds) ? req.body.payloadIds : null;
+    let payloadMeta = [];
+    let hasPayloadRequest = false;
+    try {
+      const resolvedPayloads = await resolvePayloadAttachments({
+        workspaceId,
+        payloadIds,
+      });
+      payloadMeta = resolvedPayloads.payloads;
+      hasPayloadRequest = resolvedPayloads.hasPayloadRequest;
+    } catch (err) {
+      return res.status(err.status || 400).json({
+        error: err.code || 'payload_error',
+        message: err.message || 'Invalid payloads request.',
+      });
+    }
+
+    const requestedContext = buildRequestedContext({ body: req.body, council, activeContext });
+    const wantsStream = isSseRequest(req);
+
     const modelFromContext = activeContext?.model || model;
     const { chat, userMessage } = await createChat(req.userEmail, firstMessage, { model: modelFromContext, temperature, projectId, workspaceId, councilMembers });
 
@@ -150,13 +343,7 @@ router.post('/', requireUser, async (req, res) => {
     const modelToUse = activeContext?.model || resolvedAgent?.modelId || chat.model;
     const systemPrompt = councilMeta ? `${SYSTEM_PROMPT}\n\n${councilMeta}` : SYSTEM_PROMPT;
 
-    const aiContent = await callLlm(modelToUse, {
-      system: systemPrompt,
-      user: userMessage.content,
-      history,
-      temperature: chat.temperature,
-      maxTokens: Number(process.env.OPENAI_MAX_TOKENS) || 4096,
-    }, {
+    const usageContext = {
       userId: user.id,
       workspaceId,
       projectId,
@@ -165,17 +352,84 @@ router.post('/', requireUser, async (req, res) => {
       agentId: activeContext?.agentId || resolvedAgent?.id || null,
       scenarioId: resolvedAgent ? 'council-pill' : null,
       contextId: activeContext?.contextId || null,
+      temperature: chat.temperature,
+      maxTokens: Number(process.env.OPENAI_MAX_TOKENS) || 4096,
+      traceId,
+    };
+
+    const { aiContent, resolvedContext, routingReason } = await callLlmWithFallback({
+      modelId: modelToUse,
+      systemPrompt,
+      userMessage: userMessage.content,
+      history,
+      usageContext,
+      activeContext,
+      council,
+      requestedContext,
     });
 
-    const assistantMessage = await saveAssistantMessage(chat.id, aiContent.text || aiContent, aiContent?.usage?.inputTokens || null, aiContent?.usage?.outputTokens || null);
+    const assistantMessage = await saveAssistantMessage(
+      chat.id,
+      aiContent.text || aiContent,
+      aiContent?.usage?.inputTokens || null,
+      aiContent?.usage?.outputTokens || null,
+    );
 
     const councilOut = chat.councilMembers || councilMembers;
+    const replyText = aiContent.text || aiContent || '';
+    const meta = buildMeta({
+      traceId,
+      requested: requestedContext,
+      resolved: resolvedContext,
+      reason: routingReason,
+      accounting: aiContent?.accounting || null,
+      payloads: hasPayloadRequest ? payloadMeta : undefined,
+    });
+
+    console.log('[CHAT_USAGE]', JSON.stringify({
+      traceId,
+      userId: user.id,
+      workspaceId,
+      requested: requestedContext,
+      resolved: resolvedContext,
+      reason: routingReason,
+      tokens: meta.usage?.totalTokens || 0,
+      costUsd: meta.usage?.costUsd || 0,
+      costCbT: meta.usage?.costCbT || 0,
+      walletAfter: meta.wallet?.afterCbT ?? null,
+    }));
+
+    if (wantsStream) {
+      initSse(res);
+      sendSse(res, 'route.resolved', {
+        traceId,
+        requested: requestedContext,
+        resolved: resolvedContext,
+        reason: routingReason,
+      });
+      const promptTokens = estimateTokens(userMessage.content);
+      await streamTextChunks(res, traceId, replyText, {
+        promptTokens,
+        modelId: resolvedContext?.model || modelToUse,
+      });
+      sendSse(res, 'chat.final', {
+        traceId,
+        text: replyText,
+        meta,
+        chat: { ...chat, councilMembers: councilOut },
+        messages: [userMessage, assistantMessage],
+        councilMembers: councilOut,
+      });
+      return endSse(res);
+    }
 
     return res.status(201).json({
       chat: { ...chat, councilMembers: councilOut },
       messages: [userMessage, assistantMessage],
       councilMembers: councilOut,
       usage: buildUsagePayload(aiContent),
+      text: replyText,
+      meta,
     });
   } catch (err) {
     return handleChatError(req, res, err);
@@ -189,6 +443,8 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
     const text = (message ?? content ?? '').trim();
     const council = normalizeCouncil(req.body);
     const councilMeta = buildCouncilMeta(council);
+    const traceId = resolveTraceId(req);
+    req.traceId = traceId;
     const councilMembers = Array.isArray(req.body?.councilMembers) ? req.body.councilMembers : [];
     if (!content || typeof content !== 'string') {
       return res.status(400).json({ error: 'content is required', errorCode: 'INVALID_INPUT' });
@@ -222,10 +478,33 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
       });
     }
 
+    const requestedContext = buildRequestedContext({ body: req.body, council, activeContext });
+    const wantsStream = isSseRequest(req);
+
     const userMessage = await appendUserMessage(req.userEmail, req.params.chatId, content, councilMembers);
 
     const combo = await getChatWithMessages(req.userEmail, req.params.chatId);
     if (!combo) return res.status(404).json({ error: 'Chat not found', errorCode: 'NOT_FOUND' });
+
+    const workspaceId = typeof req.body?.workspaceId === 'string' && req.body.workspaceId.trim()
+      ? req.body.workspaceId.trim()
+      : combo?.chat?.workspaceId || 'business';
+    const payloadIds = Array.isArray(req.body?.payloadIds) ? req.body.payloadIds : null;
+    let payloadMeta = [];
+    let hasPayloadRequest = false;
+    try {
+      const resolvedPayloads = await resolvePayloadAttachments({
+        workspaceId,
+        payloadIds,
+      });
+      payloadMeta = resolvedPayloads.payloads;
+      hasPayloadRequest = resolvedPayloads.hasPayloadRequest;
+    } catch (err) {
+      return res.status(err.status || 400).json({
+        error: err.code || 'payload_error',
+        message: err.message || 'Invalid payloads request.',
+      });
+    }
 
     if (isCouncilIntrospection({ text, council })) {
       const answer = buildCouncilIntrospectionAnswer(council);
@@ -241,12 +520,46 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
       );
 
       const councilOut = userMessage.councilMembers || combo.chat.councilMembers || councilMembers;
+      const meta = buildMeta({
+        traceId,
+        requested: requestedContext,
+        resolved: buildResolvedContext({
+          modelId: activeContext?.model,
+          provider: activeContext?.provider,
+          council,
+        }),
+        reason: deriveRoutingReason({ activeContext, requested: requestedContext }),
+        accounting: null,
+        payloads: hasPayloadRequest ? payloadMeta : undefined,
+      });
+
+      if (wantsStream) {
+        initSse(res);
+        sendSse(res, 'route.resolved', {
+          traceId,
+          requested: meta.requested,
+          resolved: meta.resolved,
+          reason: meta.reason,
+        });
+        await streamTextChunks(res, traceId, answer, { promptTokens: estimateTokens(text) });
+        sendSse(res, 'chat.final', {
+          traceId,
+          text: answer,
+          meta,
+          chat: { ...combo.chat, councilMembers: councilOut },
+          newMessages: [userMessage, assistantMessage],
+          councilMembers: councilOut,
+        });
+        return endSse(res);
+      }
 
       return res.status(201).json({
         chat: { ...combo.chat, councilMembers: councilOut },
         newMessages: [userMessage, assistantMessage],
         councilMembers: councilOut,
         usage: null,
+        text: answer,
+        meta,
       });
     }
 
@@ -260,13 +573,7 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
     const modelToUse = activeContext?.model || resolvedAgent?.modelId || combo.chat.model;
     const systemPrompt = councilMeta ? `${SYSTEM_PROMPT}\n\n${councilMeta}` : SYSTEM_PROMPT;
 
-    const aiContent = await callLlm(modelToUse, {
-      system: systemPrompt,
-      user: userMessage.content,
-      history,
-      temperature: combo.chat.temperature,
-      maxTokens: Number(process.env.OPENAI_MAX_TOKENS) || 4096,
-    }, {
+    const usageContext = {
       userId: user.id,
       workspaceId: combo.chat.workspaceId || null,
       projectId: combo.chat.projectId || null,
@@ -275,17 +582,84 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
       agentId: activeContext?.agentId || resolvedAgent?.id || null,
       scenarioId: resolvedAgent ? 'council-pill' : null,
       contextId: activeContext?.contextId || null,
+      temperature: combo.chat.temperature,
+      maxTokens: Number(process.env.OPENAI_MAX_TOKENS) || 4096,
+      traceId,
+    };
+
+    const { aiContent, resolvedContext, routingReason } = await callLlmWithFallback({
+      modelId: modelToUse,
+      systemPrompt,
+      userMessage: userMessage.content,
+      history,
+      usageContext,
+      activeContext,
+      council,
+      requestedContext,
     });
 
-    const assistantMessage = await saveAssistantMessage(combo.chat.id, aiContent.text || aiContent, aiContent?.usage?.inputTokens || null, aiContent?.usage?.outputTokens || null);
+    const assistantMessage = await saveAssistantMessage(
+      combo.chat.id,
+      aiContent.text || aiContent,
+      aiContent?.usage?.inputTokens || null,
+      aiContent?.usage?.outputTokens || null,
+    );
 
     const councilOut = userMessage.councilMembers || combo.chat.councilMembers || councilMembers;
+    const replyText = aiContent.text || aiContent || '';
+    const meta = buildMeta({
+      traceId,
+      requested: requestedContext,
+      resolved: resolvedContext,
+      reason: routingReason,
+      accounting: aiContent?.accounting || null,
+      payloads: hasPayloadRequest ? payloadMeta : undefined,
+    });
+
+    console.log('[CHAT_USAGE]', JSON.stringify({
+      traceId,
+      userId: user.id,
+      workspaceId: combo.chat.workspaceId || null,
+      requested: requestedContext,
+      resolved: resolvedContext,
+      reason: routingReason,
+      tokens: meta.usage?.totalTokens || 0,
+      costUsd: meta.usage?.costUsd || 0,
+      costCbT: meta.usage?.costCbT || 0,
+      walletAfter: meta.wallet?.afterCbT ?? null,
+    }));
+
+    if (wantsStream) {
+      initSse(res);
+      sendSse(res, 'route.resolved', {
+        traceId,
+        requested: requestedContext,
+        resolved: resolvedContext,
+        reason: routingReason,
+      });
+      const promptTokens = estimateTokens(userMessage.content);
+      await streamTextChunks(res, traceId, replyText, {
+        promptTokens,
+        modelId: resolvedContext?.model || modelToUse,
+      });
+      sendSse(res, 'chat.final', {
+        traceId,
+        text: replyText,
+        meta,
+        chat: { ...combo.chat, councilMembers: councilOut },
+        newMessages: [userMessage, assistantMessage],
+        councilMembers: councilOut,
+      });
+      return endSse(res);
+    }
 
     return res.status(201).json({
       chat: { ...combo.chat, councilMembers: councilOut },
       newMessages: [userMessage, assistantMessage],
       councilMembers: councilOut,
       usage: buildUsagePayload(aiContent),
+      text: replyText,
+      meta,
     });
   } catch (err) {
     return handleChatError(req, res, err);

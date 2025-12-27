@@ -1,5 +1,5 @@
 import express from 'express';
-import { handleChat } from '../chat.js';
+import { handleChat, handleChatStream } from '../chat.js';
 import {
   normalizeCouncil,
   isCouncilIntrospection,
@@ -47,6 +47,26 @@ router.post('/', requireUserOptional, rateLimitChatUserWorkspace, (req, res) => 
 
   req.council = council;
   return handleChat({ req, res, council });
+});
+
+router.post('/stream', requireUserOptional, rateLimitChatUserWorkspace, (req, res) => {
+  const { message, content } = req.body || {};
+  const text = (message ?? content ?? '').trim();
+  if (!message || !String(message).trim()) {
+    return res.status(400).json({ error: 'Missing message' });
+  }
+
+  const agentKey =
+    (typeof req.body?.agentKey === 'string' && req.body.agentKey) ||
+    (typeof req.body?.agent === 'string' && req.body.agent) ||
+    null;
+  if (agentKey) {
+    req.chatAgentKey = agentKey;
+  }
+
+  const council = normalizeCouncil(req.body);
+  req.council = council;
+  return handleChatStream({ req, res, council });
 });
 
 export default router;

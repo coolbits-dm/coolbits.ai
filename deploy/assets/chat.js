@@ -51,6 +51,7 @@ const CONFIG = {
 const API_BASE = CONFIG.API_BASE_URL;
 const API_CHATS = `${API_BASE}/chats`;
 const API_CHAT = `${API_BASE}/chat`;
+const API_CHAT_STREAM = `${API_CHAT}/stream`;
 const API_AUTH_ME = `${API_BASE}/auth/me`;
 const API_SUGGESTIONS = `${API_BASE}/suggestions`;
 const API_PROFILE = `${API_BASE}/profile`;
@@ -67,6 +68,7 @@ const API_CONTEXT_ACTIVATE = `${API_BASE}/context/activate`;
 const PUBLIC_AGENTS_REGISTRY_URL = "/api/public/agents-registry";
 const API_AUTH_GOOGLE_START = `${API_BASE}/auth/google/start`;
 const API_PROJECTS = `${API_BASE}/projects`;
+const CB_STREAMING_ENABLED = true;
 
 const CURRENCY_SYMBOLS = {
   EUR: "€",
@@ -1328,6 +1330,7 @@ const cbGetChatHeaderElements = () => {
     modelTile: modelValue ? modelValue.closest(".cb-smart-tile") : null,
     modelValue,
     modelMeta: document.getElementById("cb-active-model-meta"),
+    routingBadge: document.getElementById("cb-routing-badge"),
     contextTile: contextValue ? contextValue.closest(".cb-smart-tile") : null,
     contextValue,
     contextMeta: document.getElementById("cb-active-context-meta"),
@@ -1404,9 +1407,9 @@ const cbBuildActiveAgentSummary = () => {
 };
 
 const cbBuildModelSummary = () => {
-  if (cbActiveContextState.context) {
-    const providerLabel = cbFormatProviderLabel(cbActiveContextState.context.provider || "auto");
-    const modelLabel = cbFormatModelLabel(cbActiveContextState.context.model || "");
+  if (cbRoutingState.lastResolved) {
+    const providerLabel = cbFormatProviderLabel(cbRoutingState.lastResolved.provider || "auto");
+    const modelLabel = cbFormatModelLabel(cbRoutingState.lastResolved.model || "");
     const meta = modelLabel ? `Model: ${modelLabel}` : "Model: auto";
     return { label: providerLabel, meta };
   }
@@ -1418,11 +1421,11 @@ const cbBuildModelSummary = () => {
   const modelHint = searchInput?.value ? searchInput.value.trim() : "";
   let meta = "";
   if (providerValue === "auto") {
-    meta = modelHint ? `Model hint: ${modelHint}` : "Routing: auto";
+    meta = modelHint ? `Requested: ${modelHint}` : "Awaiting response";
   } else {
-    meta = modelHint ? `Model hint: ${modelHint}` : "Model hint: none";
+    meta = modelHint ? `Requested: ${modelHint}` : "Awaiting response";
   }
-  return { label: providerLabel, meta };
+  return { label: "Not resolved", meta };
 };
 
 const cbBuildContextSummary = () => {
@@ -1459,7 +1462,42 @@ const cbBuildUsageSummary = () => {
         outcome ? ` - ${outcome}` : ""
       }`
     : "Prompt: empty";
-  return { value: tokensLine, meta: promptMeta };
+  const liveTokens = cbStreamingState.active
+    ? Math.max(0, Math.round((cbStreamingState.promptTokens || 0) + (cbStreamingState.completionTokens || 0)))
+    : null;
+  const liveCost =
+    cbStreamingState.active &&
+    Number.isFinite(cbStreamingState.costUsd) &&
+    cbStreamingState.costUsd > 0
+      ? `$${cbStreamingState.costUsd.toFixed(4)}`
+      : null;
+  const liveMeta = liveTokens
+    ? `Live: ${liveTokens.toLocaleString()} tokens${liveCost ? ` · ${liveCost}` : ""}`
+    : "";
+  const lastTokens =
+    cbLastUsageMeta &&
+    Number.isFinite(cbLastUsageMeta.totalTokens) &&
+    cbLastUsageMeta.totalTokens > 0
+      ? cbLastUsageMeta.totalTokens
+      : null;
+  const lastCostUsd =
+    cbLastUsageMeta &&
+    Number.isFinite(cbLastUsageMeta.costUsd) &&
+    cbLastUsageMeta.costUsd > 0
+      ? `$${cbLastUsageMeta.costUsd.toFixed(4)}`
+      : null;
+  const lastCostCbT =
+    cbLastUsageMeta &&
+    Number.isFinite(cbLastUsageMeta.costCbT) &&
+    cbLastUsageMeta.costCbT > 0
+      ? `${Math.round(cbLastUsageMeta.costCbT)} cbT`
+      : null;
+  const lastCostParts = [lastCostUsd, lastCostCbT].filter(Boolean);
+  const lastMeta = lastTokens
+    ? `Last: ${lastTokens.toLocaleString()} tokens${lastCostParts.length ? ` · ${lastCostParts.join(" · ")}` : ""}`
+    : "";
+  const meta = [promptMeta, liveMeta, lastMeta].filter(Boolean).join(" · ");
+  return { value: tokensLine, meta };
 };
 
 const cbUpdateChatHeader = () => {
@@ -1488,6 +1526,39 @@ const cbUpdateChatHeader = () => {
   }
   if (elements.modelTile) {
     elements.modelTile.title = `Model: ${modelSummary.label}\n${modelSummary.meta}`;
+  }
+
+  if (elements.routingBadge) {
+    const requested = cbRoutingState.lastRequested;
+    const resolved = cbRoutingState.lastResolved;
+    const reason = cbRoutingState.lastReason;
+    const traceId = cbRoutingState.lastTraceId;
+    const mismatch = Boolean(
+      requested &&
+        resolved &&
+        (requested.provider !== resolved.provider || requested.model !== resolved.model)
+    );
+    if (mismatch) {
+      const isFallback = typeof reason === "string" && reason.startsWith("fallback");
+      const label = isFallback ? "Fallback" : "Routed";
+      const requestedLabel = cbFormatProviderLabel(requested.provider || "auto");
+      const resolvedLabel = cbFormatProviderLabel(resolved.provider || "auto");
+      const requestedModel = cbFormatModelLabel(requested.model || "auto");
+      const resolvedModel = cbFormatModelLabel(resolved.model || "auto");
+      elements.routingBadge.textContent = label;
+      elements.routingBadge.hidden = false;
+      elements.routingBadge.title = [
+        `Requested: ${requestedLabel} / ${requestedModel}`,
+        `Resolved: ${resolvedLabel} / ${resolvedModel}`,
+        reason ? `Reason: ${reason}` : null,
+        traceId ? `Trace: ${traceId}` : null,
+      ]
+        .filter(Boolean)
+        .join("\\n");
+    } else {
+      elements.routingBadge.hidden = true;
+      elements.routingBadge.removeAttribute("title");
+    }
   }
 
   const contextSummary = cbBuildContextSummary();
@@ -2243,6 +2314,25 @@ const cbActiveContextState = {
   error: null,
   pendingReason: null,
 };
+const ACTIVE_CONTEXT_COLLAPSED_KEY = "coolbits:active-context-collapsed";
+let cbActiveContextCollapsed = false;
+const cbRoutingState = {
+  lastRequested: null,
+  lastResolved: null,
+  lastReason: null,
+  lastTraceId: null,
+};
+const cbStreamingState = {
+  active: false,
+  traceId: null,
+  promptTokens: 0,
+  completionTokens: 0,
+  costUsd: null,
+  costCbT: null,
+  isEstimate: false,
+};
+let cbLastUsageMeta = null;
+let cbStreamRenderPending = false;
 let cbActiveContextRequestId = 0;
 let cbActiveContextDebounce = null;
 let cbSuppressContextActivation = false;
@@ -2336,13 +2426,182 @@ const cbFormatModelLabel = (value) => {
   return trimmed.replace(/^vertex-/, "").replace(/^openai-/, "");
 };
 
+const cbBuildRequestedContextFromUi = () => {
+  const providerSelect = document.getElementById("cb-model-selector");
+  const searchInput = document.getElementById("cb-model-search");
+  const providerValue = providerSelect?.value || "auto";
+  const provider = cbNormalizeProviderForApi(providerValue);
+  const modelHint = searchInput?.value ? searchInput.value.trim() : "";
+  const model = modelHint || "auto";
+  const agents = cbResolveCouncilSelections();
+  const mode = agents.length ? "council" : "solo";
+  return { provider, model, mode, agents };
+};
+
+const cbGenerateTraceId = () => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `tr_${crypto.randomUUID()}`;
+  }
+  return `tr_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+};
+
+const cbFormatRequestedLine = (requested) => {
+  if (!requested) return "Requested: Auto / Auto";
+  const providerLabel = cbFormatProviderLabel(requested.provider || "auto");
+  const modelLabel = cbFormatModelLabel(requested.model || "auto");
+  return `Requested: ${providerLabel} / ${modelLabel}`;
+};
+
+const cbSetRoutingState = (meta) => {
+  if (!meta || typeof meta !== "object") return;
+  cbRoutingState.lastRequested = meta.requested || cbRoutingState.lastRequested;
+  cbRoutingState.lastResolved = meta.resolved || cbRoutingState.lastResolved;
+  cbRoutingState.lastReason = meta.reason || cbRoutingState.lastReason;
+  cbRoutingState.lastTraceId = meta.traceId || cbRoutingState.lastTraceId;
+};
+
+const cbApplyRoutingUpdate = (payload) => {
+  if (!payload || typeof payload !== "object") return;
+  cbSetRoutingState(payload);
+  cbUpdateChatHeader();
+  cbUpdateActiveContextBar();
+};
+
+const cbSetStreamingUsage = ({ traceId, promptTokens, completionTokens, costUsd, costCbT, isEstimate } = {}) => {
+  cbStreamingState.active = true;
+  cbStreamingState.traceId = traceId || cbStreamingState.traceId;
+  if (Number.isFinite(promptTokens)) cbStreamingState.promptTokens = promptTokens;
+  if (Number.isFinite(completionTokens)) cbStreamingState.completionTokens = completionTokens;
+  if (Number.isFinite(costUsd)) cbStreamingState.costUsd = costUsd;
+  if (Number.isFinite(costCbT)) cbStreamingState.costCbT = costCbT;
+  if (typeof isEstimate === "boolean") cbStreamingState.isEstimate = isEstimate;
+  cbUpdateChatHeader();
+};
+
+const cbClearStreamingUsage = () => {
+  cbStreamingState.active = false;
+  cbStreamingState.traceId = null;
+  cbStreamingState.promptTokens = 0;
+  cbStreamingState.completionTokens = 0;
+  cbStreamingState.costUsd = null;
+  cbStreamingState.costCbT = null;
+  cbStreamingState.isEstimate = false;
+  cbUpdateChatHeader();
+};
+
+const cbScheduleStreamRender = () => {
+  if (cbStreamRenderPending) return;
+  cbStreamRenderPending = true;
+  requestAnimationFrame(() => {
+    cbStreamRenderPending = false;
+    renderMessages();
+  });
+};
+
+const cbApplyWalletMeta = (wallet) => {
+  if (!wallet || typeof wallet !== "object") return;
+  if (cbCurrentUser) {
+    if (Number.isFinite(wallet.afterCbT)) {
+      cbCurrentUser.includedCbtRemaining = Math.max(0, Math.floor(wallet.afterCbT));
+    }
+    if (Number.isFinite(wallet.allowanceAfterCbT)) {
+      cbCurrentUser.includedCbtPerMonth = Math.max(0, Math.floor(wallet.allowanceAfterCbT));
+    }
+  }
+  if (cbLatestBillingSummary && cbLatestBillingSummary.usage) {
+    if (Number.isFinite(wallet.afterCbT)) {
+      cbLatestBillingSummary.usage.tokensRemaining = Math.max(0, wallet.afterCbT);
+    }
+    if (Number.isFinite(wallet.allowanceAfterCbT)) {
+      const used = Math.max(0, wallet.allowanceAfterCbT - (wallet.afterCbT || 0));
+      cbLatestBillingSummary.usage.tokensUsedThisPeriod = used;
+    }
+    cbSetBillingSummary(cbLatestBillingSummary);
+  } else {
+    cbUpdateChatHeader();
+    cbUpdatePromptMeter();
+  }
+};
+
+const cbApplyChatMeta = (meta) => {
+  if (!meta || typeof meta !== "object") return;
+  cbSetRoutingState(meta);
+  if (meta.usage) {
+    cbLastUsageMeta = meta.usage;
+  }
+  const isEstimate = meta.usage?.isEstimate;
+  if (meta.wallet && isEstimate === false) {
+    cbApplyWalletMeta(meta.wallet);
+  }
+  cbUpdateChatHeader();
+  cbUpdateActiveContextBar();
+  if (meta.traceId || meta.resolved) {
+    console.debug("[CHAT_ROUTING]", {
+      traceId: meta.traceId,
+      requested: meta.requested,
+      resolved: meta.resolved,
+      reason: meta.reason,
+    });
+  }
+};
+
+const cbLoadActiveContextCollapsed = () => {
+  try {
+    return window.localStorage.getItem(ACTIVE_CONTEXT_COLLAPSED_KEY) === "1";
+  } catch (error) {
+    console.debug("[ACTIVE_CONTEXT] collapse read error", error);
+    return false;
+  }
+};
+
+const cbSetActiveContextCollapsed = (collapsed, { persist = true } = {}) => {
+  cbActiveContextCollapsed = Boolean(collapsed);
+  const { bar, toggle, toggleLabel, summary } = cbGetActiveContextElements();
+  if (bar) {
+    bar.classList.toggle("is-collapsed", cbActiveContextCollapsed);
+  }
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", cbActiveContextCollapsed ? "false" : "true");
+    toggle.title = cbActiveContextCollapsed ? "Expand Active Context" : "Collapse Active Context";
+  }
+  if (toggleLabel) {
+    toggleLabel.textContent = cbActiveContextCollapsed
+      ? "Expand Active Context"
+      : "Collapse Active Context";
+  }
+  if (summary) {
+    summary.hidden = !cbActiveContextCollapsed;
+  }
+  if (persist) {
+    try {
+      window.localStorage.setItem(ACTIVE_CONTEXT_COLLAPSED_KEY, cbActiveContextCollapsed ? "1" : "0");
+    } catch (error) {
+      console.debug("[ACTIVE_CONTEXT] collapse persist error", error);
+    }
+  }
+};
+
+const cbInitActiveContextToggle = () => {
+  const { toggle } = cbGetActiveContextElements();
+  if (!toggle || toggle.dataset.bound) return;
+  toggle.addEventListener("click", () => {
+    cbSetActiveContextCollapsed(!cbActiveContextCollapsed);
+  });
+  toggle.dataset.bound = "true";
+  cbSetActiveContextCollapsed(cbLoadActiveContextCollapsed(), { persist: false });
+};
+
 const cbGetActiveContextElements = () => ({
   bar: document.getElementById("cb-active-context-bar"),
   led: document.getElementById("cb-active-context-led"),
   mode: document.getElementById("cb-active-context-mode"),
   primary: document.getElementById("cb-active-context-primary"),
+  requested: document.getElementById("cb-active-context-requested"),
+  summary: document.getElementById("cb-active-context-summary"),
   chips: document.getElementById("cb-active-context-chips"),
   detail: document.getElementById("cb-active-context-detail"),
+  toggle: document.getElementById("cb-active-context-toggle"),
+  toggleLabel: document.getElementById("cb-active-context-toggle-label"),
 });
 
 const cbUpdateComposerSendState = () => {
@@ -2420,8 +2679,9 @@ const cbBuildActiveContextTooltip = (context, extraLines = []) => {
 };
 
 const cbUpdateActiveContextBar = () => {
-  const { bar, led, mode, primary, chips, detail } = cbGetActiveContextElements();
+  const { bar, led, mode, primary, requested, summary, chips, detail } = cbGetActiveContextElements();
   if (!bar || !led) return;
+  bar.classList.toggle("is-collapsed", cbActiveContextCollapsed);
   const status = cbActiveContextState.status || "idle";
   const context = cbActiveContextState.context;
   const confirmed = status === "active" && context?.contextId;
@@ -2452,6 +2712,30 @@ const cbUpdateActiveContextBar = () => {
       primary.textContent = `Agent: ${activeName}`;
       primary.title = activeName === "-" ? "" : activeName;
     }
+  }
+
+  if (requested) {
+    const requestedContext = cbBuildRequestedContextFromUi();
+    requested.textContent = cbFormatRequestedLine(requestedContext);
+  }
+
+  if (summary) {
+    const requestedContext = cbBuildRequestedContextFromUi();
+    const requestedProvider = cbFormatProviderLabel(requestedContext.provider || "auto");
+    const requestedModel = cbFormatModelLabel(requestedContext.model || "auto");
+    const modeLabel = councilEnabled
+      ? agents.length
+        ? "Council"
+        : "Council (none)"
+      : "Solo";
+    let primaryLabel = "Agent: -";
+    if (councilEnabled) {
+      primaryLabel = primaryAgent ? `Primary: ${primaryAgent.shortLabel}` : "Primary: -";
+    } else if (context) {
+      primaryLabel = `Agent: ${cbFormatActiveAgentName(context)}`;
+    }
+    summary.textContent = `${modeLabel} · ${primaryLabel} · Req: ${requestedProvider} / ${requestedModel}`;
+    summary.hidden = !cbActiveContextCollapsed;
   }
 
   if (chips) {
@@ -2498,6 +2782,9 @@ const cbUpdateActiveContextBar = () => {
     );
   }
   bar.title = cbBuildActiveContextTooltip(context, tooltipLines);
+  if (summary) {
+    summary.title = bar.title;
+  }
 };
 
 const cbApplyActiveContextToUi = (context) => {
@@ -4387,18 +4674,14 @@ const cbResizeComposerInput = () => {
   const paddingTop = parseFloat(styles.paddingTop) || 0;
   const paddingBottom = parseFloat(styles.paddingBottom) || 0;
   const cssMinHeight = parseFloat(styles.minHeight) || 52;
-  const storedMax = parseFloat(input.dataset.composerMaxHeight || "");
-  const baseMax = 260; // Match CSS max-height (10 lines)
-  const maxHeight = Number.isFinite(storedMax) ? storedMax : baseMax;
-  if (!Number.isFinite(storedMax)) {
-    input.dataset.composerMaxHeight = String(Math.round(maxHeight));
-  }
-  const storedMin = parseFloat(input.dataset.composerMinHeight || "");
-  const baseMin = cssMinHeight;
-  const minHeight = Number.isFinite(storedMin) ? storedMin : baseMin;
-  if (!Number.isFinite(storedMin)) {
-    input.dataset.composerMinHeight = String(Math.round(minHeight));
-  }
+  const maxRowsRaw = parseFloat(styles.getPropertyValue("--cb-composer-max-rows"));
+  const maxRows = Number.isFinite(maxRowsRaw) && maxRowsRaw > 0 ? maxRowsRaw : 7;
+  const cssMaxHeight = parseFloat(styles.maxHeight);
+  const fallbackMax = (lineHeight * maxRows) + paddingTop + paddingBottom;
+  const maxHeight = Number.isFinite(cssMaxHeight) && cssMaxHeight > 0 ? cssMaxHeight : fallbackMax;
+  const minHeight = cssMinHeight;
+  input.dataset.composerMaxHeight = String(Math.round(maxHeight));
+  input.dataset.composerMinHeight = String(Math.round(minHeight));
   input.style.height = "auto";
   const rawTarget = input.scrollHeight;
   const targetHeight = Math.max(minHeight, Math.min(maxHeight, rawTarget));
@@ -4430,6 +4713,7 @@ const cbSetupComposerInput = () => {
   if (!input.dataset.composerEnhanced) {
     input.addEventListener("input", cbResizeComposerInput);
     input.addEventListener("keydown", cbHandleComposerKeydown);
+    window.addEventListener("resize", cbResizeComposerInput);
     input.dataset.composerEnhanced = "true";
   }
   cbResizeComposerInput();
@@ -5400,7 +5684,7 @@ const cbResetCouncilStatusSoon = (ids, delay = 1500) => {
   }, delay);
 };
 
-const legacyRequestChatReply = async (message) => {
+const legacyRequestChatReply = async (message, options = {}) => {
   await ensureProfile();
   const councilPayload = getCouncilPayload();
   const hasCouncil = Array.isArray(councilPayload.agents) && councilPayload.agents.length > 0;
@@ -5409,12 +5693,21 @@ const legacyRequestChatReply = async (message) => {
   if (hasCouncil) {
     cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_PENDING);
   }
+  const requestedContext = options.requestedContext || cbBuildRequestedContextFromUi();
+  const traceId = options.traceId || cbGenerateTraceId();
   const payload = {
     message,
     history: history.map((entry) => ({ ...entry })),
     tier: profile?.capabilities?.tier || profile?.tier || "guest",
     visitorId,
   };
+  if (requestedContext) {
+    payload.provider = requestedContext.provider;
+    payload.model = requestedContext.model;
+  }
+  if (traceId) {
+    payload.traceId = traceId;
+  }
   if (hasCouncil) {
     payload.agents = councilMembers;
     payload.agentsArmed = true;
@@ -5422,6 +5715,19 @@ const legacyRequestChatReply = async (message) => {
   }
   console.log("[CB_COUNCIL] payload", councilPayload, payload);
   cbUpdateCouncilPill();
+  if (options.stream) {
+    try {
+      const data = await cbStreamChatRequest(API_CHAT_STREAM, payload, options.streamHandlers || {});
+      if (useCouncil) {
+        cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ACK);
+        cbResetCouncilStatusSoon(councilMembers);
+      }
+      return data;
+    } catch (streamError) {
+      if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
+      throw streamError;
+    }
+  }
   let response;
   try {
     response = await fetch(API_CHAT, {
@@ -5523,6 +5829,121 @@ const cbFetchJson = async (input, init = {}) => {
     console.error("[CONNECTOR_FETCH]", error);
     return { ok: false, status: 0, json: null };
   }
+};
+
+const cbParseSsePayload = (raw) => {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch (_err) {
+    return raw;
+  }
+};
+
+const cbConsumeSse = async (response, onEvent) => {
+  const reader = response.body?.getReader?.();
+  if (!reader) {
+    throw new Error("Streaming response unavailable.");
+  }
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let boundary = buffer.indexOf("\n\n");
+    while (boundary !== -1) {
+      const block = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      boundary = buffer.indexOf("\n\n");
+      const lines = block.split(/\r?\n/);
+      let event = "message";
+      const dataLines = [];
+      lines.forEach((line) => {
+        if (line.startsWith("event:")) {
+          event = line.slice(6).trim();
+        } else if (line.startsWith("data:")) {
+          dataLines.push(line.slice(5).trim());
+        }
+      });
+      const raw = dataLines.join("\n");
+      if (!raw) continue;
+      const parsed = cbParseSsePayload(raw);
+      await onEvent({ event, data: parsed });
+    }
+  }
+  if (buffer.trim()) {
+    const lines = buffer.split(/\r?\n/);
+    let event = "message";
+    const dataLines = [];
+    lines.forEach((line) => {
+      if (line.startsWith("event:")) {
+        event = line.slice(6).trim();
+      } else if (line.startsWith("data:")) {
+        dataLines.push(line.slice(5).trim());
+      }
+    });
+    const raw = dataLines.join("\n");
+    if (raw) {
+      await onEvent({ event, data: cbParseSsePayload(raw) });
+    }
+  }
+};
+
+const cbStreamChatRequest = async (url, payload, handlers = {}) => {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: cbGetAuthHeaders({
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    }),
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorPayload = await safeJson(response);
+    const message =
+      errorPayload?.message || errorPayload?.error || "Unable to send message.";
+    const err = new Error(message);
+    err.status = response.status;
+    err.payload = errorPayload;
+    throw err;
+  }
+
+  let finalPayload = null;
+  await cbConsumeSse(response, async ({ event, data }) => {
+    if (event === "error") {
+      const errorPayload = data && typeof data === "object" ? data : { message: String(data || "") };
+      const err = new Error(errorPayload.message || "Stream error.");
+      err.code = errorPayload.errorCode || errorPayload.code || "STREAM_ERROR";
+      err.payload = errorPayload;
+      throw err;
+    }
+    if (event === "route.resolved") {
+      handlers.onRoute?.(data);
+      return;
+    }
+    if (event === "chat.delta") {
+      handlers.onDelta?.(data);
+      return;
+    }
+    if (event === "usage.update") {
+      handlers.onUsage?.(data);
+      return;
+    }
+    if (event === "chat.final") {
+      finalPayload = data;
+      handlers.onFinal?.(data);
+    }
+  });
+
+  if (!finalPayload) {
+    const err = new Error("Stream ended without final response.");
+    err.code = "STREAM_EOF";
+    throw err;
+  }
+  return finalPayload;
 };
 
 const cbSetActiveChatMessages = (messageList = []) => {
@@ -5906,7 +6327,7 @@ function cbHandleStartNewChat() {
   focusChatInput();
 }
 
-async function cbCreateChat(firstMessage) {
+async function cbCreateChat(firstMessage, options = {}) {
   if (cbChatsUnsupported) {
     throw new Error("Chat persistence unavailable.");
   }
@@ -5916,11 +6337,20 @@ async function cbCreateChat(firstMessage) {
   const councilMembers = hasCouncil ? councilPayload.agents.slice() : [];
   const useCouncil = hasCouncil;
   if (hasCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_PENDING);
+  const requestedContext = options.requestedContext || cbBuildRequestedContextFromUi();
+  const traceId = options.traceId || null;
   const payload = {
     firstMessage,
     workspaceId: workspaceKey,
     projectId: cbCurrentProjectId || null,
   };
+  if (requestedContext) {
+    payload.provider = requestedContext.provider;
+    payload.model = requestedContext.model;
+  }
+  if (traceId) {
+    payload.traceId = traceId;
+  }
   if (hasCouncil) {
     payload.agents = councilMembers;
     payload.agentsArmed = true;
@@ -5928,20 +6358,30 @@ async function cbCreateChat(firstMessage) {
   }
   console.log("[CB_COUNCIL] payload", councilPayload, payload);
   cbUpdateCouncilPill();
-  const response = await fetch(API_CHATS, {
-    method: "POST",
-    headers: cbGetAuthHeaders({ "Content-Type": "application/json" }),
-    credentials: "include",
-    body: JSON.stringify(payload),
-  });
-  const data = await safeJson(response);
-  if (!response.ok) {
-    if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
-    if (response.status === 401 || response.status === 403) {
-      clearAuthState({ showOnboarding: true });
+  let data = null;
+  if (options.stream) {
+    try {
+      data = await cbStreamChatRequest(`${API_CHATS}?stream=1`, payload, options.streamHandlers || {});
+    } catch (err) {
+      if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
+      throw err;
     }
-    console.error("[CHATS] create failed", response.status, response.statusText);
-    throw new Error(data?.error || "Unable to create chat.");
+  } else {
+    const response = await fetch(API_CHATS, {
+      method: "POST",
+      headers: cbGetAuthHeaders({ "Content-Type": "application/json" }),
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    data = await safeJson(response);
+    if (!response.ok) {
+      if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
+      if (response.status === 401 || response.status === 403) {
+        clearAuthState({ showOnboarding: true });
+      }
+      console.error("[CHATS] create failed", response.status, response.statusText);
+      throw new Error(data?.error || "Unable to create chat.");
+    }
   }
   if (useCouncil) {
     cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ACK);
@@ -5962,11 +6402,13 @@ async function cbCreateChat(firstMessage) {
       cbRenderChatsList();
     }
   }
-  refreshAccountUsage().catch((error) => console.warn("[USAGE] refresh after chat create failed", error));
+  if (!data?.meta?.wallet) {
+    refreshAccountUsage().catch((error) => console.warn("[USAGE] refresh after chat create failed", error));
+  }
   return data;
 }
 
-async function cbAppendChatMessage(chatId, content) {
+async function cbAppendChatMessage(chatId, content, options = {}) {
   if (cbChatsUnsupported) {
     throw new Error("Chat persistence unavailable.");
   }
@@ -5975,7 +6417,16 @@ async function cbAppendChatMessage(chatId, content) {
   const councilMembers = hasCouncil ? councilPayload.agents.slice() : [];
   const useCouncil = hasCouncil;
   if (hasCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_PENDING);
+  const requestedContext = options.requestedContext || cbBuildRequestedContextFromUi();
+  const traceId = options.traceId || null;
   const payload = { content };
+  if (requestedContext) {
+    payload.provider = requestedContext.provider;
+    payload.model = requestedContext.model;
+  }
+  if (traceId) {
+    payload.traceId = traceId;
+  }
   if (hasCouncil) {
     payload.agents = councilMembers;
     payload.agentsArmed = true;
@@ -5983,26 +6434,42 @@ async function cbAppendChatMessage(chatId, content) {
   }
   console.log("[CB_COUNCIL] payload", councilPayload, payload);
   cbUpdateCouncilPill();
-  const response = await fetch(`${API_CHATS}/${encodeURIComponent(chatId)}/messages`, {
-    method: "POST",
-    headers: cbGetAuthHeaders({ "Content-Type": "application/json" }),
-    credentials: "include",
-    body: JSON.stringify(payload),
-  });
-  const data = await safeJson(response);
-  if (!response.ok) {
-    if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
-    if (response.status === 401 || response.status === 403) {
-      clearAuthState({ showOnboarding: true });
+  let data = null;
+  if (options.stream) {
+    try {
+      data = await cbStreamChatRequest(
+        `${API_CHATS}/${encodeURIComponent(chatId)}/messages?stream=1`,
+        payload,
+        options.streamHandlers || {}
+      );
+    } catch (err) {
+      if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
+      throw err;
     }
-    console.error("[CHATS] append failed", response.status, response.statusText);
-    throw new Error(data?.error || "Unable to send message.");
+  } else {
+    const response = await fetch(`${API_CHATS}/${encodeURIComponent(chatId)}/messages`, {
+      method: "POST",
+      headers: cbGetAuthHeaders({ "Content-Type": "application/json" }),
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    data = await safeJson(response);
+    if (!response.ok) {
+      if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
+      if (response.status === 401 || response.status === 403) {
+        clearAuthState({ showOnboarding: true });
+      }
+      console.error("[CHATS] append failed", response.status, response.statusText);
+      throw new Error(data?.error || "Unable to send message.");
+    }
   }
   if (useCouncil) {
     cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ACK);
     cbResetCouncilStatusSoon(councilMembers);
   }
-  refreshAccountUsage().catch((error) => console.warn("[USAGE] refresh after chat append failed", error));
+  if (!data?.meta?.wallet) {
+    refreshAccountUsage().catch((error) => console.warn("[USAGE] refresh after chat append failed", error));
+  }
   return data;
 }
 
@@ -6452,6 +6919,7 @@ const DEFAULT_SETTINGS = {
   showBetaNotices: false,
 };
 let cbSettings = { ...DEFAULT_SETTINGS };
+let cbProfileFocusTarget = null;
 // TODO: sync cbSettings with a future PATCH /api/account/settings endpoint once available.
 
 const saveSettingsToStorage = () => {
@@ -6550,6 +7018,7 @@ const populateProfileModal = async () => {
   const detailsBlock = document.getElementById("cb-profile-details");
   const connectBtn = document.getElementById("cb-profile-connect");
   configureConnectButton(connectBtn, "cb-profile-modal");
+  cbBindProfileModalActions();
 
   if (!cbIsAuthenticated()) {
     if (guestBlock) guestBlock.hidden = false;
@@ -6581,6 +7050,45 @@ const populateProfileModal = async () => {
   setElementText("cb-profile-plan", planLabel);
   setElementText("cb-profile-tokens", tokens);
   setElementText("cb-profile-verification", verificationMessage);
+  syncSettingsUI();
+};
+
+const cbBindProfileModalActions = () => {
+  const openAccountBtn = document.getElementById("cb-profile-open-account");
+  const openConnectorsBtn = document.getElementById("cb-profile-open-connectors");
+  const signOutBtn = document.getElementById("cb-profile-signout");
+  if (openAccountBtn && openAccountBtn.dataset.bound !== "true") {
+    openAccountBtn.addEventListener("click", async () => {
+      closeModal("cb-profile-modal", { silentFocus: true });
+      await cbOpenAccountBilling({ view: "overview" });
+    });
+    openAccountBtn.dataset.bound = "true";
+  }
+  if (openConnectorsBtn && openConnectorsBtn.dataset.bound !== "true") {
+    openConnectorsBtn.addEventListener("click", async () => {
+      closeModal("cb-profile-modal", { silentFocus: true });
+      await cbOpenAccountBilling({ view: "connectors" });
+    });
+    openConnectorsBtn.dataset.bound = "true";
+  }
+  if (signOutBtn && signOutBtn.dataset.bound !== "true") {
+    signOutBtn.addEventListener("click", () => {
+      closeModal("cb-profile-modal", { silentFocus: true });
+      cbSignOut();
+    });
+    signOutBtn.dataset.bound = "true";
+  }
+};
+
+const cbFocusProfileSection = () => {
+  if (!cbProfileFocusTarget) return;
+  const targetId =
+    cbProfileFocusTarget === "preferences" ? "cb-profile-preferences" : null;
+  const target = targetId ? document.getElementById(targetId) : null;
+  if (target) {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  cbProfileFocusTarget = null;
 };
 
 const fetchBillingSummary = async () => {
@@ -10453,11 +10961,13 @@ const cbInitModelMenu = () => {
   const update = () => {
     cbUpdateModelSearch(providerSelect.value || "auto", searchInput, listEl);
     cbUpdateChatHeader();
+    cbUpdateActiveContextBar();
     cbActivateContextFromUi("model-provider-change");
   };
   providerSelect.addEventListener("change", update);
   searchInput.addEventListener("input", () => {
     cbUpdateChatHeader();
+    cbUpdateActiveContextBar();
     cbQueueActivateContextFromUi("model-hint-change");
   });
   update();
@@ -11578,6 +12088,17 @@ const setupSupportContactLinks = () => {
   });
 };
 
+const setupSettingsEntryPoints = () => {
+  const settingsOpenAccount = document.getElementById("cb-settings-open-account");
+  if (settingsOpenAccount && settingsOpenAccount.dataset.bound !== "true") {
+    settingsOpenAccount.addEventListener("click", async () => {
+      closeModal("cb-settings-modal", { silentFocus: true });
+      await cbOpenProfile({ focus: "preferences" });
+    });
+    settingsOpenAccount.dataset.bound = "true";
+  }
+};
+
 const cbShowBillingToast = (type = "success", messageOverride = "") => {
   const toast = document.getElementById("cb-billing-toast");
   if (!toast) return;
@@ -11808,9 +12329,13 @@ const toggleUserMenu = () => {
   }
 };
 
-const cbOpenProfile = async () => {
+const cbOpenProfile = async ({ focus = null } = {}) => {
+  cbProfileFocusTarget = focus;
   await populateProfileModal();
   openModal("cb-profile-modal");
+  if (cbProfileFocusTarget) {
+    requestAnimationFrame(cbFocusProfileSection);
+  }
 };
 
 const cbOpenBilling = async () => {
@@ -11818,9 +12343,8 @@ const cbOpenBilling = async () => {
   openModal("cb-billing-modal");
 };
 
-const cbOpenSettings = () => {
-  syncSettingsUI();
-  openModal("cb-settings-modal");
+const cbOpenSettings = async () => {
+  await cbOpenProfile({ focus: "preferences" });
 };
 
 const cbSignOut = () => {
@@ -12291,6 +12815,7 @@ const initCoolBitsUI = () => {
   setupUserMenuHandlers();
   setupAccountBillingEntryPoints();
   setupSupportContactLinks();
+  setupSettingsEntryPoints();
   setupEnterpriseContactFormHandlers();
   setupAccountViewTabs();
   cbRenderConnectorsPanel();
@@ -12308,6 +12833,7 @@ const initCoolBitsUI = () => {
   cbRenderCouncilBar();
   cbUpdateChatHeader();
   cbUpdateComposerSendState();
+  cbInitActiveContextToggle();
   cbLoadActiveContext().catch((error) => console.warn("[ACTIVE_CONTEXT] init failed", error));
 
   if (!cbDashboardRouterState.bound) {
@@ -12507,6 +13033,34 @@ const addMessage = (role, content, { persistHistory = true } = {}) => {
   renderMessages();
 };
 
+const cbStartStreamingAssistantMessage = () => {
+  const message = { role: "assistant", content: "", timestamp: Date.now(), streaming: true };
+  messages.push(message);
+  cbChatForceScrollToBottom = true;
+  renderMessages();
+  return message;
+};
+
+const cbUpdateStreamingAssistantMessage = (message, delta) => {
+  if (!message || typeof delta !== "string") return;
+  message.content = `${message.content || ""}${delta}`;
+  cbChatForceScrollToBottom = true;
+  cbScheduleStreamRender();
+};
+
+const cbFinalizeStreamingAssistantMessage = (message, finalText, { persistHistory = true } = {}) => {
+  if (!message) return;
+  const text = typeof finalText === "string" ? finalText : message.content || "";
+  message.content = text;
+  delete message.streaming;
+  if (persistHistory) {
+    history.push({ role: "assistant", content: text });
+    saveHistory();
+  }
+  cbChatForceScrollToBottom = true;
+  renderMessages();
+};
+
 async function sendMessage(prefilledValue) {
   if (isSending) {
     return;
@@ -12538,22 +13092,91 @@ async function sendMessage(prefilledValue) {
 
   clearComposerError();
   isSending = true;
+  cbUpdateComposerSendState();
   elements.button?.setAttribute("disabled", "true");
   elements.input?.setAttribute("disabled", "true");
 
+  const requestedContext = cbBuildRequestedContextFromUi();
+  const traceId = cbGenerateTraceId();
+  cbSetRoutingState({ traceId });
+  console.debug("[CHAT_REQUESTED]", { traceId, requested: requestedContext });
+
+  const useStreaming = Boolean(CB_STREAMING_ENABLED);
+  let streamingMessage = null;
+  if (useStreaming) {
+    cbClearStreamingUsage();
+  }
+  const streamHandlers = useStreaming
+    ? {
+        onRoute: (data) => {
+          cbApplyRoutingUpdate({
+            traceId: data?.traceId,
+            requested: data?.requested,
+            resolved: data?.resolved,
+            reason: data?.reason,
+          });
+        },
+        onDelta: (data) => {
+          const delta = typeof data?.delta === "string" ? data.delta : "";
+          if (delta) {
+            cbUpdateStreamingAssistantMessage(streamingMessage, delta);
+          }
+        },
+        onUsage: (data) => {
+          cbSetStreamingUsage({
+            traceId: data?.traceId || traceId,
+            promptTokens: data?.promptTokens,
+            completionTokens: data?.completionTokens,
+            costUsd: data?.costUsd,
+            costCbT: data?.costCbT,
+            isEstimate: data?.isEstimate,
+          });
+        },
+      }
+    : null;
+
   try {
     addMessage("user", message);
+    if (useStreaming) {
+      streamingMessage = cbStartStreamingAssistantMessage();
+    }
     if (councilActive && isCouncilTicket) {
       cbRunCouncilEvaluation(message);
     }
     let autoRenameSource = null;
     if (cbChatsUnsupported) {
-      const data = await legacyRequestChatReply(message);
-      const reply = extractReply(data);
-      if (!reply) {
-        throw new Error("Chat service returned an empty reply.");
+      if (useStreaming) {
+        const data = await legacyRequestChatReply(message, {
+          traceId,
+          requestedContext,
+          stream: true,
+          streamHandlers,
+        });
+        const reply = extractReply(data) || data?.text || "";
+        if (!reply) {
+          throw new Error("Chat service returned an empty reply.");
+        }
+        cbFinalizeStreamingAssistantMessage(streamingMessage, reply, { persistHistory: true });
+        if (data?.meta) {
+          cbApplyChatMeta(data.meta);
+        }
+        if (data?.user) {
+          cbApplyAuthPayload(data.user);
+        }
+      } else {
+        const data = await legacyRequestChatReply(message, { traceId, requestedContext });
+        const reply = extractReply(data);
+        if (!reply) {
+          throw new Error("Chat service returned an empty reply.");
+        }
+        addMessage("assistant", reply);
+        if (data?.meta) {
+          cbApplyChatMeta(data.meta);
+        }
+        if (data?.user) {
+          cbApplyAuthPayload(data.user);
+        }
       }
-      addMessage("assistant", reply);
       if (input) {
         input.value = "";
         cbResizeComposerInput();
@@ -12561,22 +13184,71 @@ async function sendMessage(prefilledValue) {
       }
     } else {
       let nextMessages = cbActiveChatMessages.slice();
-      if (!cbActiveChatId) {
-        const creation = await cbCreateChat(message);
-        cbActiveChatId = creation?.chat?.id || null;
-        nextMessages = Array.isArray(creation?.messages) ? creation.messages : [];
-        const firstAssistant = nextMessages.find(
-          (msg) => typeof msg?.content === "string" && (msg.role || "").toLowerCase() === "assistant"
-        );
-        if (firstAssistant) {
-          autoRenameSource = firstAssistant.content;
+      if (useStreaming) {
+        if (!cbActiveChatId) {
+          const creation = await cbCreateChat(message, {
+            traceId,
+            requestedContext,
+            stream: true,
+            streamHandlers,
+          });
+          cbActiveChatId = creation?.chat?.id || null;
+          nextMessages = Array.isArray(creation?.messages) ? creation.messages : [];
+          const firstAssistant = nextMessages.find(
+            (msg) => typeof msg?.content === "string" && (msg.role || "").toLowerCase() === "assistant"
+          );
+          if (firstAssistant) {
+            autoRenameSource = firstAssistant.content;
+          }
+          const replyText = creation?.text || extractReply(creation) || "";
+          cbFinalizeStreamingAssistantMessage(streamingMessage, replyText, { persistHistory: false });
+          if (creation?.meta) {
+            cbApplyChatMeta(creation.meta);
+          }
+        } else {
+          const appendResult = await cbAppendChatMessage(cbActiveChatId, message, {
+            traceId,
+            requestedContext,
+            stream: true,
+            streamHandlers,
+          });
+          const appended = Array.isArray(appendResult?.newMessages) ? appendResult.newMessages : [];
+          nextMessages = nextMessages.concat(appended);
+          const replyText = appendResult?.text || extractReply(appendResult) || "";
+          cbFinalizeStreamingAssistantMessage(streamingMessage, replyText, { persistHistory: false });
+          if (appendResult?.meta) {
+            cbApplyChatMeta(appendResult.meta);
+          }
         }
       } else {
-        const appendResult = await cbAppendChatMessage(cbActiveChatId, message);
-        const appended = Array.isArray(appendResult?.newMessages) ? appendResult.newMessages : [];
-        nextMessages = nextMessages.concat(appended);
+        if (!cbActiveChatId) {
+          const creation = await cbCreateChat(message, { traceId, requestedContext });
+          cbActiveChatId = creation?.chat?.id || null;
+          nextMessages = Array.isArray(creation?.messages) ? creation.messages : [];
+          const firstAssistant = nextMessages.find(
+            (msg) => typeof msg?.content === "string" && (msg.role || "").toLowerCase() === "assistant"
+          );
+          if (firstAssistant) {
+            autoRenameSource = firstAssistant.content;
+          }
+          if (creation?.meta) {
+            cbApplyChatMeta(creation.meta);
+          }
+        } else {
+          const appendResult = await cbAppendChatMessage(cbActiveChatId, message, {
+            traceId,
+            requestedContext,
+          });
+          const appended = Array.isArray(appendResult?.newMessages) ? appendResult.newMessages : [];
+          nextMessages = nextMessages.concat(appended);
+          if (appendResult?.meta) {
+            cbApplyChatMeta(appendResult.meta);
+          }
+        }
       }
-      cbSetActiveChatMessages(nextMessages);
+      if (nextMessages.length) {
+        cbSetActiveChatMessages(nextMessages);
+      }
       if (input) {
         input.value = "";
         cbResizeComposerInput();
@@ -12589,13 +13261,46 @@ async function sendMessage(prefilledValue) {
     }
   } catch (error) {
     console.error(error);
-    const fallback = error instanceof Error ? error.message : null;
-    const messageText = fallback || "We couldn't reach the CoolBits backend right now. Please try again.";
+    const payload = error?.payload || {};
+    const status = error?.status;
+    const errorCode = error?.code || payload?.errorCode || payload?.error || payload?.code;
+    if (status === 401 || status === 403 || errorCode === "UNAUTHENTICATED") {
+      clearAuthState({ showOnboarding: true });
+    }
+    let messageText =
+      payload?.message ||
+      payload?.error ||
+      (error instanceof Error ? error.message : null) ||
+      "We couldn't reach the CoolBits backend right now. Please try again.";
+    let inlineOnly = Boolean(error?.inlineOnly);
+    if (status === 402 || errorCode === "CBT_EXHAUSTED" || errorCode === "cbt_limit_reached" || errorCode === "PLAN_INACTIVE") {
+      messageText =
+        payload?.message ||
+        "Token quota reached for your current plan. Please upgrade or wait for a reset.";
+      cbSetTokenLimitBannerVisible(true);
+      inlineOnly = true;
+    } else if (status === 429) {
+      const scope = (payload?.scope || "").toLowerCase();
+      messageText = scope === "guest"
+        ? "Too many requests as guest. Please slow down."
+        : "System is rate limited. Please wait before sending more messages.";
+      inlineOnly = true;
+    }
     showComposerError(messageText);
-    if (!error?.inlineOnly) {
+    if (useStreaming && streamingMessage) {
+      const index = messages.indexOf(streamingMessage);
+      if (index !== -1) {
+        messages.splice(index, 1);
+        renderMessages();
+      }
+    }
+    if (!inlineOnly) {
       addMessage("system", messageText, { persistHistory: false });
     }
   } finally {
+    if (useStreaming) {
+      cbClearStreamingUsage();
+    }
     isSending = false;
     cbUpdateComposerSendState();
     elements.input?.removeAttribute("disabled");

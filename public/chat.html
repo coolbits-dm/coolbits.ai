@@ -728,9 +728,12 @@
             <div class="cb-smart-meta" id="cb-active-agent-meta">Council off</div>
           </div>
           <div class="cb-smart-tile">
-            <div class="cb-smart-label">Model</div>
+            <div class="cb-smart-label">Last Resolved</div>
             <div class="cb-smart-value" id="cb-active-model">Auto</div>
-            <div class="cb-smart-meta" id="cb-active-model-meta">Routing: auto</div>
+            <div class="cb-smart-meta-row">
+              <div class="cb-smart-meta" id="cb-active-model-meta">Model: auto</div>
+              <button type="button" class="cb-routing-badge" id="cb-routing-badge" hidden>Routed</button>
+            </div>
           </div>
           <div class="cb-smart-tile">
             <div class="cb-smart-label">Context</div>
@@ -762,12 +765,18 @@
       <div id="chat-composer" class="chat-composer" data-chat-composer>
         <div id="cb-council-active" class="cb-council-active" hidden></div>
         <div class="cb-active-context-bar" id="cb-active-context-bar" role="status" aria-live="polite">
-          <div class="cb-active-context-header">
-            <span class="cb-active-context-label">Active Context</span>
-            <span class="cb-active-context-led" id="cb-active-context-led" data-status="idle" aria-hidden="true"></span>
+        <div class="cb-active-context-header">
+          <span class="cb-active-context-label cb-sr-only">Active Context</span>
+          <span class="cb-active-context-led" id="cb-active-context-led" data-status="idle" aria-hidden="true"></span>
+          <button type="button" class="cb-active-context-toggle" id="cb-active-context-toggle" aria-expanded="true">
+            <span class="cb-active-context-toggle-icon" aria-hidden="true"></span>
+            <span class="cb-sr-only" id="cb-active-context-toggle-label">Collapse Active Context</span>
+          </button>
           </div>
+          <div class="cb-active-context-summary" id="cb-active-context-summary"></div>
           <div class="cb-active-context-line" id="cb-active-context-mode">Solo</div>
           <div class="cb-active-context-line" id="cb-active-context-primary">Agent: -</div>
+          <div class="cb-active-context-line cb-active-context-requested" id="cb-active-context-requested">Requested: Auto / Auto</div>
           <div class="cb-active-context-chips" id="cb-active-context-chips"></div>
           <div class="cb-active-context-detail" id="cb-active-context-detail"></div>
         </div>
@@ -878,32 +887,94 @@
     <p>© 2025 Cool Bits SRL · Iași, RO · powered by cbLM.ai <span class="footer-mobile-extra">· orchestrated by <a href="https://camarad.ai" target="_blank" rel="noopener">Camarad</a> · backed by <a href="https://stripe.com" target="_blank" rel="noopener">Stripe</a></span></p>
   </footer>
   <div id="cb-profile-modal" class="cb-modal-backdrop" hidden aria-hidden="true">
-    <div class="cb-modal" role="dialog" aria-modal="true" aria-labelledby="cb-profile-title">
+    <div class="cb-modal cb-profile-modal" role="dialog" aria-modal="true" aria-labelledby="cb-profile-title">
       <div class="cb-modal-header">
-        <h2 class="cb-modal-title" id="cb-profile-title">Profile</h2>
-        <button type="button" class="cb-modal-close" aria-label="Close Profile" data-modal-id="cb-profile-modal">&times;</button>
+        <div>
+          <h2 class="cb-modal-title" id="cb-profile-title">Account</h2>
+          <p class="cb-modal-note">Profile, preferences, and billing shortcuts.</p>
+        </div>
+        <button type="button" class="cb-modal-close" aria-label="Close Account" data-modal-id="cb-profile-modal">&times;</button>
       </div>
       <div class="cb-modal-body">
         <div class="cb-modal-section" id="cb-profile-guest" hidden>
-          <p>You are browsing as Guest. Sign in with Google to unlock full account features.</p>
+          <p>You are browsing as Guest. Sign in with Google to manage your account and preferences.</p>
           <button type="button" class="btn btn-primary cb-modal-primary-button" id="cb-profile-connect">Continue with Google</button>
         </div>
         <div id="cb-profile-details" hidden>
-          <div class="cb-modal-section">
-            <div class="cb-modal-label">Email</div>
-            <div class="cb-modal-value" id="cb-profile-email">—</div>
-          </div>
-          <div class="cb-modal-section">
-            <div class="cb-modal-label">Plan</div>
-            <div class="cb-modal-value" id="cb-profile-plan">—</div>
-          </div>
-          <div class="cb-modal-section">
-            <div class="cb-modal-label">Tokens remaining</div>
-            <div class="cb-modal-value" id="cb-profile-tokens">—</div>
-          </div>
-          <div class="cb-modal-section">
-            <div class="cb-modal-label">Verification</div>
-            <div class="cb-modal-value" id="cb-profile-verification">—</div>
+          <div class="cb-profile-grid">
+            <section class="cb-profile-card">
+              <header class="cb-profile-card-header">
+                <div>
+                  <p class="cb-profile-card-subtitle">Account</p>
+                  <h3 class="cb-profile-card-title">Profile</h3>
+                </div>
+              </header>
+              <div class="cb-profile-row">
+                <div class="cb-modal-label">Email</div>
+                <div class="cb-modal-value" id="cb-profile-email">—</div>
+              </div>
+              <div class="cb-profile-row">
+                <div class="cb-modal-label">Plan</div>
+                <div class="cb-modal-value" id="cb-profile-plan">—</div>
+              </div>
+              <div class="cb-profile-row">
+                <div class="cb-modal-label">Tokens remaining</div>
+                <div class="cb-modal-value" id="cb-profile-tokens">—</div>
+              </div>
+              <div class="cb-profile-row">
+                <div class="cb-modal-label">Verification</div>
+                <div class="cb-modal-value" id="cb-profile-verification">—</div>
+              </div>
+            </section>
+            <section class="cb-profile-card" id="cb-profile-preferences">
+              <header class="cb-profile-card-header">
+                <div>
+                  <p class="cb-profile-card-subtitle">Preferences</p>
+                  <h3 class="cb-profile-card-title">Settings</h3>
+                </div>
+              </header>
+              <div class="cb-settings-row">
+                <div class="cb-settings-row-text">
+                  <div class="cb-modal-value">Prefer English responses</div>
+                  <p class="cb-modal-note">Keep replies in English even if the chat starts in another language.</p>
+                </div>
+                <button type="button" class="cb-settings-toggle" id="cb-setting-prefer-english" data-setting-key="preferEnglish" role="switch" aria-checked="false">
+                  <span class="cb-settings-toggle-thumb"></span>
+                </button>
+              </div>
+              <div class="cb-settings-row">
+                <div class="cb-settings-row-text">
+                  <div class="cb-modal-value">Show advanced prompts</div>
+                  <p class="cb-modal-note">Display extra prompt chips inside the chat composer.</p>
+                </div>
+                <button type="button" class="cb-settings-toggle" id="cb-setting-show-advanced" data-setting-key="showAdvancedPrompts" role="switch" aria-checked="false">
+                  <span class="cb-settings-toggle-thumb"></span>
+                </button>
+              </div>
+              <div class="cb-settings-row">
+                <div class="cb-settings-row-text">
+                  <div class="cb-modal-value">Beta feature notices</div>
+                  <p class="cb-modal-note">Get alerts when experimental capabilities unlock on this device.</p>
+                </div>
+                <button type="button" class="cb-settings-toggle" id="cb-setting-beta-notices" data-setting-key="showBetaNotices" role="switch" aria-checked="false">
+                  <span class="cb-settings-toggle-thumb"></span>
+                </button>
+              </div>
+            </section>
+            <section class="cb-profile-card">
+              <header class="cb-profile-card-header">
+                <div>
+                  <p class="cb-profile-card-subtitle">Manage</p>
+                  <h3 class="cb-profile-card-title">Account tools</h3>
+                </div>
+              </header>
+              <p class="cb-modal-note">Open the full Account &amp; Billing panel for plans, tokens, and connectors.</p>
+              <div class="cb-profile-actions">
+                <button type="button" class="btn btn-primary" id="cb-profile-open-account">Account &amp; Billing</button>
+                <button type="button" class="btn-secondary" id="cb-profile-open-connectors">Connectors</button>
+                <button type="button" class="btn-secondary" id="cb-profile-signout">Sign out</button>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -1270,32 +1341,10 @@
         <button type="button" class="cb-modal-close" aria-label="Close Settings" data-modal-id="cb-settings-modal">&times;</button>
       </div>
       <div class="cb-modal-body">
-        <div class="cb-settings-row">
-          <div class="cb-settings-row-text">
-            <div class="cb-modal-value">Prefer English responses</div>
-            <p class="cb-modal-note">Keep replies in English even if the chat starts in another language.</p>
-          </div>
-          <button type="button" class="cb-settings-toggle" id="cb-setting-prefer-english" data-setting-key="preferEnglish" role="switch" aria-checked="false">
-            <span class="cb-settings-toggle-thumb"></span>
-          </button>
-        </div>
-        <div class="cb-settings-row">
-          <div class="cb-settings-row-text">
-            <div class="cb-modal-value">Show advanced prompts</div>
-            <p class="cb-modal-note">Display extra prompt chips inside the chat composer.</p>
-          </div>
-          <button type="button" class="cb-settings-toggle" id="cb-setting-show-advanced" data-setting-key="showAdvancedPrompts" role="switch" aria-checked="false">
-            <span class="cb-settings-toggle-thumb"></span>
-          </button>
-        </div>
-        <div class="cb-settings-row">
-          <div class="cb-settings-row-text">
-            <div class="cb-modal-value">Beta feature notices</div>
-            <p class="cb-modal-note">Get alerts when experimental capabilities unlock on this device.</p>
-          </div>
-          <button type="button" class="cb-settings-toggle" id="cb-setting-beta-notices" data-setting-key="showBetaNotices" role="switch" aria-checked="false">
-            <span class="cb-settings-toggle-thumb"></span>
-          </button>
+        <p class="cb-modal-note">Preferences now live inside Account → Settings.</p>
+        <div class="cb-modal-actions">
+          <button type="button" class="btn btn-primary" id="cb-settings-open-account">Open Account</button>
+          <button type="button" class="btn-secondary" data-modal-id="cb-settings-modal" data-modal-close>Close</button>
         </div>
       </div>
     </div>

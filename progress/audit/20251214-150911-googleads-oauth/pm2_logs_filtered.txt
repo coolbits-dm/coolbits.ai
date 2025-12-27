@@ -1,0 +1,125 @@
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[31m2|coolbits | [39mlog append failed Error: EACCES: permission denied, open '/opt/coolbits.ai/logs/requests.log'
+[31m2|coolbits | [39m  code: 'EACCES',
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]
+[32m2|coolbits | [39m[GOOGLEADS_ROUTER_LOADED]

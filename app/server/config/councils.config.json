@@ -6,6 +6,9 @@
     "agents": [
       "cbAgent-B-001-ceo",
       "cbAgent-B-002-cto",
+      "cbAgent-B-003-cfo",
+      "cbAgent-B-007-cmo",
+      "cbAgent-B-004-coo",
       "cbAgent-A-002-analytics",
       "cbAgent-D-001-devops"
     ],
@@ -23,7 +26,9 @@
     "agents": [
       "cbAgent-A-001-ppc",
       "cbAgent-A-002-analytics",
+      "cbAgent-A-008-cro",
       "cbAgent-A-003-creative",
+      "cbAgent-A-009-account",
       "cbAgent-B-001-ceo",
       "cbAgent-D-001-devops"
     ],
@@ -39,8 +44,13 @@
     "label": "Build Council",
     "description": "Tech architecture, integrations, infra and LLM cost guardrails.",
     "agents": [
+      "cbAgent-D-008-leaddev",
       "cbAgent-B-002-cto",
+      "cbAgent-D-002-backend",
+      "cbAgent-D-003-frontend",
+      "cbAgent-D-005-security",
       "cbAgent-D-001-devops",
+      "cbAgent-B-006-product",
       "cbAgent-A-002-analytics"
     ],
     "defaultScenarioId": "infraHealthCheck",

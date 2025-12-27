@@ -103,6 +103,24 @@
     "enabled": false,
     "artifacts": ["offers", "funnels", "experiments"]
   },
+  "cbAgent-B-007-cmo": {
+    "label": "CMO",
+    "role": "Growth & marketing strategy",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "analytics.summary.read",
+      "brand_rules.read",
+      "brand_rules.write",
+      "funnels.read",
+      "funnels.write",
+      "experiments.read",
+      "experiments.write"
+    ],
+    "shortTag": "/B/CMO",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["brand_rules", "funnels", "experiments"]
+  },
   "cbAgent-A-001-ppc": {
     "label": "PPC Lead",
     "role": "Campaign structure & changes",
@@ -237,6 +255,39 @@
     "enabled": false,
     "artifacts": ["crm_flows", "email_sequences", "journeys"]
   },
+  "cbAgent-A-008-cro": {
+    "label": "CRO Specialist",
+    "role": "Conversion optimization",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "analytics.summary.read",
+      "funnels.read",
+      "funnels.write",
+      "experiments.read",
+      "experiments.write",
+      "content_briefs.read",
+      "content_briefs.write"
+    ],
+    "shortTag": "/A/CRO",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["funnels", "experiments", "content_briefs"]
+  },
+  "cbAgent-A-009-account": {
+    "label": "Account Director",
+    "role": "Client strategy & communication",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "briefs.read",
+      "briefs.write",
+      "analytics.summary.read",
+      "service_catalog.read"
+    ],
+    "shortTag": "/A/Account",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["briefs", "service_catalog"]
+  },
   "cbAgent-D-001-devops": {
     "label": "DevOps",
     "role": "Reliability & cost guardrails",
@@ -368,6 +419,81 @@
     "canApplyChanges": false,
     "enabled": false,
     "artifacts": ["runbooks", "dev_docs", "user_docs", "processes", "policies"]
+  },
+  "cbAgent-D-008-leaddev": {
+    "label": "Lead Dev",
+    "role": "Technical delivery & architecture",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [
+      "tech_plan.read",
+      "tech_plan.write",
+      "schemas.read",
+      "schemas.write",
+      "api_specs.read",
+      "api_specs.write",
+      "ui_specs.read",
+      "ui_specs.write",
+      "component_maps.read",
+      "component_maps.write",
+      "tickets.read",
+      "tickets.write"
+    ],
+    "shortTag": "/D/LeadDev",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": ["tech_plans", "api_specs", "schemas", "ui_specs", "component_maps", "tickets"]
+  },
+  "cbAgent-P-001-axis": {
+    "label": "Axis",
+    "role": "Personal operator",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [],
+    "shortTag": "/P/Axis",
+    "canApplyChanges": false,
+    "enabled": true,
+    "artifacts": [],
+    "maxAutonomy": "L1",
+    "defaultAutonomy": "L1"
+  },
+  "cbAgent-P-002-finance": {
+    "label": "Finance Guide",
+    "role": "Personal budgeting & planning",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [],
+    "shortTag": "/P/Finance",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": []
+  },
+  "cbAgent-P-003-ops": {
+    "label": "Ops Helper",
+    "role": "Routines & systems",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [],
+    "shortTag": "/P/Ops",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": []
+  },
+  "cbAgent-P-004-focus": {
+    "label": "Productivity Buddy",
+    "role": "Focus & priorities",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [],
+    "shortTag": "/P/Focus",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": []
+  },
+  "cbAgent-P-005-lifetrack": {
+    "label": "Life Dashboard",
+    "role": "Personal tracking & insights",
+    "model": "vertex-gemini-2.5-pro",
+    "tools": [],
+    "shortTag": "/P/Life",
+    "canApplyChanges": false,
+    "enabled": false,
+    "artifacts": []
   },
   "cbAgent-X-001-custom": {
     "label": "Custom Agent",

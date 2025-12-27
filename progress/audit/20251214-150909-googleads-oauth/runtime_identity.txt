@@ -1,0 +1,5 @@
+Date: 2025-12-14T17:09:09+02:00
+Hostname: cloud
+Whoami: cblm
+ID: uid=1000(cblm) gid=1000(cblm) groups=1000(cblm),27(sudo),119(docker),997(camarad)
+Uname: Linux cloud 5.15.0-161-generic #171-Ubuntu SMP Sat Oct 11 08:17:01 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux

@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coolbits.ai/schemas/cbpl.schema.v1.json",
+  "title": "CoolBits Payload (CBPL) v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "selection", "payload", "availability", "hash"],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "cbpl.v1" },
+    "kind": {
+      "type": "string",
+      "enum": ["selection", "snapshot_ref", "dryrun", "commit_intent"]
+    },
+    "workspaceId": { "type": "string" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "createdBy": { "type": "string" },
+    "selection": { "$ref": "#/$defs/selectionState" },
+    "payload": { "type": "object" },
+    "availability": { "$ref": "#/$defs/availabilityMap" },
+    "hash": { "type": "string", "minLength": 8 },
+    "signature": { "type": ["object", "null"] },
+    "name": { "type": "string" },
+    "description": { "type": "string" }
+  },
+  "$defs": {
+    "dateYmd": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "compareMode": {
+      "type": "string",
+      "enum": ["none", "previous_period", "previous_year", "custom"]
+    },
+    "ga4Selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "blocks", "compareMode"],
+      "properties": {
+        "propertyId": { "type": ["string", "null"] },
+        "from": { "$ref": "#/$defs/dateYmd" },
+        "to": { "$ref": "#/$defs/dateYmd" },
+        "blocks": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "compareMode": { "$ref": "#/$defs/compareMode" },
+        "compareFrom": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "compareTo": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
+      }
+    },
+    "googleAdsSelection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "blocks", "compareMode"],
+      "properties": {
+        "customerId": { "type": ["string", "null"] },
+        "loginCustomerId": { "type": ["string", "null"] },
+        "from": { "$ref": "#/$defs/dateYmd" },
+        "to": { "$ref": "#/$defs/dateYmd" },
+        "blocks": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "compareMode": { "$ref": "#/$defs/compareMode" },
+        "compareFrom": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "compareTo": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
+      }
+    },
+    "selectionState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workspaceId"],
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "connector": { "type": "string", "enum": ["ga4", "googleads", "mixed"] },
+        "ga4": { "$ref": "#/$defs/ga4Selection" },
+        "googleads": { "$ref": "#/$defs/googleAdsSelection" }
+      }
+    },
+    "availabilityMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["status"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["available", "unavailable", "partial", "unknown"]
+          },
+          "note": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+== FS: /opt/coolbits.ai/public/assets ==
+total 440
+drwxr-xr-x 3 root root   4096 Dec 13 03:05 .
+drwxr-xr-x 3 root root   4096 Dec 13 02:41 ..
+-rw-r--r-- 1 root root   2679 Nov 20 12:49 ChatBox.js
+-rw-r--r-- 1 root root   6980 Nov 20 12:49 ChatLayout.js
+-rw-r--r-- 1 root root   2064 Nov 19 12:45 FooterComposer.js
+-rw-r--r-- 1 root root   1332 Nov 20 11:52 MessageList.js
+-rw-rw-r-- 1 root root 295177 Dec 13 00:33 chat.js
+-rw-r--r-- 1 root root     68 Dec 13 01:47 coolbits-alt.png
+-rw-r--r-- 1 root root  20018 Dec 13 02:34 coolbits-logo.svg
+-rw-r--r-- 1 root root    187 Nov 19 00:38 index.js
+-rw-r--r-- 1 root root    729 Nov 18 21:43 script.js
+-rw-r--r-- 1 root root  82521 Dec 13 03:05 style.css
+drwxr-xr-x 2 root root   4096 Dec 11 07:30 vendor
+
+== CURL: chat.js (local bypass) ==
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0  288k    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+HTTP/2 200 
+server: nginx/1.18.0 (Ubuntu)
+date: Sun, 14 Dec 2025 15:09:13 GMT
+content-type: application/javascript
+content-length: 295177
+last-modified: Fri, 12 Dec 2025 22:33:18 GMT
+etag: "693c982e-48109"
+cache-control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0
+pragma: no-cache
+expires: 0
+accept-ranges: bytes
+
+
+== CURL: style.css (local bypass) ==
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0 82521    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+HTTP/2 200 
+server: nginx/1.18.0 (Ubuntu)
+date: Sun, 14 Dec 2025 15:09:13 GMT
+content-type: text/css
+content-length: 82521
+last-modified: Sat, 13 Dec 2025 01:05:05 GMT
+etag: "693cbbc1-14259"
+cache-control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0
+pragma: no-cache
+expires: 0
+accept-ranges: bytes
+

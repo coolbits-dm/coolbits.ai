@@ -1,0 +1,22 @@
+]633;E;echo "date: $(date -Is)";50de4d16-5492-4f63-be92-0cf64c4dc856]633;Cdate: 2025-12-14T16:40:35+02:00
+whoami: cblm
+id: uid=1000(cblm) gid=1000(cblm) groups=1000(cblm),27(sudo),119(docker),997(camarad)
+pwd: /opt/coolbits.ai
+
+== pm2 list ==
+┌────┬─────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name                │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼─────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ [1m[36m2[39m[22m  │ coolbits            │ default     │ 1.0.0   │ [7m[1mfork[22m[27m    │ 2246075  │ 2s     │ 106… │ [32m[1monline[22m[39m    │ 0%       │ 146.6mb  │ [1mcblm[22m     │ [90mdisabled[39m │
+│ [1m[36m0[39m[22m  │ coolbits-backend    │ default     │ 1.0.0   │ [7m[1mfork[22m[27m    │ 0        │ 0      │ 240… │ [31m[1mstopped[22m[39m   │ 0%       │ 0b       │ [1mcblm[22m     │ [90mdisabled[39m │
+└────┴─────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+
+== pm2 pid coolbits ==
+2246161
+
+== ps -fp 2246161 ==
+UID          PID    PPID  C STIME TTY          TIME CMD
+cblm     2246161  660302  0 16:40 ?        00:00:00 node /opt/coolbits.ai/app/server/server.js
+
+== /proc/2246161/cwd ==
+/opt/coolbits.ai

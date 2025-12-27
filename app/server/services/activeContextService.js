@@ -2,24 +2,10 @@ import crypto from 'node:crypto';
 import { getAgentProfile, listEnabledAgents } from '../config/cbAgents.js';
 import { models as modelRegistry, getDefaultModelId } from '../config/modelRegistry.js';
 import { getPlanForUser } from './billingService.js';
+import { normalizeProviderKey, normalizeProviderFromModel } from '../utils/providerUtils.js';
 
 const activeContextByUser = new Map();
 const byokStateByUser = new Map();
-
-const PROVIDER_ALIASES = {
-  auto: 'auto',
-  openai: 'openai',
-  anthropic: 'anthropic',
-  google: 'google',
-  xai: 'xai',
-  deepseek: 'deepseek',
-  chatgpt: 'openai',
-  claude: 'anthropic',
-  gemini: 'google',
-  grok: 'xai',
-  copilot: 'openai',
-  vertex: 'google',
-};
 
 const WORKSPACE_ALIASES = {
   business: 'cbB',
@@ -54,9 +40,7 @@ const PROVIDER_DEFAULT_MODELS = {
 };
 
 function normalizeProvider(value) {
-  if (!value) return 'auto';
-  const key = String(value).trim().toLowerCase();
-  return PROVIDER_ALIASES[key] || 'auto';
+  return normalizeProviderKey(value);
 }
 
 function normalizeWorkspace(value) {
@@ -130,8 +114,7 @@ function mapExternalModelToInternal(provider, modelValue) {
 function providerFromModel(modelId, fallbackProvider) {
   const modelConfig = modelId && modelRegistry[modelId] ? modelRegistry[modelId] : null;
   const provider = modelConfig?.provider || fallbackProvider || 'vertex';
-  if (provider === 'vertex') return 'google';
-  return provider;
+  return normalizeProviderFromModel(provider);
 }
 
 function normalizeBillingSource(value) {
@@ -251,6 +234,20 @@ export async function activateContext(userId, requested = {}) {
     }
   }
 
+  const requestedModel = typeof requested.model === 'string' && requested.model.trim()
+    ? requested.model.trim()
+    : 'auto';
+  let resolutionReason = 'workspace_default';
+  if (providerRequested !== 'auto' && requestedModel !== 'auto') {
+    resolutionReason = 'user_selected';
+  } else if (providerRequested !== 'auto') {
+    resolutionReason = 'auto_route';
+  } else if (requestedModel !== 'auto') {
+    resolutionReason = 'user_selected';
+  } else if (agentProfile?.model) {
+    resolutionReason = 'agent_default';
+  }
+
   const context = {
     contextId: `ctx_${crypto.randomUUID()}`,
     userId,
@@ -263,6 +260,18 @@ export async function activateContext(userId, requested = {}) {
       : null,
     provider: providerResolved || providerRequested || 'auto',
     model: modelResolved,
+    requested: {
+      provider: providerRequested,
+      model: requestedModel,
+      billingSource,
+      agentId: agentProfile.id,
+    },
+    resolved: {
+      provider: providerResolved || providerRequested || 'auto',
+      model: modelResolved,
+      agentId: agentProfile.id,
+    },
+    resolutionReason,
     billingSource,
     status: 'active',
     error: null,

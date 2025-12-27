@@ -64,10 +64,301 @@
       .cb-static-links a {
         color: rgba(226, 232, 240, 0.9);
       }
+
+      .cb-legal-company {
+        margin-top: 8px;
+        font-size: 0.86rem;
+        color: rgba(226, 232, 240, 0.65);
+        line-height: 1.5;
+      }
+
+      .cb-legal-company strong {
+        color: rgba(226, 232, 240, 0.88);
+        font-weight: 600;
+      }
+
+      .cb-legal-company span {
+        display: block;
+      }
     </style>
   </head>
   <body>
-    <main class="cb-static-shell">
+    <div class="cb-app-shell" data-app-shell>
+      <aside class="cb-sidebar" id="cb-sidebar" data-sidebar data-collapsed="false" aria-label="CoolBits workspace navigation">
+        <div class="cb-sidebar-scroll">
+          <div class="cb-sidebar-header">
+            <button type="button" class="cb-sidebar-logo" data-sidebar-logo aria-label="CoolBits home">
+              <img src="/assets/coolbits-logo.svg" alt="CoolBits" />
+              <span class="cb-sidebar-logo-label">CoolBits</span>
+            </button>
+            <div class="cb-sidebar-header-actions">
+              <button type="button" class="cb-sidebar-toggle" data-sidebar-toggle aria-label="Collapse sidebar">
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="cb-sidebar-section">
+            <button type="button" class="cb-sidebar-new-chat" data-sidebar-new-chat aria-label="New Chat">
+              <span class="cb-sidebar-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24">
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"></path>
+                </svg>
+              </span>
+              <span class="cb-sidebar-label">New Chat</span>
+            </button>
+          </div>
+          <div class="cb-sidebar-section">
+            <button type="button" class="cb-sidebar-item" data-sidebar-agents aria-label="Agents">
+              <span class="cb-sidebar-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M7 15c0-2.2 2.2-4 5-4s5 1.8 5 4M4.5 20c0-2.4 3.1-4.5 7.5-4.5s7.5 2.1 7.5 4.5"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    fill="none"
+                    stroke-linecap="round"
+                  ></path>
+                  <circle cx="9" cy="7" r="3" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+                  <circle cx="16.5" cy="6.5" r="2.5" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+                </svg>
+              </span>
+              <span class="cb-sidebar-label">Agents</span>
+            </button>
+          </div>
+          <div class="cb-sidebar-section">
+            <a class="cb-sidebar-item" href="/maturity" aria-label="Maturity Index">
+              <span class="cb-sidebar-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M4 14a8 8 0 0 1 16 0"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    fill="none"
+                    stroke-linecap="round"
+                  ></path>
+                  <path
+                    d="M12 14l3.5-3.5"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    fill="none"
+                    stroke-linecap="round"
+                  ></path>
+                  <circle cx="12" cy="14" r="1.5" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+                </svg>
+              </span>
+              <span class="cb-sidebar-label">Maturity Index</span>
+            </a>
+          </div>
+          <div class="cb-sidebar-section">
+            <a class="cb-sidebar-item" href="/pricing/" aria-label="Pricing">
+              <span class="cb-sidebar-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path
+                    d="M5 7h14M7 11h10M9 15h6M12 19h0"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    fill="none"
+                    stroke-linecap="round"
+                  ></path>
+                </svg>
+              </span>
+              <span class="cb-sidebar-label">Pricing</span>
+            </a>
+          </div>
+          <div class="cb-sidebar-section cb-sidebar-workspace">
+            <div class="cb-sidebar-section-header">Workspace</div>
+            <button type="button" class="cb-sidebar-select" id="cb-workspace-selector" aria-haspopup="listbox" aria-expanded="false" aria-label="Select workspace">
+              <span class="cb-sidebar-select-label" id="cb-workspace-current-label">Business</span>
+              <span class="cb-sidebar-chevron" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </span>
+            </button>
+            <div class="cb-sidebar-menu" id="cb-workspace-menu" role="listbox" aria-label="Select workspace" hidden></div>
+          </div>
+          <div class="cb-sidebar-section" data-sidebar-connectors>
+            <div class="cb-sidebar-section-header">Connectors</div>
+            <button
+              type="button"
+              class="cb-sidebar-item cb-connectors-toggle"
+              id="cb-connectors-toggle"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              aria-controls="cb-connectors-menu"
+              aria-label="Manage connectors"
+              data-open="false"
+            >
+              <span class="cb-sidebar-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M7 12h10M7 6h4M13 18h4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"></path>
+                  <circle cx="17" cy="6" r="2" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+                  <circle cx="7" cy="12" r="2" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+                  <circle cx="17" cy="18" r="2" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+                </svg>
+              </span>
+              <span class="cb-sidebar-label">Manage Connectors</span>
+              <span class="cb-sidebar-chevron" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </span>
+            </button>
+            <div class="cb-sidebar-menu cb-connectors-menu" id="cb-connectors-menu" role="listbox" aria-label="Manage connectors" hidden>
+              <button type="button" class="cb-sidebar-menu-button" role="option" data-sidebar-feature="connectors">
+                Connector settings
+              </button>
+              <button type="button" class="cb-sidebar-menu-button" role="option" data-sidebar-view="ga4">
+                <span>GA4</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button" role="option" data-sidebar-view="googleads">
+                <span>Google Ads</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+                <span>Meta Ads</span>
+                <span class="cb-menu-soon">Soon</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+                <span>TikTok Ads</span>
+                <span class="cb-menu-soon">Soon</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+                <span>LinkedIn Ads</span>
+                <span class="cb-menu-soon">Soon</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+                <span>Google Search Console</span>
+                <span class="cb-menu-soon">Soon</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+                <span>Google Merchant Center</span>
+                <span class="cb-menu-soon">Soon</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+                <span>Shopify</span>
+                <span class="cb-menu-soon">Soon</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+                <span>Stripe</span>
+                <span class="cb-menu-soon">Soon</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+                <span>HubSpot</span>
+                <span class="cb-menu-soon">Soon</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+                <span>Klaviyo</span>
+                <span class="cb-menu-soon">Soon</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+                <span>Mailchimp</span>
+                <span class="cb-menu-soon">Soon</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+                <span>Google Docs</span>
+                <span class="cb-menu-soon">Soon</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+                <span>Gmail</span>
+                <span class="cb-menu-soon">Soon</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+                <span>Google Calendar</span>
+                <span class="cb-menu-soon">Soon</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+                <span>Notion</span>
+                <span class="cb-menu-soon">Soon</span>
+              </button>
+              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
+                <span>Todoist</span>
+                <span class="cb-menu-soon">Soon</span>
+              </button>
+            </div>
+          </div>
+          <div class="cb-sidebar-section">
+            <div class="cb-sidebar-section-header">Bits Orchestrator</div>
+            <button type="button" class="cb-sidebar-item" data-sidebar-feature="orchestrator" data-sidebar-tooltip="Coming soon" aria-label="Bits Orchestrator">
+              <span class="cb-sidebar-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M5 12a7 7 0 0114 0" stroke="currentColor" stroke-width="1.5" fill="none"></path>
+                  <path d="M12 5v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+                </svg>
+              </span>
+              <span class="cb-sidebar-label">Bits Orchestrator</span>
+              <span class="cb-sidebar-pill">Soon</span>
+            </button>
+          </div>
+          <div class="cb-sidebar-section cb-sidebar-projects" data-projects-section>
+            <div class="cb-sidebar-section-header">Projects</div>
+            <button type="button" class="cb-sidebar-select" id="cb-project-selector" aria-haspopup="listbox" aria-expanded="false" aria-label="Select project">
+              <span class="cb-sidebar-select-label" id="cb-project-current-label">All projects</span>
+              <span class="cb-sidebar-chevron" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24">
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </span>
+            </button>
+            <div class="cb-sidebar-menu" id="cb-project-menu" role="listbox" aria-label="Project list" hidden></div>
+            <p class="cb-sidebar-hint" id="cb-projects-guest-hint" hidden>Sign in to organize chats by project.</p>
+            <p class="cb-sidebar-error" id="cb-projects-error" hidden></p>
+          </div>
+          <div class="cb-sidebar-section cb-sidebar-chats-section">
+            <div class="cb-sidebar-section-header">Chats</div>
+            <ul class="cb-sidebar-chat-list" data-sidebar-chat-list></ul>
+          </div>
+        </div>
+        <div class="cb-sidebar-footer" id="cb-sidebar-user-slot" aria-live="polite" hidden></div>
+      </aside>
+      <div class="cb-sidebar-backdrop" data-sidebar-backdrop hidden aria-hidden="true"></div>
+      <div class="cb-app-main">
+        <div class="top-bar">
+          <div class="top-bar-left">
+            <button
+              type="button"
+              class="cb-mobile-menu-button"
+              data-sidebar-mobile-toggle
+              aria-label="Open navigation menu"
+              aria-controls="cb-sidebar"
+              aria-expanded="false"
+            >
+              <span class="cb-mobile-menu-icon" aria-hidden="true"></span>
+            </button>
+            <img src="/assets/coolbits-logo.svg" class="top-bar-logo" alt="CoolBits" />
+          </div>
+          <div class="top-bar-right">
+            <div id="cb-user-area">
+              <div class="user-plan-label" id="cb-user-badge">
+                <span class="cb-user-badge-line cb-user-badge-email" id="cb-header-user-email">Guest</span>
+                <span class="cb-user-badge-line cb-user-badge-plan" id="cb-header-user-plan"></span>
+                <span class="cb-user-badge-line cb-user-badge-tokens" id="cb-header-user-tokens"></span>
+              </div>
+              <button class="user-avatar-button" id="cb-user-button" type="button" aria-label="User menu" aria-haspopup="menu" aria-expanded="false">
+                <span class="user-avatar-icon"></span>
+              </button>
+              <div id="cb-user-menu" class="cb-user-menu" aria-hidden="true">
+                <div class="cb-user-menu-plan-row">
+                  <div class="cb-user-menu-plan-copy">
+                    <span id="cb-user-menu-name">Guest</span>
+                    <span id="cb-user-menu-plan-short" class="cb-user-plan-tokens">Starter</span>
+                  </div>
+                  <button type="button" class="cb-user-menu-pill-btn" id="cb-user-menu-plan" data-menu-action="plan-billing">
+                    Manage plan
+                  </button>
+                </div>
+                <div class="cb-user-menu-divider" role="separator"></div>
+                <button type="button" class="cb-user-menu-item" id="cb-user-menu-account" data-menu-action="account-billing">Account</button>
+                <button type="button" class="cb-user-menu-item" id="cb-user-menu-profile" data-menu-action="profile">Profile</button>
+                <button type="button" class="cb-user-menu-item" id="cb-user-menu-settings" data-menu-action="settings">Settings</button>
+                <div class="cb-user-menu-divider" role="separator"></div>
+                <button type="button" class="cb-user-menu-item" id="cb-menu-signout" data-menu-action="signout">Sign out</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <main class="cb-static-shell">
       <section class="cb-static-card">
         <h1>Privacy Policy</h1>
         <div class="cb-static-muted">Last updated: 2025-12-24</div>
@@ -239,10 +530,23 @@
           Data controller: COOL BITS S.R.L. (Romania). For privacy questions or requests, use <a href="/contact">/contact</a> (select
           “Privacy” topic) and we will respond.
         </p>
+        <div class="cb-legal-company" aria-label="Company details">
+          <strong>COOL BITS S.R.L.</strong>
+          <span>CUI: 42331573</span>
+          <span>EUID: ROONRC.J22/676/2020</span>
+          <span>J22/676/27.02.2020</span>
+          <span>IBAN: RO76INGB0000999910114315</span>
+          <span>Bank: ING Office Iasi Anastasie Panu</span>
+          <span>Address: Iasi, Columnei 14, 700410, Romania</span>
+        </div>
 
       </section>
-    </main>
-    <footer data-cb-footer></footer>
+        </main>
+        <footer data-cb-footer></footer>
+      </div>
+    </div>
+
     <script src="/assets/site-footer.js"></script>
+    <script src="/assets/chat.js?v=council-pill-v14" type="module"></script>
   </body>
 </html>

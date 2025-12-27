@@ -78,13 +78,14 @@ export async function call(modelIdInput, params = {}, usageContext = null) {
   };
 
   if (usageContext?.userId) {
-    await recordUsage({
+    const accounting = await recordUsage({
       ...usageContext,
       provider,
       modelId: modelConfig.id,
       rawUsage: normalizedUsage,
       planCode: usageContext.planCode,
     });
+    result.accounting = accounting;
   }
 
   return result;

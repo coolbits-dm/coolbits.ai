@@ -1,0 +1,174 @@
+{
+  "lastCalculated": "2025-12-25T15:34:00Z",
+  "indices": {
+    "pmi": {
+      "label": "Personal Maturity Index",
+      "summary": "Personal momentum, habits, and resilience across the last 30 days.",
+      "metrics": [
+        {
+          "key": "focusScore",
+          "value": 79,
+          "description": "Depth and consistency of focused work sessions.",
+          "example": "Avg 3.8h of deep work per day."
+        },
+        {
+          "key": "habitRegularity",
+          "value": 85,
+          "description": "Daily habit cadence and streak reliability.",
+          "example": "5 of 7 daily rituals completed."
+        },
+        {
+          "key": "decisionAutonomy",
+          "value": 77,
+          "description": "Speed of decisions made without external escalation.",
+          "example": "5 of 7 decisions made independently."
+        },
+        {
+          "key": "selfRefinement",
+          "value": 81,
+          "description": "Quality of post-action reflection and improvement.",
+          "example": "Weekly retro notes captured."
+        },
+        {
+          "key": "councilBalance",
+          "value": 75,
+          "description": "Balance between self direction and council guidance.",
+          "example": "Council input used on key pivots."
+        }
+      ]
+    },
+    "bmi": {
+      "label": "Business Maturity Index",
+      "summary": "Business operating health, pipeline stability, and client retention.",
+      "metrics": [
+        {
+          "key": "kpiCoverage",
+          "value": 68,
+          "description": "Share of KPIs instrumented across active accounts.",
+          "example": "68 percent of target KPIs tracked."
+        },
+        {
+          "key": "campaignSync",
+          "value": 74,
+          "description": "Alignment between campaigns, targets, and reporting.",
+          "example": "Q4 campaigns launched on schedule."
+        },
+        {
+          "key": "councilDiscipline",
+          "value": 70,
+          "description": "Consistency of strategic council reviews.",
+          "example": "Monthly council reviews completed."
+        },
+        {
+          "key": "budgetAlignment",
+          "value": 72,
+          "description": "Budget pacing and allocation precision.",
+          "example": "Spend within plus or minus 5 percent."
+        },
+        {
+          "key": "snapshotUtilization",
+          "value": 71,
+          "description": "Regular use of snapshot reports for tracking.",
+          "example": "Weekly snapshots reviewed."
+        },
+        {
+          "key": "industryContextScore",
+          "value": 60,
+          "description": "Incorporation of industry context in decisions.",
+          "example": "Benchmarks referenced in planning."
+        }
+      ]
+    },
+    "ami": {
+      "label": "Agentic Maturity Index",
+      "summary": "Agent orchestration, diversity, and workflow efficiency coverage.",
+      "metrics": [
+        {
+          "key": "agentDiversity",
+          "value": 62,
+          "description": "Variety of AI agents and tools deployed.",
+          "example": "5 agent roles in active use."
+        },
+        {
+          "key": "agentDepth",
+          "value": 65,
+          "description": "Depth of agent integration and specialization.",
+          "example": "Agents handle multi-step workflows."
+        },
+        {
+          "key": "modelExperimentation",
+          "value": 63,
+          "description": "Frequency of model experimentation and updates.",
+          "example": "Quarterly model refresh cycle."
+        },
+        {
+          "key": "customizationLevel",
+          "value": 66,
+          "description": "Degree of customization of agent behaviors.",
+          "example": "Custom prompts per workspace."
+        },
+        {
+          "key": "agentEfficiency",
+          "value": 64,
+          "description": "Efficiency gains from agent usage.",
+          "example": "62 percent of routine tasks automated."
+        }
+      ]
+    },
+    "dmi": {
+      "label": "Development Maturity Index",
+      "summary": "Release cadence, test coverage, and deployment discipline.",
+      "metrics": [
+        {
+          "key": "releaseCadence",
+          "value": 80,
+          "description": "Frequency and regularity of releases.",
+          "example": "Bi-weekly release rhythm."
+        },
+        {
+          "key": "infraCoverage",
+          "value": 78,
+          "description": "Infrastructure coverage and automation.",
+          "example": "IaC coverage across environments."
+        },
+        {
+          "key": "buildCouncilDepth",
+          "value": 72,
+          "description": "Depth of build and architecture reviews.",
+          "example": "Senior reviews on critical merges."
+        },
+        {
+          "key": "testInclusionRate",
+          "value": 85,
+          "description": "Rate of test inclusion in development.",
+          "example": "82 percent of changes include tests."
+        },
+        {
+          "key": "deploymentDiscipline",
+          "value": 75,
+          "description": "Adherence to deployment best practices.",
+          "example": "All releases through CI pipelines."
+        }
+      ]
+    }
+  },
+  "connectorInputs": [
+    {
+      "source": "Google Ads",
+      "metrics": {
+        "kpiCoverage": 0.68,
+        "campaignSync": 0.74,
+        "agentEfficiency": 0.64,
+        "decisionAutonomy": 0.77
+      },
+      "addOns": [
+        {
+          "key": "conversionQualityIndex",
+          "value": 0.85,
+          "category": "bmi",
+          "description": "Quality score of conversions versus cost."
+        }
+      ]
+    }
+  ]
+}

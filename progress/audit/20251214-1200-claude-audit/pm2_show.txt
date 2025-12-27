@@ -1,0 +1,44 @@
+[1m[7m Describing process with id 2 - name coolbits [27m[22m
+┌───────────────────┬─────────────────────────────────────────┐
+│ status            │ [32m[1monline[22m[39m                                  │
+│ name              │ coolbits                                │
+│ namespace         │ default                                 │
+│ version           │ 1.0.0                                   │
+│ restarts          │ 106493                                  │
+│ uptime            │ 0s                                      │
+│ script path       │ /opt/coolbits.ai/app/server/server.js   │
+│ script args       │ N/A                                     │
+│ error log path    │ /home/cblm/.pm2/logs/coolbits-error.log │
+│ out log path      │ /home/cblm/.pm2/logs/coolbits-out.log   │
+│ pid path          │ /home/cblm/.pm2/pids/coolbits-2.pid     │
+│ interpreter       │ node                                    │
+│ interpreter args  │ N/A                                     │
+│ script id         │ 2                                       │
+│ exec cwd          │ /opt/coolbits.ai                        │
+│ exec mode         │ fork_mode                               │
+│ node.js version   │ 20.19.5                                 │
+│ node env          │ production                              │
+│ watch & reload    │ ✘                                       │
+│ unstable restarts │ 0                                       │
+│ created at        │ 2025-12-13T22:18:18.257Z                │
+└───────────────────┴─────────────────────────────────────────┘
+[7m[1m Actions available [22m[27m
+┌────────────────────────┐
+│ km:heapdump            │
+│ km:cpu:profiling:start │
+│ km:cpu:profiling:stop  │
+│ km:heap:sampling:start │
+│ km:heap:sampling:stop  │
+└────────────────────────┘
+[37m[3m Trigger via: pm2 trigger coolbits <action_name>[23m[39m
+[37m[3m[23m[39m
+[7m[1m Divergent env variables from local env [22m[27m
+┌─────────────────────┬─────────────────────────────────────────────────────────────────────┐
+│ PWD                 │ /opt/coolbits.ai                                                    │
+│ VSCODE_IPC_HOOK_CLI │ /run/user/1000/vscode-ipc-74628557-0c98-40e0-95be-6990b2688063.sock │
+└─────────────────────┴─────────────────────────────────────────────────────────────────────┘
+
+[37m[3m Add your own code metrics: http://bit.ly/code-metrics[23m[39m
+[37m[3m Use `pm2 logs coolbits [--lines 1000]` to display logs[23m[39m
+[37m[3m Use `pm2 env 2` to display environment variables[23m[39m
+[37m[3m Use `pm2 monit` to monitor CPU and Memory usage[23m[39m coolbits

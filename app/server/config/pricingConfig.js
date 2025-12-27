@@ -2,6 +2,8 @@
 // 1 cbT = 1,000 baseline tokens (input + output) on gemini-2.5-flash-lite.
 
 export const BASE_MODEL_ID = 'gemini-2.5-flash-lite';
+export const PRICING_VERSION = process.env.PRICING_VERSION || 'model-registry-2025-12-26';
+export const FX_VERSION = process.env.FX_VERSION || 'cbt-1';
 
 // Billing config: how much we charge per cbT (not provider cost).
 export const BILLING = {
@@ -103,6 +105,8 @@ export function getPublicPricingSheet() {
 
 export default {
   BASE_MODEL_ID,
+  PRICING_VERSION,
+  FX_VERSION,
   BILLING,
   MODEL_PRICING,
   getModelConfig,

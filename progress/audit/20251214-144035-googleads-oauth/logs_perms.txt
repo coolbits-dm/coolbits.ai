@@ -1,0 +1,24 @@
+]633;E;echo "== ls -la /opt/coolbits.ai/logs ==";50de4d16-5492-4f63-be92-0cf64c4dc856]633;C== ls -la /opt/coolbits.ai/logs ==
+total 1348
+drwxrwxr-x  2 cblm cblm    4096 Dec 11 07:30 .
+drwxr-xr-x 16 root root    4096 Dec 11 04:34 ..
+-rwxr-xr-x  1 cblm cblm   45461 Dec 10 21:24 errors.log
+-rw-rw-r--  1 cblm cblm 1312951 Dec 14 16:19 requests.log
+
+== stat requests.log ==
+  File: /opt/coolbits.ai/logs/requests.log
+  Size: 1312951   	Blocks: 2576       IO Block: 4096   regular file
+Device: fc01h/64513d	Inode: 920093      Links: 1
+Access: (0664/-rw-rw-r--)  Uid: ( 1000/    cblm)   Gid: ( 1000/    cblm)
+Access: 2025-12-13 04:01:44.394397275 +0200
+Modify: 2025-12-14 16:19:07.132075705 +0200
+Change: 2025-12-14 16:19:07.132075705 +0200
+ Birth: 2025-12-11 07:30:55.706023763 +0200
+
+== namei -l requests.log ==
+f: /opt/coolbits.ai/logs/requests.log
+drwxr-xr-x root root /
+drwxrwxrwx root root opt
+drwxr-xr-x root root coolbits.ai
+drwxrwxr-x cblm cblm logs
+-rw-rw-r-- cblm cblm requests.log
