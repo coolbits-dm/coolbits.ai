@@ -19,7 +19,7 @@ app.use(
       'http://localhost:3000',
       'http://localhost:5173',
     ],
-    methods: ['GET', 'POST', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Visitor-Id', 'X-Workspace-Id'],
   }),
 );

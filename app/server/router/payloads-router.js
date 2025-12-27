@@ -6,12 +6,19 @@ import {
   listPayloads,
   getPayload,
   deletePayload,
+  renamePayload,
   decodeCursor,
   encodeCursor,
 } from '../services/payloadService.js';
 
 const router = express.Router();
 const MAX_PAGE_SIZE = 50;
+
+router.use((_req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  next();
+});
 
 function getWorkspaceId(req) {
   const candidate = req.body?.workspaceId || req.query?.workspaceId || req.workspaceId || 'business';
@@ -103,6 +110,24 @@ router.delete('/:id', requireUser, async (req, res) => {
       return res.status(404).json({ error: 'payload_not_found' });
     }
     return res.json({ ok: true });
+  } catch (err) {
+    return respondError(res, err);
+  }
+});
+
+router.patch('/:id', requireUser, async (req, res) => {
+  try {
+    const user = await getUserByEmail(req.userEmail || req.user?.email);
+    if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
+
+    const workspaceId = getWorkspaceId(req);
+    const id = req.params.id;
+    const name = req.body?.name ?? '';
+    const payload = await renamePayload({ workspaceId, id, name });
+    if (!payload) {
+      return res.status(404).json({ error: 'payload_not_found' });
+    }
+    return res.json({ payload });
   } catch (err) {
     return respondError(res, err);
   }

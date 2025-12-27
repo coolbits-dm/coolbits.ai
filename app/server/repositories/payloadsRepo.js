@@ -83,6 +83,17 @@ export async function deletePayloadById(workspaceId, id) {
   return result.rowCount > 0;
 }
 
+export async function updatePayloadName(workspaceId, id, name) {
+  const result = await query(
+    `UPDATE payloads
+     SET name = $3
+     WHERE workspace_id = $1 AND id = $2
+     RETURNING id, workspace_id, name, kind, schema_version, hash, created_by, created_at`,
+    [workspaceId, id, name || null],
+  );
+  return normalizeRow(result.rows[0]);
+}
+
 export async function listPayloads(workspaceId, { kind, q, limit, cursor } = {}) {
   const where = ['workspace_id = $1'];
   const params = [workspaceId];

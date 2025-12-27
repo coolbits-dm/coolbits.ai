@@ -22,6 +22,7 @@ const run = async () => {
   const baseCbpl = {
     schemaVersion: 'cbpl.v1',
     kind: 'selection',
+    intent: 'read_only',
     selection: {
       workspaceId: 'business',
       connector: 'ga4',
@@ -35,13 +36,23 @@ const run = async () => {
         compareTo: null,
       },
     },
-    payload: {
-      querySpec: {
-        blocks: ['overview'],
+    artifactRefs: [
+      {
+        type: 'prompt_ref',
+        messageId: 'msg-1',
+        promptSha256: 'a'.repeat(64),
+        excerpt: 'summary',
       },
+    ],
+    summary: {
+      blocksCount: 1,
+      metricsCount: 0,
+      totalBytes: 0,
+      hasWriteIntent: false,
     },
-    availability: {
-      'ga4.overview': { status: 'available' },
+    provenance: {
+      createdBy: 'user-1',
+      createdAt: '2025-01-08T10:00:00.000Z',
     },
   };
 
@@ -73,18 +84,19 @@ const run = async () => {
     const b = {
       kind: baseCbpl.kind,
       schemaVersion: baseCbpl.schemaVersion,
-      availability: baseCbpl.availability,
-      payload: baseCbpl.payload,
+      intent: baseCbpl.intent,
       selection: baseCbpl.selection,
+      artifactRefs: baseCbpl.artifactRefs,
+      summary: baseCbpl.summary,
     };
     const hashA = cbplTest.computeCbplHash(a).hash;
     const hashB = cbplTest.computeCbplHash(b).hash;
     assert.equal(hashA, hashB);
   });
 
-  test('Hash ignores name differences (dedupe stability)', () => {
-    const a = { ...clone(baseCbpl), name: 'First payload' };
-    const b = { ...clone(baseCbpl), name: 'Second payload' };
+  test('Hash ignores policyHints differences (dedupe stability)', () => {
+    const a = { ...clone(baseCbpl), policyHints: { spendCapCbT: 10 } };
+    const b = { ...clone(baseCbpl), policyHints: { spendCapCbT: 999 } };
     const hashA = cbplTest.computeCbplHash(a).hash;
     const hashB = cbplTest.computeCbplHash(b).hash;
     assert.equal(hashA, hashB);
@@ -92,7 +104,7 @@ const run = async () => {
 
   test('Size cap rejection triggers cbpl_too_large', () => {
     const huge = clone(baseCbpl);
-    huge.payload = { blob: 'a'.repeat(cbplTest.MAX_CBPL_BYTES + 16) };
+    huge.selection.ga4.blocks = ['a'.repeat(cbplTest.MAX_CBPL_BYTES + 16)];
     const { canonical } = cbplTest.computeCbplHash(huge);
     expectErrorCode(() => cbplTest.assertCbplSize(canonical), 'cbpl_too_large');
   });

@@ -12,3 +12,7 @@ progress/audit/
 
 # personal/public profiles
 public/coolbits/CEO/
+
+# local artifact storage fallbacks
+uploads/artifacts/
+artifacts/

@@ -7,6 +7,7 @@ import {
   getPayloadsByIds,
   listPayloads as listPayloadsRepo,
   deletePayloadById as deletePayloadByIdRepo,
+  updatePayloadName,
 } from '../repositories/payloadsRepo.js';
 import { MAX_CBPL_BYTES, MAX_PAYLOAD_IDS, MAX_PAYLOAD_ID_BYTES } from '../config/payloadConfig.js';
 
@@ -48,6 +49,42 @@ function sanitizeCbpl(cbpl) {
   return JSON.parse(stableStringify(cbpl));
 }
 
+function stripCbplForHash(cbpl) {
+  const sanitized = sanitizeCbpl(cbpl);
+  const stripped = { ...sanitized };
+  delete stripped.hash;
+  delete stripped.hashAlgo;
+  delete stripped.hashHex;
+  delete stripped.signature;
+  delete stripped.name;
+  delete stripped.description;
+  delete stripped.payload;
+  delete stripped.availability;
+  delete stripped.policyHints;
+  delete stripped.summary;
+  delete stripped.provenance;
+
+  if (Array.isArray(stripped.artifactRefs)) {
+    stripped.artifactRefs = stripped.artifactRefs.map((ref) => {
+      if (!ref || typeof ref !== 'object') return ref;
+      const type = ref.type;
+      const base = { type };
+      if (type === 'prompt_ref') {
+        if (ref.messageId) base.messageId = ref.messageId;
+        if (ref.promptSha256) base.promptSha256 = ref.promptSha256;
+      } else if (type === 'file_ref' || type === 'image_ref') {
+        if (ref.artifactId) base.artifactId = ref.artifactId;
+      } else {
+        if (ref.artifactId) base.artifactId = ref.artifactId;
+        if (ref.messageId) base.messageId = ref.messageId;
+      }
+      return base;
+    });
+  }
+
+  return stripped;
+}
+
 function isYmd(value) {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
@@ -55,10 +92,8 @@ function isYmd(value) {
 function parseAllowedEnums(schema) {
   const allowedKinds = new Set(schema?.properties?.kind?.enum || []);
   const allowedCompareModes = new Set(schema?.$defs?.compareMode?.enum || []);
-  const availabilityStatuses = new Set(
-    schema?.$defs?.availabilityMap?.additionalProperties?.properties?.status?.enum || [],
-  );
-  return { allowedKinds, allowedCompareModes, availabilityStatuses };
+  const allowedIntents = new Set(schema?.$defs?.intent?.enum || []);
+  return { allowedKinds, allowedCompareModes, allowedIntents };
 }
 
 function validateSelectionBlock(selection, allowedCompareModes, label) {
@@ -99,7 +134,7 @@ function validateSelectionBlock(selection, allowedCompareModes, label) {
 
 async function validateCbpl(cbpl) {
   const schema = await loadCbplSchema();
-  const { allowedKinds, allowedCompareModes, availabilityStatuses } = parseAllowedEnums(schema);
+  const { allowedKinds, allowedCompareModes, allowedIntents } = parseAllowedEnums(schema);
   const errors = [];
 
   if (!cbpl || typeof cbpl !== 'object') {
@@ -114,27 +149,57 @@ async function validateCbpl(cbpl) {
     errors.push('kind_invalid');
   }
 
+  const intent = cbpl.intent || 'read_only';
+  if (!allowedIntents.has(intent)) {
+    errors.push('intent_invalid');
+  }
+
   if (!cbpl.selection || typeof cbpl.selection !== 'object') {
     errors.push('selection_missing');
   } else if (!cbpl.selection.workspaceId || typeof cbpl.selection.workspaceId !== 'string') {
     errors.push('selection_workspace_required');
   }
 
-  if (!cbpl.payload || typeof cbpl.payload !== 'object') {
-    errors.push('payload_invalid');
+  if (cbpl.hashAlgo && cbpl.hashAlgo !== 'sha256') {
+    errors.push('hash_algo_invalid');
   }
 
-  if (!cbpl.availability || typeof cbpl.availability !== 'object') {
-    errors.push('availability_invalid');
-  } else {
-    for (const value of Object.values(cbpl.availability)) {
-      if (!value || typeof value !== 'object') {
-        errors.push('availability_entry_invalid');
-        break;
-      }
-      if (!availabilityStatuses.has(value.status)) {
-        errors.push('availability_status_invalid');
-        break;
+  if (cbpl.hashHex && !/^[a-f0-9]{64}$/.test(cbpl.hashHex)) {
+    errors.push('hash_hex_invalid');
+  }
+
+  if (cbpl.artifactRefs != null) {
+    if (!Array.isArray(cbpl.artifactRefs)) {
+      errors.push('artifact_refs_invalid');
+    } else {
+      for (const ref of cbpl.artifactRefs) {
+        if (!ref || typeof ref !== 'object') {
+          errors.push('artifact_ref_invalid');
+          break;
+        }
+        const type = ref.type;
+        if (!type) {
+          errors.push('artifact_ref_type_invalid');
+          break;
+        }
+        if (type === 'prompt_ref') {
+          if (!ref.messageId || typeof ref.messageId !== 'string') {
+            errors.push('artifact_prompt_ref_invalid');
+            break;
+          }
+          if (ref.promptSha256 && !/^[a-f0-9]{64}$/.test(ref.promptSha256)) {
+            errors.push('artifact_prompt_hash_invalid');
+            break;
+          }
+        } else if (type === 'file_ref' || type === 'image_ref') {
+          if (!ref.artifactId || typeof ref.artifactId !== 'string') {
+            errors.push('artifact_ref_id_invalid');
+            break;
+          }
+        } else if (type != null) {
+          errors.push('artifact_ref_type_invalid');
+          break;
+        }
       }
     }
   }
@@ -151,12 +216,7 @@ async function validateCbpl(cbpl) {
 }
 
 function computeCbplHash(cbpl) {
-  const sanitized = sanitizeCbpl(cbpl);
-  const stripped = { ...sanitized };
-  delete stripped.hash;
-  delete stripped.signature;
-  delete stripped.name;
-  delete stripped.description;
+  const stripped = stripCbplForHash(cbpl);
   const canonical = stableStringify(stripped);
   const hash = crypto.createHash('sha256').update(canonical).digest('hex');
   return { hash, canonical, stripped };
@@ -202,6 +262,13 @@ function ensureKind(cbpl, kind) {
   return { ...cbpl, kind };
 }
 
+function ensureIntent(cbpl) {
+  if (!cbpl.intent) {
+    return { ...cbpl, intent: 'read_only' };
+  }
+  return cbpl;
+}
+
 function normalizePayloadIds(payloadIds) {
   if (!Array.isArray(payloadIds)) {
     return { ids: [], hasPayloadRequest: false };
@@ -238,6 +305,7 @@ export async function createPayload({ workspaceId, userId, name, kind, cbpl }) {
   let normalized = sanitizeCbpl(cbpl);
   normalized = ensureWorkspaceMatch(normalized, workspaceId);
   normalized = ensureKind(normalized, kind);
+  normalized = ensureIntent(normalized);
 
   const validation = await validateCbpl(normalized);
   if (!validation.ok) {
@@ -248,7 +316,7 @@ export async function createPayload({ workspaceId, userId, name, kind, cbpl }) {
   assertCbplSize(canonical);
 
   const payloadId = crypto.randomUUID();
-  const contentJson = { ...stripped, hash };
+  const contentJson = { ...stripped, hashAlgo: 'sha256', hashHex: hash };
   const contentBytes = Buffer.from(stableStringify(contentJson), 'utf8');
 
   const inserted = await insertPayload({
@@ -276,6 +344,15 @@ export async function getPayload({ workspaceId, id }) {
 
 export async function deletePayload({ workspaceId, id }) {
   return deletePayloadByIdRepo(workspaceId, id);
+}
+
+export async function renamePayload({ workspaceId, id, name }) {
+  if (typeof name !== 'string') {
+    throw buildPayloadError('payload_name_invalid', 'Payload name must be a string.', 400);
+  }
+  const trimmed = name.trim();
+  const updated = await updatePayloadName(workspaceId, id, trimmed || null);
+  return updated;
 }
 
 export async function resolvePayloadAttachments({ workspaceId, payloadIds }) {

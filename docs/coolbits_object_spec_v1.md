@@ -128,24 +128,24 @@ Versioned procedure that produces a Run plan (and optionally a payload artifact)
 ---
 
 ## CoolBits Payload (.cbpl)
-Canonical payload artifact. The versioned schema reference is `docs/cbpl.schema.v1.json`.
+Canonical payload manifest. The versioned schema reference is `docs/cbpl.schema.v1.json`.
 
 ### File format (v1)
 - Header: `CBPL\0` + `v1` (binary prefix)
 - Body: canonical JSON (UTF-8, sorted keys)
-- Hash: computed over canonical JSON with `hash`, `signature`, `name`, `description` omitted
+- Hash: computed over canonical JSON with `hash*`, `policyHints`, `summary`, `provenance`, and display-only fields omitted
 
 ### Body fields (v1)
 - `schemaVersion` (string, `cbpl.v1`)
 - `kind` (`selection` | `snapshot_ref` | `dryrun` | `commit_intent`)
-- `workspaceId` (string)
-- `createdAt` (iso8601)
-- `createdBy` (string)
+- `intent` (`read_only` | `write_intent`)
 - `selection` (SelectionState)
-- `payload` (object) - widget-specific request spec
-- `availability` (map field -> { status, note? })
-- `hash` (string)
-- `signature` (object | null)
+- `artifactRefs` (array of `ArtifactRef` objects)
+- `policyHints` (object, optional)
+- `summary` (object, optional)
+- `provenance` (object, optional)
+- `hashAlgo` (string, `sha256`) - server-computed
+- `hashHex` (string, 64 hex) - server-computed
 
 ### SelectionState (current UI mapping)
 Mirrors the selection objects built in `public/assets/chat.js` for GA4 and Google Ads.
@@ -153,6 +153,10 @@ Mirrors the selection objects built in `public/assets/chat.js` for GA4 and Googl
 **Fields**
 - `workspaceId` (string)
 - `connector` (`ga4` | `googleads` | `mixed`)
+- `scope` (object, optional)
+  - `ga4PropertyId` (string)
+  - `googleAdsCustomerId` (string)
+  - `googleAdsLoginCustomerId` (string)
 - `ga4` (object | null)
   - `propertyId` (string | null)
   - `from` (YYYY-MM-DD)
@@ -170,3 +174,51 @@ Mirrors the selection objects built in `public/assets/chat.js` for GA4 and Googl
   - `compareMode` (`none` | `previous_period` | `previous_year` | `custom`)
   - `compareFrom` (YYYY-MM-DD | null)
   - `compareTo` (YYYY-MM-DD | null)
+
+### ArtifactRef (CBPL references only, no raw bytes)
+Prompt and media content live in the Artifact store and are referenced here.
+
+**prompt_ref**
+```
+{ "type": "prompt_ref", "messageId": "msg_...", "promptSha256": "...", "excerpt": "..." }
+```
+
+**file_ref**
+```
+{ "type": "file_ref", "artifactId": "art_...", "name": "doc.pdf" }
+```
+
+**image_ref**
+```
+{ "type": "image_ref", "artifactId": "art_...", "name": "img.png" }
+```
+
+---
+
+## Artifact
+Canonical store for prompt/media content. Access is via backend only.
+
+**Fields**
+- `artifactId` (string, ULID/UUID)
+- `workspaceId` (string)
+- `contentType` (string: text/plain, image/png, application/pdf, etc.)
+- `bytes` (integer)
+- `sha256` (64-hex)
+- `storageProvider` (`fs` | `gcs` | `s3`)
+- `storageKey` (string)
+- `status` (`pending` | `uploaded` | `ready`)
+- `createdBy` (string)
+- `createdAt` (iso8601)
+- `retentionPolicy` (object | null)
+- `derived` (object | null)
+
+### Artifact attachments
+Tracks where artifacts are used.
+
+**Fields**
+- `workspaceId`
+- `artifactId`
+- `attachedToType` (`chat_message` | `payload` | `run_preview` | `run`)
+- `attachedToId`
+- `createdBy`
+- `createdAt`
