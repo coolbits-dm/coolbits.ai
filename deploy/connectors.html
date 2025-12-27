@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pricing - CoolBits.ai</title>
+    <title>Connectors - CoolBits.ai</title>
     <link rel="stylesheet" href="/assets/style.css?v=2025-12-27-01" />
-    <link rel="stylesheet" href="/assets/overview.css?v=overview-v1" />
+    <link rel="stylesheet" href="/assets/connectors.css?v=connectors-v1" />
     <link rel="icon" href="/favicon.ico" />
   </head>
-  <body class="cb-overview-page cb-pricing-page">
+  <body class="cb-connectors-page">
     <div class="cb-app-shell" data-app-shell>
       <aside class="cb-sidebar" id="cb-sidebar" data-sidebar data-collapsed="false" aria-label="CoolBits workspace navigation">
         <div class="cb-sidebar-scroll">
@@ -72,7 +72,7 @@
             </a>
           </div>
           <div class="cb-sidebar-section">
-            <a class="cb-sidebar-item cb-sidebar-item--icon-only" href="/connectors" aria-label="Connectors" title="Connectors">
+            <a class="cb-sidebar-item cb-sidebar-item--icon-only is-active" href="/connectors" aria-label="Connectors" title="Connectors">
               <span class="cb-sidebar-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24">
                   <path d="M7 12h10M7 6h4M13 18h4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"></path>
@@ -109,7 +109,7 @@
             </a>
           </div>
           <div class="cb-sidebar-section">
-            <a class="cb-sidebar-item is-active" href="/pricing/" aria-label="Pricing">
+            <a class="cb-sidebar-item" href="/pricing/" aria-label="Pricing">
               <span class="cb-sidebar-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24">
                   <path
@@ -136,19 +136,6 @@
             </button>
             <div class="cb-sidebar-menu" id="cb-workspace-menu" role="listbox" aria-label="Select workspace" hidden></div>
           </div>
-          <div class="cb-sidebar-section">
-            <div class="cb-sidebar-section-header">Bits Orchestrator</div>
-            <button type="button" class="cb-sidebar-item" data-sidebar-feature="orchestrator" data-sidebar-tooltip="Coming soon" aria-label="Bits Orchestrator">
-              <span class="cb-sidebar-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M5 12a7 7 0 0114 0" stroke="currentColor" stroke-width="1.5" fill="none"></path>
-                  <path d="M12 5v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
-                </svg>
-              </span>
-              <span class="cb-sidebar-label">Bits Orchestrator</span>
-              <span class="cb-sidebar-pill">Soon</span>
-            </button>
-          </div>
           <div class="cb-sidebar-section cb-sidebar-projects" data-projects-section>
             <div class="cb-sidebar-section-header">Projects</div>
             <button type="button" class="cb-sidebar-select" id="cb-project-selector" aria-haspopup="listbox" aria-expanded="false" aria-label="Select project">
@@ -159,10 +146,10 @@
                 </svg>
               </span>
             </button>
-            <div class="cb-sidebar-menu" id="cb-project-menu" role="listbox" aria-label="Select project" hidden></div>
+            <div class="cb-sidebar-menu" id="cb-project-menu" role="listbox" aria-label="Project list" hidden></div>
             <div class="cb-sidebar-error" id="cb-projects-error" hidden>Unable to load projects.</div>
             <p class="cb-sidebar-hint cb-projects-guest-hint" id="cb-projects-guest-hint" hidden>
-              Sign in to manage projects and attach them to payloads.
+              Sign in to organize chats by project.
             </p>
             <button type="button" class="cb-sidebar-button-secondary" id="cb-project-create-open">
               <span class="cb-sidebar-button-icon" aria-hidden="true">+</span>
@@ -175,165 +162,23 @@
             <div class="cb-sidebar-empty" data-sidebar-empty hidden>No chats yet</div>
           </div>
           <div class="cb-sidebar-footer">
-            <div id="cb-user-area">
-              <div class="user-plan-label" id="cb-user-badge">
-                <span class="cb-user-badge-line cb-user-badge-email">Guest</span>
-                <span class="cb-user-badge-line cb-user-badge-plan"></span>
-                <span class="cb-user-badge-line cb-user-badge-tokens"></span>
-              </div>
-              <button class="user-avatar-button" id="cb-user-button" type="button" aria-label="User menu" aria-haspopup="menu" aria-expanded="false">
-                <span class="user-avatar-icon"></span>
-              </button>
-              <div id="cb-user-menu" class="cb-user-menu" aria-hidden="true">
-                <div class="cb-user-menu-plan-row">
-                  <div class="cb-user-menu-plan-copy">
-                    <span id="cb-user-menu-name">Guest</span>
-                    <span id="cb-user-menu-plan-short" class="cb-user-plan-tokens">Starter</span>
-                  </div>
-                  <button type="button" class="cb-user-menu-pill-btn" id="cb-user-menu-plan" data-menu-action="plan-billing">
-                    Manage plan
-                  </button>
-                </div>
-                <div class="cb-user-menu-divider" role="separator"></div>
-                <button type="button" class="cb-user-menu-item" id="cb-user-menu-account" data-menu-action="account-billing">Account</button>
-                <button type="button" class="cb-user-menu-item" id="cb-user-menu-profile" data-menu-action="profile">Profile</button>
-                <button type="button" class="cb-user-menu-item" id="cb-user-menu-settings" data-menu-action="settings">Settings</button>
-                <div class="cb-user-menu-divider" role="separator"></div>
-                <button type="button" class="cb-user-menu-item" id="cb-menu-signout" data-menu-action="signout">Sign out</button>
-              </div>
-            </div>
+            <div class="cb-sidebar-user" id="cb-sidebar-user-slot" aria-live="polite" hidden></div>
           </div>
         </div>
       </aside>
-
-      <div class="cb-main">
-        <main class="cb-overview-shell">
-          <header class="cb-overview-header">
-            <div>
-              <p class="cb-overview-kicker">Billing</p>
-              <h1 class="cb-overview-title">Pricing</h1>
-              <p class="cb-overview-subtitle">
-                cbT-based pricing with transparent model factors and usage accounting.
-              </p>
-            </div>
-            <div class="cb-overview-actions">
-              <a class="cb-overview-button" href="/chat">Go to Chat</a>
-              <a class="cb-overview-button is-secondary" href="/contact">Contact</a>
-            </div>
-          </header>
-
-          <section class="cb-overview-grid">
-            <div class="cb-overview-card">
-              <h3>Plans</h3>
-              <p class="cb-overview-muted">
-                Starter, Pro, and Enterprise plans are available based on workspace usage and billing needs.
-              </p>
-              <div class="cb-overview-tag-row">
-                <span class="cb-overview-pill">Starter</span>
-                <span class="cb-overview-pill">Pro</span>
-                <span class="cb-overview-pill">Enterprise</span>
-              </div>
-            </div>
-            <div class="cb-overview-card">
-              <h3>cbT basis</h3>
-              <p class="cb-overview-muted">
-                1 cbT equals 1,000 tokens on the base model. Model factors scale cbT usage.
-              </p>
-              <ul class="cb-overview-list">
-                <li><span class="cb-overview-pill">Base model</span><span id="cb-pricing-base">-</span></li>
-                <li><span class="cb-overview-pill">cbT price</span><span id="cb-pricing-cbt">-</span></li>
-              </ul>
-              <p class="cb-overview-footnote">Final charges reflect confirmed usage in chat meta.</p>
-            </div>
-          </section>
-
-          <section class="cb-overview-card">
-            <h3>Model pricing factors</h3>
-            <div class="cb-overview-table-wrap">
-              <table class="cb-overview-table">
-                <thead>
-                  <tr>
-                    <th>Model</th>
-                    <th>Label</th>
-                    <th>Family</th>
-                    <th>Factor</th>
-                    <th>Cost / 1k</th>
-                  </tr>
-                </thead>
-                <tbody id="cb-pricing-table"></tbody>
-              </table>
-            </div>
-            <p class="cb-overview-footnote" id="cb-pricing-status">Loading pricing sheet...</p>
-          </section>
-        </main>
-        <footer data-cb-footer></footer>
-      </div>
+      <main class="cb-connectors-main">
+        <header class="cb-connectors-header">
+          <div>
+            <div class="cb-connectors-kicker">CONNECTORS REGISTRY</div>
+            <h1>Connectors</h1>
+            <p>Browse available integrations for the active workspace. Coming soon connectors are visible but inactive.</p>
+          </div>
+          <div class="cb-connectors-workspaces" id="cb-connectors-workspaces"></div>
+        </header>
+        <section class="cb-connectors-grid" id="cb-connectors-grid"></section>
+        <div class="cb-connectors-empty" id="cb-connectors-empty" hidden>Unable to load connectors.</div>
+      </main>
     </div>
-
-    <script src="/assets/site-footer.js"></script>
-    <script src="/assets/chat.js?v=2025-12-27-01" type="module"></script>
-    <script>
-      (() => {
-        const status = document.getElementById("cb-pricing-status");
-        const tableBody = document.getElementById("cb-pricing-table");
-        const baseModel = document.getElementById("cb-pricing-base");
-        const cbtPrice = document.getElementById("cb-pricing-cbt");
-
-        if (!status || !tableBody) return;
-
-        const setStatus = (message) => {
-          status.textContent = message;
-        };
-
-        fetch("/api/pricing/models", { headers: { Accept: "application/json" }, credentials: "include" })
-          .then(async (response) => {
-            const json = await response.json().catch(() => null);
-            return { ok: response.ok, json };
-          })
-          .then(({ ok, json }) => {
-            if (!ok || !json) {
-              throw new Error("Pricing unavailable");
-            }
-
-            const currency = json.currency || "";
-            const price = typeof json.cbtPrice === "number" ? json.cbtPrice : null;
-            const models = Object.values(json.models || {});
-
-            if (baseModel) {
-              baseModel.textContent = json.baseModelId || "-";
-            }
-            if (cbtPrice) {
-              cbtPrice.textContent = price ? `${price} ${currency} per cbT` : "-";
-            }
-
-            if (!models.length) {
-              setStatus("No model pricing data available.");
-              return;
-            }
-
-            models.sort((a, b) => (a.factor || 0) - (b.factor || 0));
-            tableBody.innerHTML = "";
-
-            models.forEach((model) => {
-              const row = document.createElement("tr");
-              const factor = typeof model.factor === "number" ? model.factor : null;
-              const cost = price && factor ? (price * factor).toFixed(6) : "-";
-              row.innerHTML = `
-                <td>${model.id || "-"}</td>
-                <td>${model.label || "-"}</td>
-                <td>${model.family || "-"}</td>
-                <td>${factor ?? "-"}</td>
-                <td>${cost === "-" ? "-" : `${cost} ${currency}`}</td>
-              `;
-              tableBody.appendChild(row);
-            });
-
-            setStatus("Updated from /api/pricing/models.");
-          })
-          .catch(() => {
-            setStatus("Pricing sheet unavailable right now.");
-          });
-      })();
-    </script>
+    <script src="/assets/connectors.js?v=connectors-v1" defer></script>
   </body>
 </html>

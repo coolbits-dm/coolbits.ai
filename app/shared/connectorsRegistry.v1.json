@@ -1,0 +1,711 @@
+{
+  "schemaVersion": "cb-connectors-registry.v1",
+  "workspaces": [
+    { "id": "personal", "slug": "p", "label": "Personal" },
+    { "id": "business", "slug": "b", "label": "Business" },
+    { "id": "agency", "slug": "a", "label": "Agency" },
+    { "id": "developer", "slug": "d", "label": "Development" }
+  ],
+  "clientAliases": {
+    "workspaceId": { "dev": "developer" }
+  },
+  "enums": {
+    "availability": ["available", "coming_soon", "unavailable"],
+    "auth": ["oauth", "api_key", "service_account", "none"],
+    "syncMode": ["on_demand", "scheduled", "both", "none"]
+  },
+  "connectors": [
+    {
+      "id": "google_docs",
+      "label": "Google Docs",
+      "vendor": "google",
+      "category": "productivity",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["folders", "files"]
+      },
+      "defaults": { "workspaces": ["personal"] }
+    },
+    {
+      "id": "gmail",
+      "label": "Gmail",
+      "vendor": "google",
+      "category": "messaging",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["labels", "search"]
+      },
+      "defaults": { "workspaces": ["personal"] }
+    },
+    {
+      "id": "youtube",
+      "label": "YouTube",
+      "vendor": "google",
+      "category": "social",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["channels", "videos"]
+      },
+      "defaults": { "workspaces": ["personal"] }
+    },
+    {
+      "id": "google_drive",
+      "label": "Google Drive",
+      "vendor": "google",
+      "category": "storage",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["folders", "files"]
+      },
+      "defaults": { "workspaces": ["personal"] }
+    },
+    {
+      "id": "meta_social",
+      "label": "Meta Social (FB/IG/WhatsApp)",
+      "vendor": "meta",
+      "category": "social",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["pages", "accounts", "channels"]
+      },
+      "defaults": { "workspaces": ["personal"] }
+    },
+    {
+      "id": "x",
+      "label": "X",
+      "vendor": "x",
+      "category": "social",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["accounts"]
+      },
+      "defaults": { "workspaces": ["personal"] }
+    },
+    {
+      "id": "tiktok",
+      "label": "TikTok",
+      "vendor": "tiktok",
+      "category": "social",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["accounts"]
+      },
+      "defaults": { "workspaces": ["personal"] }
+    },
+    {
+      "id": "linkedin",
+      "label": "LinkedIn",
+      "vendor": "linkedin",
+      "category": "social",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["orgs", "profiles"]
+      },
+      "defaults": { "workspaces": ["personal"] }
+    },
+    {
+      "id": "openai_chatgpt",
+      "label": "ChatGPT",
+      "vendor": "openai",
+      "category": "ai",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "api_key",
+        "resources": false,
+        "read": true,
+        "write": true,
+        "syncMode": "none",
+        "selectors": []
+      },
+      "defaults": { "workspaces": ["personal"] }
+    },
+    {
+      "id": "xai_grok",
+      "label": "Grok",
+      "vendor": "xai",
+      "category": "ai",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "api_key",
+        "resources": false,
+        "read": true,
+        "write": true,
+        "syncMode": "none",
+        "selectors": []
+      },
+      "defaults": { "workspaces": ["personal"] }
+    },
+    {
+      "id": "google_ads",
+      "label": "Google Ads",
+      "vendor": "google",
+      "category": "ads",
+      "availability": "available",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["dateRange", "compare", "campaigns", "adGroups", "segments", "metrics"]
+      },
+      "defaults": { "workspaces": ["business"] },
+      "ui": { "href": "/chat?view=googleads" }
+    },
+    {
+      "id": "ga4",
+      "label": "Google Analytics 4",
+      "vendor": "google",
+      "category": "analytics",
+      "availability": "available",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": false,
+        "syncMode": "on_demand",
+        "selectors": ["dateRange", "compare", "filters", "dimensions", "metrics"]
+      },
+      "defaults": { "workspaces": ["business"] },
+      "ui": { "href": "/chat?view=ga4" }
+    },
+    {
+      "id": "gsc",
+      "label": "Google Search Console",
+      "vendor": "google",
+      "category": "seo",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": false,
+        "syncMode": "on_demand",
+        "selectors": ["sites", "dateRange", "dimensions", "metrics"]
+      },
+      "defaults": { "workspaces": ["business"] }
+    },
+    {
+      "id": "gtm",
+      "label": "Google Tag Manager",
+      "vendor": "google",
+      "category": "ops",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["accounts", "containers", "workspaces"]
+      },
+      "defaults": { "workspaces": ["business"] }
+    },
+    {
+      "id": "merchant_center",
+      "label": "Google Merchant Center",
+      "vendor": "google",
+      "category": "commerce",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["accounts", "feeds", "products"]
+      },
+      "defaults": { "workspaces": ["business"] }
+    },
+    {
+      "id": "google_business_profile",
+      "label": "Google Business Profile",
+      "vendor": "google",
+      "category": "local",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["locations"]
+      },
+      "defaults": { "workspaces": ["business"] }
+    },
+    {
+      "id": "stripe",
+      "label": "Stripe",
+      "vendor": "stripe",
+      "category": "billing",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "api_key",
+        "resources": false,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["customers", "payments", "invoices", "subscriptions"]
+      },
+      "defaults": { "workspaces": ["business"] }
+    },
+    {
+      "id": "shopify",
+      "label": "Shopify",
+      "vendor": "shopify",
+      "category": "commerce",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["store", "orders", "products"]
+      },
+      "defaults": { "workspaces": ["business"] }
+    },
+    {
+      "id": "woocommerce",
+      "label": "WooCommerce",
+      "vendor": "woocommerce",
+      "category": "commerce",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "api_key",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["store", "orders", "products"]
+      },
+      "defaults": { "workspaces": ["business"] }
+    },
+    {
+      "id": "hubspot_crm",
+      "label": "HubSpot CRM",
+      "vendor": "hubspot",
+      "category": "crm",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["contacts", "companies", "deals"]
+      },
+      "defaults": { "workspaces": ["business"] }
+    },
+    {
+      "id": "google_ads_mcc",
+      "label": "Google Ads (MCC)",
+      "vendor": "google",
+      "category": "ads",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["customers", "dateRange", "compare", "metrics"]
+      },
+      "defaults": { "workspaces": ["agency"] }
+    },
+    {
+      "id": "ga4_multi",
+      "label": "GA4 (Multi-property)",
+      "vendor": "google",
+      "category": "analytics",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": false,
+        "syncMode": "on_demand",
+        "selectors": ["properties", "dateRange", "compare", "metrics"]
+      },
+      "defaults": { "workspaces": ["agency"] }
+    },
+    {
+      "id": "meta_ads",
+      "label": "Meta Ads",
+      "vendor": "meta",
+      "category": "ads",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["adAccounts", "dateRange", "compare", "campaigns", "metrics"]
+      },
+      "defaults": { "workspaces": ["agency"] }
+    },
+    {
+      "id": "microsoft_ads",
+      "label": "Microsoft Advertising",
+      "vendor": "microsoft",
+      "category": "ads",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["accounts", "dateRange", "compare", "campaigns", "metrics"]
+      },
+      "defaults": { "workspaces": ["agency"] }
+    },
+    {
+      "id": "tiktok_ads",
+      "label": "TikTok Ads",
+      "vendor": "tiktok",
+      "category": "ads",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["adAccounts", "dateRange", "compare", "campaigns", "metrics"]
+      },
+      "defaults": { "workspaces": ["agency"] }
+    },
+    {
+      "id": "linkedin_ads",
+      "label": "LinkedIn Ads",
+      "vendor": "linkedin",
+      "category": "ads",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["adAccounts", "dateRange", "compare", "campaigns", "metrics"]
+      },
+      "defaults": { "workspaces": ["agency"] }
+    },
+    {
+      "id": "pinterest_ads",
+      "label": "Pinterest Ads",
+      "vendor": "pinterest",
+      "category": "ads",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["adAccounts", "dateRange", "campaigns", "metrics"]
+      },
+      "defaults": { "workspaces": ["agency"] }
+    },
+    {
+      "id": "snapchat_ads",
+      "label": "Snapchat Ads",
+      "vendor": "snap",
+      "category": "ads",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["adAccounts", "dateRange", "campaigns", "metrics"]
+      },
+      "defaults": { "workspaces": ["agency"] }
+    },
+    {
+      "id": "callrail",
+      "label": "Call tracking (CallRail)",
+      "vendor": "callrail",
+      "category": "attribution",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "api_key",
+        "resources": true,
+        "read": true,
+        "write": false,
+        "syncMode": "on_demand",
+        "selectors": ["accounts", "dateRange", "calls", "formLeads"]
+      },
+      "defaults": { "workspaces": ["agency"] }
+    },
+    {
+      "id": "looker_studio",
+      "label": "Looker Studio",
+      "vendor": "google",
+      "category": "reporting",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "none",
+        "selectors": ["reports", "dataSources"]
+      },
+      "defaults": { "workspaces": ["agency"] }
+    },
+    {
+      "id": "github",
+      "label": "GitHub",
+      "vendor": "github",
+      "category": "dev",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["repos", "issues", "prs", "actions"]
+      },
+      "defaults": { "workspaces": ["developer"] }
+    },
+    {
+      "id": "gitlab",
+      "label": "GitLab",
+      "vendor": "gitlab",
+      "category": "dev",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["projects", "issues", "mrs", "pipelines"]
+      },
+      "defaults": { "workspaces": ["developer"] }
+    },
+    {
+      "id": "jira",
+      "label": "Jira",
+      "vendor": "atlassian",
+      "category": "ops",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["projects", "boards", "issues", "sprints"]
+      },
+      "defaults": { "workspaces": ["developer"] }
+    },
+    {
+      "id": "slack",
+      "label": "Slack",
+      "vendor": "slack",
+      "category": "ops",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "oauth",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["workspaces", "channels", "messages"]
+      },
+      "defaults": { "workspaces": ["developer"] }
+    },
+    {
+      "id": "cloudflare",
+      "label": "Cloudflare",
+      "vendor": "cloudflare",
+      "category": "infra",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "api_key",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["zones", "dns", "workers", "cache"]
+      },
+      "defaults": { "workspaces": ["developer"] }
+    },
+    {
+      "id": "gcp",
+      "label": "Google Cloud",
+      "vendor": "google",
+      "category": "infra",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "service_account",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["projects", "services", "logs", "metrics"]
+      },
+      "defaults": { "workspaces": ["developer"] }
+    },
+    {
+      "id": "sentry",
+      "label": "Sentry",
+      "vendor": "sentry",
+      "category": "observability",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "api_key",
+        "resources": true,
+        "read": true,
+        "write": false,
+        "syncMode": "on_demand",
+        "selectors": ["orgs", "projects", "issues", "releases"]
+      },
+      "defaults": { "workspaces": ["developer"] }
+    },
+    {
+      "id": "datadog",
+      "label": "Datadog",
+      "vendor": "datadog",
+      "category": "observability",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "api_key",
+        "resources": true,
+        "read": true,
+        "write": false,
+        "syncMode": "on_demand",
+        "selectors": ["metrics", "logs", "apm"]
+      },
+      "defaults": { "workspaces": ["developer"] }
+    },
+    {
+      "id": "openai_api",
+      "label": "OpenAI API",
+      "vendor": "openai",
+      "category": "ai",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "api_key",
+        "resources": false,
+        "read": true,
+        "write": true,
+        "syncMode": "none",
+        "selectors": []
+      },
+      "defaults": { "workspaces": ["developer"] }
+    },
+    {
+      "id": "vertex_ai",
+      "label": "Vertex AI",
+      "vendor": "google",
+      "category": "ai",
+      "availability": "coming_soon",
+      "capabilities": {
+        "auth": "service_account",
+        "resources": true,
+        "read": true,
+        "write": true,
+        "syncMode": "on_demand",
+        "selectors": ["models", "endpoints", "datasets"]
+      },
+      "defaults": { "workspaces": ["developer"] }
+    }
+  ],
+  "panels": {
+    "personal": [
+      "gmail",
+      "google_docs",
+      "youtube",
+      "google_drive",
+      "meta_social",
+      "x",
+      "tiktok",
+      "linkedin",
+      "openai_chatgpt",
+      "xai_grok"
+    ],
+    "business": [
+      "google_ads",
+      "ga4",
+      "gsc",
+      "gtm",
+      "merchant_center",
+      "google_business_profile",
+      "stripe",
+      "shopify",
+      "woocommerce",
+      "hubspot_crm"
+    ],
+    "agency": [
+      "google_ads_mcc",
+      "ga4_multi",
+      "meta_ads",
+      "microsoft_ads",
+      "tiktok_ads",
+      "linkedin_ads",
+      "pinterest_ads",
+      "snapchat_ads",
+      "callrail",
+      "looker_studio"
+    ],
+    "developer": [
+      "github",
+      "gitlab",
+      "jira",
+      "slack",
+      "cloudflare",
+      "gcp",
+      "sentry",
+      "datadog",
+      "openai_api",
+      "vertex_ai"
+    ]
+  }
+}

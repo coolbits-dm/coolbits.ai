@@ -1,0 +1,187 @@
+.cb-connectors-page {
+  min-height: 100vh;
+}
+
+.cb-connectors-main {
+  flex: 1;
+  padding: 32px 36px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.cb-connectors-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.cb-connectors-header h1 {
+  margin: 8px 0 6px;
+  font-size: 2rem;
+  color: #f8fafc;
+}
+
+.cb-connectors-header p {
+  margin: 0;
+  color: #cbd5e1;
+  max-width: 520px;
+}
+
+.cb-connectors-kicker {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.cb-connectors-workspaces {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cb-connectors-workspace-btn {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: #e2e8f0;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.cb-connectors-workspace-btn.is-active {
+  border-color: rgba(59, 130, 246, 0.6);
+  background: rgba(59, 130, 246, 0.18);
+  color: #fff;
+}
+
+.cb-connectors-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.cb-connector-tile {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 16px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 150px;
+}
+
+.cb-connector-tile-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cb-connector-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.2);
+  color: #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cb-connector-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.cb-connector-title h3 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 1.05rem;
+}
+
+.cb-connector-title span {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.cb-connector-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.16);
+  color: #cbd5e1;
+}
+
+.cb-connector-badge.is-available {
+  background: rgba(52, 211, 153, 0.18);
+  color: #34d399;
+}
+
+.cb-connector-badge.is-coming_soon {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+.cb-connector-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.cb-connector-action {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.cb-connector-action:hover {
+  border-color: rgba(59, 130, 246, 0.6);
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.cb-connector-action.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.cb-connectors-empty {
+  color: #f87171;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px dashed rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+@media (max-width: 900px) {
+  .cb-connectors-main {
+    padding: 24px 20px 32px;
+  }
+  .cb-connectors-grid {
+    grid-template-columns: 1fr;
+  }
+}

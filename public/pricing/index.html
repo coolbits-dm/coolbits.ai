@@ -72,6 +72,19 @@
             </a>
           </div>
           <div class="cb-sidebar-section">
+            <a class="cb-sidebar-item cb-sidebar-item--icon-only" href="/connectors" aria-label="Connectors" title="Connectors">
+              <span class="cb-sidebar-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M7 12h10M7 6h4M13 18h4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"></path>
+                  <circle cx="17" cy="6" r="2" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+                  <circle cx="7" cy="12" r="2" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+                  <circle cx="17" cy="18" r="2" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
+                </svg>
+              </span>
+              <span class="cb-sidebar-label">Connectors</span>
+            </a>
+          </div>
+          <div class="cb-sidebar-section">
             <a class="cb-sidebar-item" href="/maturity" aria-label="Maturity Index">
               <span class="cb-sidebar-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24">
@@ -122,105 +135,6 @@
               </span>
             </button>
             <div class="cb-sidebar-menu" id="cb-workspace-menu" role="listbox" aria-label="Select workspace" hidden></div>
-          </div>
-          <div class="cb-sidebar-section" data-sidebar-connectors>
-            <div class="cb-sidebar-section-header">Connectors</div>
-            <button
-              type="button"
-              class="cb-sidebar-item cb-connectors-toggle"
-              id="cb-connectors-toggle"
-              aria-haspopup="listbox"
-              aria-expanded="false"
-              aria-controls="cb-connectors-menu"
-              aria-label="Manage connectors"
-              data-open="false"
-            >
-              <span class="cb-sidebar-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M7 12h10M7 6h4M13 18h4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"></path>
-                  <circle cx="17" cy="6" r="2" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
-                  <circle cx="7" cy="12" r="2" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
-                  <circle cx="17" cy="18" r="2" stroke="currentColor" stroke-width="1.5" fill="none"></circle>
-                </svg>
-              </span>
-              <span class="cb-sidebar-label">Manage Connectors</span>
-              <span class="cb-sidebar-chevron" aria-hidden="true">
-                <svg width="14" height="14" viewBox="0 0 24 24">
-                  <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
-                </svg>
-              </span>
-            </button>
-            <div class="cb-sidebar-menu cb-connectors-menu" id="cb-connectors-menu" role="listbox" aria-label="Manage connectors" hidden>
-              <button type="button" class="cb-sidebar-menu-button" role="option" data-sidebar-feature="connectors">
-                Connector settings
-              </button>
-              <button type="button" class="cb-sidebar-menu-button" role="option" data-sidebar-view="ga4">
-                <span>GA4</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button" role="option" data-sidebar-view="googleads">
-                <span>Google Ads</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
-                <span>Meta Ads</span>
-                <span class="cb-menu-soon">Soon</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
-                <span>TikTok Ads</span>
-                <span class="cb-menu-soon">Soon</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
-                <span>LinkedIn Ads</span>
-                <span class="cb-menu-soon">Soon</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
-                <span>Google Search Console</span>
-                <span class="cb-menu-soon">Soon</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
-                <span>Google Merchant Center</span>
-                <span class="cb-menu-soon">Soon</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
-                <span>Shopify</span>
-                <span class="cb-menu-soon">Soon</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
-                <span>Stripe</span>
-                <span class="cb-menu-soon">Soon</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
-                <span>HubSpot</span>
-                <span class="cb-menu-soon">Soon</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
-                <span>Klaviyo</span>
-                <span class="cb-menu-soon">Soon</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
-                <span>Mailchimp</span>
-                <span class="cb-menu-soon">Soon</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
-                <span>Google Docs</span>
-                <span class="cb-menu-soon">Soon</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
-                <span>Gmail</span>
-                <span class="cb-menu-soon">Soon</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
-                <span>Google Calendar</span>
-                <span class="cb-menu-soon">Soon</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
-                <span>Notion</span>
-                <span class="cb-menu-soon">Soon</span>
-              </button>
-              <button type="button" class="cb-sidebar-menu-button cb-sidebar-item--locked" role="option" disabled aria-disabled="true">
-                <span>Todoist</span>
-                <span class="cb-menu-soon">Soon</span>
-              </button>
-            </div>
           </div>
           <div class="cb-sidebar-section">
             <div class="cb-sidebar-section-header">Bits Orchestrator</div>
