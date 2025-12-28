@@ -1,13 +1,4 @@
 import {
-  listWorkspacesByOwner,
-  listSystemWorkspaces,
-  insertWorkspace,
-  getWorkspaceById,
-  countCustomWorkspaces,
-  updateWorkspaceName,
-  deleteWorkspace,
-} from '../repositories/workspacesRepo.js';
-import {
   getSystemWorkspaceDefinitions,
   getCustomWorkspaceCap,
   isReservedWorkspaceSlug,
@@ -15,6 +6,16 @@ import {
   buildCustomWorkspaceId,
   orderSystemWorkspaces,
 } from '../config/workspaceConfig.js';
+import { getCapabilities } from '../config/plans.js';
+
+let workspaceRepoPromise = null;
+
+async function getWorkspaceRepo() {
+  if (!workspaceRepoPromise) {
+    workspaceRepoPromise = import('../repositories/workspacesRepo.js');
+  }
+  return workspaceRepoPromise;
+}
 
 function buildWorkspaceError(code, message, status = 400) {
   const err = new Error(message || code);
@@ -47,6 +48,39 @@ function ensureName(value) {
   return trimmed.slice(0, 120);
 }
 
+function normalizeWorkspaceKey(value) {
+  if (!value) return null;
+  const lower = String(value).trim().toLowerCase();
+  if (lower === 'dev') return 'developer';
+  return lower;
+}
+
+function getAllowedSystemKinds({ planId, capabilities } = {}) {
+  const allowedFromUser = Array.isArray(capabilities?.workspacesAllowed)
+    ? capabilities.workspacesAllowed
+    : null;
+  const allowed = allowedFromUser || getCapabilities(planId).workspacesAllowed || [];
+  const normalized = new Set(allowed.map((entry) => normalizeWorkspaceKey(entry)));
+  // Personal + Business are always accessible across plans.
+  normalized.add('personal');
+  normalized.add('business');
+  return normalized;
+}
+
+function isSystemKindAllowed({ planId, capabilities, systemKind, workspaceId }) {
+  const allowed = getAllowedSystemKinds({ planId, capabilities });
+  const key = normalizeWorkspaceKey(systemKind || workspaceId);
+  if (!key) return false;
+  return allowed.has(key);
+}
+
+function assertSystemKindAllowed({ workspace, planId, capabilities }) {
+  if (!workspace || workspace.workspaceType !== 'system') return;
+  if (!isSystemKindAllowed({ planId, capabilities, systemKind: workspace.systemKind, workspaceId: workspace.id })) {
+    throw buildWorkspaceError('forbidden_workspace_kind', 'Workspace is not allowed for your plan.', 403);
+  }
+}
+
 async function ensureSlugAvailable(ownerId, baseSlug) {
   let slug = baseSlug;
   if (!slug) {
@@ -70,6 +104,7 @@ async function ensureSlugAvailable(ownerId, baseSlug) {
 export async function ensureSystemWorkspaces({ ownerId, createdBy = null } = {}) {
   const normalizedOwner = normalizeOwnerId(ownerId);
   const definitions = getSystemWorkspaceDefinitions();
+  const { listSystemWorkspaces, insertWorkspace } = await getWorkspaceRepo();
   const existing = await listSystemWorkspaces(normalizedOwner);
   const existingKinds = new Set(existing.map((row) => row.systemKind));
   const created = [];
@@ -92,13 +127,19 @@ export async function ensureSystemWorkspaces({ ownerId, createdBy = null } = {})
   return { created, existing };
 }
 
-export async function assertWorkspaceAccess({ ownerId, workspaceId }) {
+export async function assertWorkspaceAccess({ ownerId, workspaceId, planId, capabilities }) {
   const normalizedOwner = normalizeOwnerId(ownerId);
   const trimmedWorkspace = String(workspaceId || '').trim().toLowerCase();
   if (!trimmedWorkspace) {
     throw buildWorkspaceError('workspace_required', 'workspaceId is required.', 400);
   }
   await ensureSystemWorkspaces({ ownerId: normalizedOwner, createdBy: normalizedOwner });
+  if (trimmedWorkspace === 'dev' || trimmedWorkspace === 'developer') {
+    if (!isSystemKindAllowed({ planId, capabilities, systemKind: 'dev', workspaceId: 'developer' })) {
+      throw buildWorkspaceError('forbidden_workspace_kind', 'Workspace is not allowed for your plan.', 403);
+    }
+  }
+  const { getWorkspaceById, listSystemWorkspaces } = await getWorkspaceRepo();
   let workspace = await getWorkspaceById(normalizedOwner, trimmedWorkspace);
   if (!workspace && (trimmedWorkspace === 'dev' || trimmedWorkspace === 'developer')) {
     const systems = await listSystemWorkspaces(normalizedOwner);
@@ -107,12 +148,14 @@ export async function assertWorkspaceAccess({ ownerId, workspaceId }) {
   if (!workspace) {
     throw buildWorkspaceError('workspace_mismatch', 'Workspace does not belong to this user.', 403);
   }
+  assertSystemKindAllowed({ workspace, planId, capabilities });
   return workspace;
 }
 
 export async function listWorkspaces({ ownerId }) {
   const normalizedOwner = normalizeOwnerId(ownerId);
   await ensureSystemWorkspaces({ ownerId: normalizedOwner, createdBy: normalizedOwner });
+  const { listWorkspacesByOwner } = await getWorkspaceRepo();
   const rows = await listWorkspacesByOwner(normalizedOwner);
   const system = rows.filter((row) => row.workspaceType === 'system');
   const custom = rows.filter((row) => row.workspaceType !== 'system');
@@ -129,6 +172,7 @@ export async function createCustomWorkspace({ ownerId, createdBy, name }) {
   const normalizedOwner = normalizeOwnerId(ownerId);
   const safeName = ensureName(name);
   const cap = getCustomWorkspaceCap(createdBy?.planId || createdBy?.plan_id || 'starter');
+  const { countCustomWorkspaces, insertWorkspace } = await getWorkspaceRepo();
   const current = await countCustomWorkspaces(normalizedOwner);
   if (current >= cap) {
     throw buildWorkspaceError('workspace_limit_reached', 'Workspace limit reached for your plan.', 403);
@@ -159,6 +203,7 @@ export async function createCustomWorkspace({ ownerId, createdBy, name }) {
 export async function renameWorkspace({ ownerId, id, name }) {
   const normalizedOwner = normalizeOwnerId(ownerId);
   const safeName = ensureName(name);
+  const { getWorkspaceById, updateWorkspaceName } = await getWorkspaceRepo();
   const workspace = await getWorkspaceById(normalizedOwner, id);
   if (!workspace) {
     throw buildWorkspaceError('workspace_not_found', 'Workspace not found.', 404);
@@ -172,6 +217,7 @@ export async function renameWorkspace({ ownerId, id, name }) {
 
 export async function deleteWorkspaceById({ ownerId, id }) {
   const normalizedOwner = normalizeOwnerId(ownerId);
+  const { getWorkspaceById, deleteWorkspace } = await getWorkspaceRepo();
   const workspace = await getWorkspaceById(normalizedOwner, id);
   if (!workspace) {
     throw buildWorkspaceError('workspace_not_found', 'Workspace not found.', 404);
@@ -193,4 +239,10 @@ export default {
   createCustomWorkspace,
   renameWorkspace,
   deleteWorkspaceById,
+};
+
+export const __test = {
+  isSystemKindAllowed,
+  getAllowedSystemKinds,
+  normalizeWorkspaceKey,
 };

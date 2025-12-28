@@ -26,9 +26,15 @@ router.post('/preview', requireUser, async (req, res) => {
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
     const requestedWorkspaceId = getWorkspaceId(req);
+    const planId = user.planId || user.plan_id || null;
+    const capabilities = Array.isArray(user.workspacesAllowed)
+      ? { workspacesAllowed: user.workspacesAllowed }
+      : null;
     const workspace = await assertWorkspaceAccess({
       ownerId: user.id || user.email,
       workspaceId: requestedWorkspaceId,
+      planId,
+      capabilities,
     });
     const workspaceId = workspace.id;
     const objective = typeof req.body?.objective === 'string' ? req.body.objective.trim() : '';
@@ -74,9 +80,15 @@ router.post('/commit', requireUser, async (req, res) => {
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
     const requestedWorkspaceId = getWorkspaceId(req);
+    const planId = user.planId || user.plan_id || null;
+    const capabilities = Array.isArray(user.workspacesAllowed)
+      ? { workspacesAllowed: user.workspacesAllowed }
+      : null;
     const workspace = await assertWorkspaceAccess({
       ownerId: user.id || user.email,
       workspaceId: requestedWorkspaceId,
+      planId,
+      capabilities,
     });
     const workspaceId = workspace.id;
     const previewId = typeof req.body?.previewId === 'string' ? req.body.previewId.trim() : '';

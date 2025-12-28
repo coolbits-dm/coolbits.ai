@@ -39,9 +39,15 @@ router.post('/', requireUser, async (req, res) => {
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
     const requestedWorkspaceId = getWorkspaceId(req);
+    const planId = user.planId || user.plan_id || null;
+    const capabilities = Array.isArray(user.workspacesAllowed)
+      ? { workspacesAllowed: user.workspacesAllowed }
+      : null;
     const workspace = await assertWorkspaceAccess({
       ownerId: user.id || user.email,
       workspaceId: requestedWorkspaceId,
+      planId,
+      capabilities,
     });
     const workspaceId = workspace.id;
     const { name, kind, cbpl } = req.body || {};
@@ -70,9 +76,15 @@ router.get('/', requireUser, async (req, res) => {
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
     const requestedWorkspaceId = getWorkspaceId(req);
+    const planId = user.planId || user.plan_id || null;
+    const capabilities = Array.isArray(user.workspacesAllowed)
+      ? { workspacesAllowed: user.workspacesAllowed }
+      : null;
     const workspace = await assertWorkspaceAccess({
       ownerId: user.id || user.email,
       workspaceId: requestedWorkspaceId,
+      planId,
+      capabilities,
     });
     const workspaceId = workspace.id;
     const kind = typeof req.query.kind === 'string' && req.query.kind.trim() ? req.query.kind.trim() : null;
@@ -98,9 +110,15 @@ router.get('/:id', requireUser, async (req, res) => {
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
     const requestedWorkspaceId = getWorkspaceId(req);
+    const planId = user.planId || user.plan_id || null;
+    const capabilities = Array.isArray(user.workspacesAllowed)
+      ? { workspacesAllowed: user.workspacesAllowed }
+      : null;
     const workspace = await assertWorkspaceAccess({
       ownerId: user.id || user.email,
       workspaceId: requestedWorkspaceId,
+      planId,
+      capabilities,
     });
     const workspaceId = workspace.id;
     const id = req.params.id;
@@ -120,9 +138,15 @@ router.delete('/:id', requireUser, async (req, res) => {
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
     const requestedWorkspaceId = getWorkspaceId(req);
+    const planId = user.planId || user.plan_id || null;
+    const capabilities = Array.isArray(user.workspacesAllowed)
+      ? { workspacesAllowed: user.workspacesAllowed }
+      : null;
     const workspace = await assertWorkspaceAccess({
       ownerId: user.id || user.email,
       workspaceId: requestedWorkspaceId,
+      planId,
+      capabilities,
     });
     const workspaceId = workspace.id;
     const id = req.params.id;
@@ -142,9 +166,15 @@ router.patch('/:id', requireUser, async (req, res) => {
     if (!user) return res.status(401).json({ error: 'UNAUTHORIZED' });
 
     const requestedWorkspaceId = getWorkspaceId(req);
+    const planId = user.planId || user.plan_id || null;
+    const capabilities = Array.isArray(user.workspacesAllowed)
+      ? { workspacesAllowed: user.workspacesAllowed }
+      : null;
     const workspace = await assertWorkspaceAccess({
       ownerId: user.id || user.email,
       workspaceId: requestedWorkspaceId,
+      planId,
+      capabilities,
     });
     const workspaceId = workspace.id;
     const id = req.params.id;

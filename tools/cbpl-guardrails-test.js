@@ -25,6 +25,9 @@ const run = async () => {
     consumeRunPreview,
     __test: previewTest,
   } = await import('../app/server/services/runPreviewService.js');
+  const {
+    __test: workspaceTest,
+  } = await import('../app/server/services/workspaceService.js');
 
   const baseCbpl = {
     schemaVersion: 'cbpl.v1',
@@ -161,6 +164,16 @@ const run = async () => {
       () => createRunPreview({ userId: 'user-3', workspaceId: 'ws-3', payloadIds: ids, payloadHashes: [] }),
       'payload_ids_too_many',
     );
+  });
+
+  test('Starter plan blocks dev/agency workspaces', () => {
+    assert.equal(workspaceTest.isSystemKindAllowed({ planId: 'starter', systemKind: 'dev' }), false);
+    assert.equal(workspaceTest.isSystemKindAllowed({ planId: 'starter', systemKind: 'agency' }), false);
+  });
+
+  test('Allowed plans can access dev/agency workspaces', () => {
+    assert.equal(workspaceTest.isSystemKindAllowed({ planId: 'dev', systemKind: 'dev' }), true);
+    assert.equal(workspaceTest.isSystemKindAllowed({ planId: 'agency', systemKind: 'agency' }), true);
   });
 
   for (const t of tests) {
