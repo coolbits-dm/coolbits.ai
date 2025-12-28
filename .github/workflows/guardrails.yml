@@ -1,0 +1,41 @@
+name: guardrails
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+      - master
+      - cleanup/prune-non-cbpl
+
+concurrency:
+  group: guardrails-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guardrails:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      
+      - name: Connectors registry guardrails
+        run: |
+          if [ -f app/shared/connectorsRegistry.v1.json ]; then
+            node tools/connectors-registry-test.js
+          else
+            echo "::warning::connectorsRegistry.v1.json missing on this ref; skipping registry guardrail."
+          fi
+
+      - name: CBPL guardrails
+        run: |
+          if [ -f app/server/services/payloadService.js ]; then
+            node tools/cbpl-guardrails-test.js
+          else
+            echo "::warning::payloadService.js missing on this ref; skipping CBPL guardrail."
+          fi
