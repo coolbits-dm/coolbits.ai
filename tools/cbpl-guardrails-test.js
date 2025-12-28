@@ -1,5 +1,12 @@
-import 'dotenv/config';
 import assert from 'node:assert/strict';
+
+// Optional dotenv load for local runs; CI stays dependency-free.
+try {
+  const dotenv = await import('dotenv');
+  dotenv.config?.();
+} catch {
+  // no-op: dotenv not installed (expected in Node-only CI)
+}
 
 const ensureDbEnv = () => {
   if (!process.env.COOLBITS_DATABASE_URL) {
