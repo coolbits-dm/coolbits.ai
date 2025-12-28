@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coolbits.ai/schemas/cbpl.schema.v1.json",
+  "title": "CoolBits Payload (CBPL) v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "selection", "intent"],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "cbpl.v1" },
+    "kind": {
+      "type": "string",
+      "enum": ["selection", "snapshot_ref", "dryrun", "commit_intent"]
+    },
+    "intent": { "$ref": "#/$defs/intent" },
+    "selection": { "$ref": "#/$defs/selectionState" },
+    "artifactRefs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/artifactRef" }
+    },
+    "policyHints": { "type": "object" },
+    "summary": { "$ref": "#/$defs/summary" },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "hashAlgo": { "type": "string", "enum": ["sha256"] },
+    "hashHex": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "hash": { "type": "string", "minLength": 8 },
+    "workspaceId": { "type": "string" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "createdBy": { "type": "string" }
+  },
+  "$defs": {
+    "dateYmd": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "compareMode": {
+      "type": "string",
+      "enum": ["none", "previous_period", "previous_year", "custom"]
+    },
+    "intent": {
+      "type": "string",
+      "enum": ["read_only", "write_intent"]
+    },
+    "selectionScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ga4PropertyId": { "type": "string" },
+        "googleAdsCustomerId": { "type": "string" },
+        "googleAdsLoginCustomerId": { "type": "string" }
+      }
+    },
+    "ga4Selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "blocks", "compareMode"],
+      "properties": {
+        "propertyId": { "type": ["string", "null"] },
+        "from": { "$ref": "#/$defs/dateYmd" },
+        "to": { "$ref": "#/$defs/dateYmd" },
+        "blocks": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "compareMode": { "$ref": "#/$defs/compareMode" },
+        "compareFrom": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "compareTo": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
+      }
+    },
+    "googleAdsSelection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "blocks", "compareMode"],
+      "properties": {
+        "customerId": { "type": ["string", "null"] },
+        "loginCustomerId": { "type": ["string", "null"] },
+        "from": { "$ref": "#/$defs/dateYmd" },
+        "to": { "$ref": "#/$defs/dateYmd" },
+        "blocks": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "compareMode": { "$ref": "#/$defs/compareMode" },
+        "compareFrom": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "compareTo": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" }
+      }
+    },
+    "selectionState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workspaceId"],
+      "properties": {
+        "workspaceId": { "type": "string" },
+        "connector": { "type": "string", "enum": ["ga4", "googleads", "mixed"] },
+        "scope": { "$ref": "#/$defs/selectionScope" },
+        "ga4": { "$ref": "#/$defs/ga4Selection" },
+        "googleads": { "$ref": "#/$defs/googleAdsSelection" }
+      }
+    },
+    "promptRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "messageId"],
+      "properties": {
+        "type": { "const": "prompt_ref" },
+        "messageId": { "type": "string" },
+        "promptSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "excerpt": { "type": "string" }
+      }
+    },
+    "fileRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "artifactId"],
+      "properties": {
+        "type": { "const": "file_ref" },
+        "artifactId": { "type": "string" },
+        "name": { "type": "string" }
+      }
+    },
+    "imageRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "artifactId"],
+      "properties": {
+        "type": { "const": "image_ref" },
+        "artifactId": { "type": "string" },
+        "name": { "type": "string" }
+      }
+    },
+    "artifactRef": {
+      "oneOf": [
+        { "$ref": "#/$defs/promptRef" },
+        { "$ref": "#/$defs/fileRef" },
+        { "$ref": "#/$defs/imageRef" }
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "blocksCount": { "type": "integer", "minimum": 0 },
+        "metricsCount": { "type": "integer", "minimum": 0 },
+        "totalBytes": { "type": "integer", "minimum": 0 },
+        "hasWriteIntent": { "type": "boolean" }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
