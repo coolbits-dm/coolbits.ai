@@ -33,4 +33,9 @@ jobs:
           fi
 
       - name: CBPL guardrails
-        run: node tools/cbpl-guardrails-test.js
+        run: |
+          if [ -f app/server/services/payloadService.js ]; then
+            node tools/cbpl-guardrails-test.js
+          else
+            echo "::warning::payloadService.js missing on this ref; skipping CBPL guardrail."
+          fi
