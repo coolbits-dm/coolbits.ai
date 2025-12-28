@@ -23,13 +23,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
-
-      - name: Install
-        run: npm ci
-
+      
       - name: Connectors registry guardrails
-        run: npm run test:registry
+        run: node tools/connectors-registry-test.js
 
       - name: CBPL guardrails
         run: node tools/cbpl-guardrails-test.js
