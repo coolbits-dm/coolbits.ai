@@ -11,6 +11,8 @@ import accountRouter from './account-router.js';
 import projectRouter from './project-router.js';
 import pricingRouter from './pricing-router.js';
 import chatsRouter from './chats-router.js';
+import payloadsRouter from './payloads-router.js';
+import runsRouter from './runs-router.js';
 import userRouter from './user-router.js';
 import agentsRouter from './agents-router.js';
 import analyticsRouter from './analytics-router.js';
@@ -47,6 +49,8 @@ function detectLanguage(req) {
 
 router.use('/chat', chatRouter);
 router.use('/chats', chatsRouter);
+router.use('/payloads', payloadsRouter);
+router.use('/runs', runsRouter);
 router.use('/profile', profileRouter);
 router.use('/reasoning', reasoningRouter);
 router.use('/ultimate', vertexRouter);
