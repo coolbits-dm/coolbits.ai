@@ -1,3 +1,5 @@
+import { loadCanon } from '../../shared/canon/loadCanon.js';
+
 /**
  * Normalize council payload coming from the frontend.
  * Always returns { agents: string[], armed: boolean } where armed is derived from agents.length.
@@ -78,16 +80,11 @@ export function buildCouncilIntrospectionAnswer(council) {
     return "I don't know which agents are selected or if they are armed.";
   }
 
-  const labelMap = {
-    ceo: 'CEO',
-    cto: 'CTO',
-    cfo: 'CFO',
-    cmo: 'CMO',
-    coo: 'COO',
-  };
+  const { canon } = loadCanon();
+  const labelMap = new Map((canon.roles || []).map((role) => [role.id, role.label]));
 
   const readableAgents = agents
-    .map((key) => labelMap[key] || key.toUpperCase())
+    .map((key) => labelMap.get(key) || key.toUpperCase())
     .join(', ');
 
   if (!armed) {

@@ -1,0 +1,504 @@
+{
+  "version": "1.0.0",
+  "workspaces": {
+    "P": {
+      "id": "P",
+      "label": "Personal",
+      "roles": ["p_planner", "p_research", "p_writer", "p_ops", "p_tutor"]
+    },
+    "B": {
+      "id": "B",
+      "label": "Business",
+      "roles": ["ceo", "cmo", "cfo", "coo", "cto"]
+    },
+    "A": {
+      "id": "A",
+      "label": "Agency",
+      "roles": ["a_ppc", "a_seo", "a_content", "a_social", "a_analytics"]
+    },
+    "D": {
+      "id": "D",
+      "label": "Development",
+      "roles": ["d_architect", "d_backend", "d_frontend", "d_devops", "d_qa"]
+    }
+  },
+  "groups": {
+    "council": ["ceo", "cmo", "cfo", "coo", "cto"]
+  },
+  "roles": [
+    {
+      "id": "p_planner",
+      "workspaceId": "P",
+      "label": "Planner",
+      "subtitle": "Goals",
+      "description": "Plans priorities, tasks, and timelines.",
+      "connectors": [],
+      "capabilities": ["planning", "prioritization", "scheduling"]
+    },
+    {
+      "id": "p_research",
+      "workspaceId": "P",
+      "label": "Research",
+      "subtitle": "Sources",
+      "description": "Finds sources and summarizes findings.",
+      "connectors": [],
+      "capabilities": ["research", "summarization"]
+    },
+    {
+      "id": "p_writer",
+      "workspaceId": "P",
+      "label": "Writer",
+      "subtitle": "Drafts",
+      "description": "Drafts and edits messages, briefs, and content.",
+      "connectors": [],
+      "capabilities": ["writing", "editing"]
+    },
+    {
+      "id": "p_ops",
+      "workspaceId": "P",
+      "label": "Ops",
+      "subtitle": "Tasks",
+      "description": "Organizes checklists, reminders, and routine tasks.",
+      "connectors": [],
+      "capabilities": ["task_management", "coordination"]
+    },
+    {
+      "id": "p_tutor",
+      "workspaceId": "P",
+      "label": "Tutor",
+      "subtitle": "Learning",
+      "description": "Explains concepts and creates learning plans.",
+      "connectors": [],
+      "capabilities": ["teaching", "explanations"]
+    },
+    {
+      "id": "ceo",
+      "workspaceId": "B",
+      "label": "CEO",
+      "subtitle": "Strategy",
+      "description": "Sets priorities, positioning, and trade-offs.",
+      "connectors": ["googleads", "ga4"],
+      "capabilities": ["strategy", "priorities", "tradeoffs"]
+    },
+    {
+      "id": "cmo",
+      "workspaceId": "B",
+      "label": "CMO",
+      "subtitle": "Growth",
+      "description": "Plans acquisition, channel mix, and messaging.",
+      "connectors": ["googleads", "ga4", "meta_ads", "tiktok_ads", "linkedin_ads"],
+      "capabilities": ["growth", "acquisition", "messaging"]
+    },
+    {
+      "id": "cfo",
+      "workspaceId": "B",
+      "label": "CFO",
+      "subtitle": "Finance",
+      "description": "Manages budgets, forecasts, and ROI guardrails.",
+      "connectors": ["stripe", "googleads"],
+      "capabilities": ["finance", "budgeting", "roi"]
+    },
+    {
+      "id": "coo",
+      "workspaceId": "B",
+      "label": "COO",
+      "subtitle": "Operations",
+      "description": "Aligns execution, process, and delivery.",
+      "connectors": ["ga4", "google_ads_mcc"],
+      "capabilities": ["operations", "processes", "delivery"]
+    },
+    {
+      "id": "cto",
+      "workspaceId": "B",
+      "label": "CTO",
+      "subtitle": "Technology",
+      "description": "Defines architecture and technical risk posture.",
+      "connectors": ["git", "google_cloud", "error_event_stream"],
+      "capabilities": ["architecture", "risk", "systems"]
+    },
+    {
+      "id": "a_ppc",
+      "workspaceId": "A",
+      "label": "PPC",
+      "subtitle": "Paid Media",
+      "description": "Plans and optimizes paid media campaigns.",
+      "connectors": ["googleads", "google_ads_mcc", "meta_ads", "tiktok_ads", "linkedin_ads"],
+      "capabilities": ["paid_media", "budgeting", "optimization"]
+    },
+    {
+      "id": "a_seo",
+      "workspaceId": "A",
+      "label": "SEO",
+      "subtitle": "Search",
+      "description": "Plans search strategy and on-site improvements.",
+      "connectors": ["ga4", "tracking_debugger"],
+      "capabilities": ["seo", "content_strategy", "technical_audit"]
+    },
+    {
+      "id": "a_content",
+      "workspaceId": "A",
+      "label": "Content",
+      "subtitle": "Editorial",
+      "description": "Creates content plans and briefs.",
+      "connectors": ["ga4"],
+      "capabilities": ["content_planning", "briefing"]
+    },
+    {
+      "id": "a_social",
+      "workspaceId": "A",
+      "label": "Social",
+      "subtitle": "Channels",
+      "description": "Plans social content and channel activity.",
+      "connectors": ["meta_ads", "tiktok_ads", "linkedin_ads"],
+      "capabilities": ["social", "community"]
+    },
+    {
+      "id": "a_analytics",
+      "workspaceId": "A",
+      "label": "Analytics",
+      "subtitle": "Attribution",
+      "description": "Builds reporting and attribution views.",
+      "connectors": ["ga4", "googleads", "google_ads_mcc"],
+      "capabilities": ["analytics", "reporting", "attribution"]
+    },
+    {
+      "id": "d_architect",
+      "workspaceId": "D",
+      "label": "Architect",
+      "subtitle": "Systems",
+      "description": "Designs system boundaries and interfaces.",
+      "connectors": ["git", "google_cloud"],
+      "capabilities": ["architecture", "systems", "interfaces"]
+    },
+    {
+      "id": "d_backend",
+      "workspaceId": "D",
+      "label": "Backend",
+      "subtitle": "Services",
+      "description": "Builds APIs and data services.",
+      "connectors": ["git", "google_cloud"],
+      "capabilities": ["backend", "api", "data"]
+    },
+    {
+      "id": "d_frontend",
+      "workspaceId": "D",
+      "label": "Frontend",
+      "subtitle": "UI",
+      "description": "Builds UI and client-side logic.",
+      "connectors": ["git"],
+      "capabilities": ["frontend", "ui", "state"]
+    },
+    {
+      "id": "d_devops",
+      "workspaceId": "D",
+      "label": "DevOps",
+      "subtitle": "Reliability",
+      "description": "Manages delivery pipelines and reliability.",
+      "connectors": ["google_cloud", "error_event_stream", "stripe"],
+      "capabilities": ["devops", "reliability", "deployment"]
+    },
+    {
+      "id": "d_qa",
+      "workspaceId": "D",
+      "label": "QA",
+      "subtitle": "Quality",
+      "description": "Plans tests and release checks.",
+      "connectors": ["ga4"],
+      "capabilities": ["testing", "release"]
+    }
+  ],
+  "routingPolicy": {
+    "p_planner": {
+      "primaryModelId": "vertex-gemini-2.5-flash-lite",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "fast",
+      "providerOverride": false
+    },
+    "p_research": {
+      "primaryModelId": "vertex-gemini-2.5-flash-lite",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "fast",
+      "providerOverride": false
+    },
+    "p_writer": {
+      "primaryModelId": "vertex-gemini-2.5-flash-lite",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "fast",
+      "providerOverride": false
+    },
+    "p_ops": {
+      "primaryModelId": "vertex-gemini-2.5-flash-lite",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "fast",
+      "providerOverride": false
+    },
+    "p_tutor": {
+      "primaryModelId": "vertex-gemini-2.5-flash-lite",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "fast",
+      "providerOverride": false
+    },
+    "ceo": {
+      "primaryModelId": "vertex-gemini-2.5-pro",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "deep",
+      "providerOverride": false,
+      "promptId": "cbAgent-B-001-ceo"
+    },
+    "cmo": {
+      "primaryModelId": "vertex-gemini-2.5-pro",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "deep",
+      "providerOverride": false
+    },
+    "cfo": {
+      "primaryModelId": "vertex-gemini-2.5-pro",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "deep",
+      "providerOverride": false
+    },
+    "coo": {
+      "primaryModelId": "vertex-gemini-2.5-pro",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "deep",
+      "providerOverride": false
+    },
+    "cto": {
+      "primaryModelId": "vertex-gemini-2.5-pro",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "deep",
+      "providerOverride": false,
+      "promptId": "cbAgent-B-002-cto"
+    },
+    "a_ppc": {
+      "primaryModelId": "vertex-gemini-2.5-flash-lite",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "fast",
+      "providerOverride": false,
+      "promptId": "cbAgent-A-001-ppc"
+    },
+    "a_seo": {
+      "primaryModelId": "vertex-gemini-2.5-flash-lite",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "fast",
+      "providerOverride": false
+    },
+    "a_content": {
+      "primaryModelId": "vertex-gemini-2.5-flash-lite",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "fast",
+      "providerOverride": false
+    },
+    "a_social": {
+      "primaryModelId": "vertex-gemini-2.5-flash-lite",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "fast",
+      "providerOverride": false
+    },
+    "a_analytics": {
+      "primaryModelId": "vertex-gemini-2.0-pro",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "balanced",
+      "providerOverride": false,
+      "promptId": "cbAgent-A-002-analytics"
+    },
+    "d_architect": {
+      "primaryModelId": "vertex-gemini-2.5-pro",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "deep",
+      "providerOverride": false
+    },
+    "d_backend": {
+      "primaryModelId": "vertex-gemini-2.5-pro",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "deep",
+      "providerOverride": false
+    },
+    "d_frontend": {
+      "primaryModelId": "vertex-gemini-2.5-flash-lite",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "fast",
+      "providerOverride": false
+    },
+    "d_devops": {
+      "primaryModelId": "vertex-gemini-2.5-pro",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "deep",
+      "providerOverride": false,
+      "promptId": "cbAgent-D-001-devops"
+    },
+    "d_qa": {
+      "primaryModelId": "vertex-gemini-2.5-flash-lite",
+      "fallbackModelIds": [],
+      "allowedProviders": ["vertex"],
+      "latencyTier": "fast",
+      "providerOverride": false
+    }
+  },
+  "industries": [
+    {
+      "id": "dental",
+      "label": "Dental",
+      "description": "Dental clinics and practices.",
+      "recommendedRoles": {
+        "P": ["p_planner", "p_writer"],
+        "B": ["ceo", "cmo"],
+        "A": ["a_ppc", "a_content"],
+        "D": ["d_backend", "d_devops"]
+      },
+      "connectorPriority": ["googleads", "ga4"]
+    },
+    {
+      "id": "ecommerce",
+      "label": "Ecommerce",
+      "description": "Online retail and direct-to-consumer brands.",
+      "recommendedRoles": {
+        "P": ["p_planner", "p_ops"],
+        "B": ["ceo", "cmo", "cfo"],
+        "A": ["a_ppc", "a_analytics"],
+        "D": ["d_backend", "d_devops"]
+      },
+      "connectorPriority": ["googleads", "ga4", "stripe"]
+    },
+    {
+      "id": "realestate",
+      "label": "Real Estate",
+      "description": "Real estate brokers and property platforms.",
+      "recommendedRoles": {
+        "P": ["p_planner", "p_writer"],
+        "B": ["ceo", "cmo"],
+        "A": ["a_ppc", "a_content"],
+        "D": ["d_frontend", "d_backend"]
+      },
+      "connectorPriority": ["googleads", "ga4"]
+    },
+    {
+      "id": "automotive",
+      "label": "Automotive",
+      "description": "Auto dealers and service networks.",
+      "recommendedRoles": {
+        "P": ["p_planner", "p_ops"],
+        "B": ["ceo", "cmo", "coo"],
+        "A": ["a_ppc", "a_social"],
+        "D": ["d_backend", "d_qa"]
+      },
+      "connectorPriority": ["googleads", "ga4"]
+    },
+    {
+      "id": "saas",
+      "label": "SaaS",
+      "description": "Software and subscription services.",
+      "recommendedRoles": {
+        "P": ["p_planner", "p_research"],
+        "B": ["ceo", "cmo", "cto"],
+        "A": ["a_content", "a_analytics"],
+        "D": ["d_architect", "d_backend"]
+      },
+      "connectorPriority": ["ga4", "googleads", "git"]
+    },
+    {
+      "id": "local_services",
+      "label": "Local Services",
+      "description": "Service-area businesses and local operators.",
+      "recommendedRoles": {
+        "P": ["p_planner", "p_ops"],
+        "B": ["ceo", "coo"],
+        "A": ["a_ppc", "a_social"],
+        "D": ["d_frontend", "d_qa"]
+      },
+      "connectorPriority": ["googleads", "ga4"]
+    },
+    {
+      "id": "medical",
+      "label": "Medical",
+      "description": "Clinics and healthcare providers.",
+      "recommendedRoles": {
+        "P": ["p_tutor", "p_writer"],
+        "B": ["ceo", "cfo"],
+        "A": ["a_content", "a_analytics"],
+        "D": ["d_backend", "d_devops"]
+      },
+      "connectorPriority": ["ga4", "googleads"]
+    },
+    {
+      "id": "hospitality",
+      "label": "Hospitality",
+      "description": "Hotels, travel, and guest services.",
+      "recommendedRoles": {
+        "P": ["p_planner", "p_writer"],
+        "B": ["ceo", "cmo"],
+        "A": ["a_social", "a_content"],
+        "D": ["d_frontend", "d_qa"]
+      },
+      "connectorPriority": ["googleads", "ga4"]
+    },
+    {
+      "id": "legal",
+      "label": "Legal",
+      "description": "Law firms and legal services.",
+      "recommendedRoles": {
+        "P": ["p_research", "p_writer"],
+        "B": ["ceo", "cfo"],
+        "A": ["a_content", "a_seo"],
+        "D": ["d_backend", "d_qa"]
+      },
+      "connectorPriority": ["googleads", "ga4"]
+    },
+    {
+      "id": "education",
+      "label": "Education",
+      "description": "Schools, courses, and training programs.",
+      "recommendedRoles": {
+        "P": ["p_tutor", "p_writer"],
+        "B": ["ceo", "cmo"],
+        "A": ["a_content", "a_social"],
+        "D": ["d_frontend", "d_backend"]
+      },
+      "connectorPriority": ["ga4", "googleads"]
+    },
+    {
+      "id": "finance",
+      "label": "Finance",
+      "description": "Financial services and advisory.",
+      "recommendedRoles": {
+        "P": ["p_planner", "p_research"],
+        "B": ["cfo", "ceo"],
+        "A": ["a_analytics", "a_content"],
+        "D": ["d_backend", "d_devops"]
+      },
+      "connectorPriority": ["ga4", "stripe"]
+    },
+    {
+      "id": "nonprofit",
+      "label": "Nonprofit",
+      "description": "Foundations and nonprofit programs.",
+      "recommendedRoles": {
+        "P": ["p_writer", "p_ops"],
+        "B": ["ceo", "coo"],
+        "A": ["a_social", "a_content"],
+        "D": ["d_frontend", "d_qa"]
+      },
+      "connectorPriority": ["googleads", "ga4"]
+    }
+  ],
+  "defaultIndustryId": "saas"
+}

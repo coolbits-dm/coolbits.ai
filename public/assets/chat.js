@@ -1,5 +1,5 @@
 import { marked } from "./vendor/marked.esm.js";
-console.log("[CB_CHAT_BUILD]", "ui-canon", new Date().toISOString());
+console.log("[CB_CHAT_BUILD]", "council-pill-v3");
 // [CB_BASELINE] cb136
 
 // --- CoolBits auth debug wrapper ---
@@ -51,7 +51,6 @@ const CONFIG = {
 const API_BASE = CONFIG.API_BASE_URL;
 const API_CHATS = `${API_BASE}/chats`;
 const API_CHAT = `${API_BASE}/chat`;
-const API_CHAT_STREAM = `${API_CHAT}/stream`;
 const API_AUTH_ME = `${API_BASE}/auth/me`;
 const API_SUGGESTIONS = `${API_BASE}/suggestions`;
 const API_PROFILE = `${API_BASE}/profile`;
@@ -63,12 +62,9 @@ const API_BILLING_DOWNGRADE = `${API_BASE}/billing/downgrade`;
 const API_BILLING_SUMMARY = `${API_BASE}/billing/summary`;
 const API_AGENTS_REGISTRY = `${API_BASE}/agents/registry`;
 const API_AGENTS_RUN = `${API_BASE}/agents/run`;
-const API_CONTEXT_ACTIVE = `${API_BASE}/context/active`;
-const API_CONTEXT_ACTIVATE = `${API_BASE}/context/activate`;
-const PUBLIC_AGENTS_REGISTRY_URL = "/api/public/agents-registry";
 const API_AUTH_GOOGLE_START = `${API_BASE}/auth/google/start`;
 const API_PROJECTS = `${API_BASE}/projects`;
-const CB_STREAMING_ENABLED = true;
+const API_CANON = `${API_BASE}/canon`;
 
 const CURRENCY_SYMBOLS = {
   EUR: "€",
@@ -134,7 +130,6 @@ const PLAN_DEFINITIONS = {
 const PLAN_CODES = Object.keys(PLAN_DEFINITIONS);
 
 const CONNECTOR_CATEGORIES = [
-  { id: "personal", label: "Personal connectors" },
   { id: "business", label: "Business connectors" },
   { id: "agency", label: "Agency connectors" },
   { id: "dev", label: "Developer connectors" },
@@ -142,53 +137,12 @@ const CONNECTOR_CATEGORIES = [
 
 const CONNECTORS_CONFIG = [
   {
-    key: "google_docs",
-    label: "Google Docs",
-    category: "personal",
-    status: "coming_soon",
-    description: "Capture docs, notes, and meeting summaries from Google Docs.",
-    icon: "docs",
-  },
-  {
-    key: "gmail",
-    label: "Gmail",
-    category: "personal",
-    status: "coming_soon",
-    description: "Sync inbox signals and follow-ups from Gmail.",
-    icon: "gmail",
-  },
-  {
-    key: "google_calendar",
-    label: "Google Calendar",
-    category: "personal",
-    status: "coming_soon",
-    description: "Track schedule focus blocks, meetings, and habit cadence.",
-    icon: "gcal",
-  },
-  {
-    key: "notion",
-    label: "Notion",
-    category: "personal",
-    status: "coming_soon",
-    description: "Pull personal knowledge base, tasks, and daily notes from Notion.",
-    icon: "notion",
-  },
-  {
-    key: "todoist",
-    label: "Todoist",
-    category: "personal",
-    status: "coming_soon",
-    description: "Measure task completion velocity and planning rhythm from Todoist.",
-    icon: "todoist",
-  },
-  {
     key: "googleads",
     label: "Google Ads",
     category: "business",
     status: "unknown",
     description: "Sync spend, conversions, and audiences from your core Google Ads accounts.",
     icon: "google_ads",
-    agentKeys: ["ceo", "cmo", "ppc_lead"],
     supportsAuth: true,
     apiBase: "/api/connectors/googleads",
   },
@@ -199,7 +153,6 @@ const CONNECTORS_CONFIG = [
     status: "unknown",
     description: "Pull conversion events and funnel metrics from GA4 properties.",
     icon: "ga4",
-    agentKeys: ["ceo", "cmo", "ppc_lead", "seo_lead"],
     supportsAuth: true,
     apiBase: "/api/connectors/ga4",
   },
@@ -210,7 +163,6 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Review paid social performance and audiences from Meta Ads.",
     icon: "meta",
-    agentKeys: ["cmo", "ppc_lead"],
   },
   {
     key: "tiktok_ads",
@@ -219,7 +171,6 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Centralize TikTok Ads reporting and budget pacing.",
     icon: "tiktok",
-    agentKeys: ["cmo", "ppc_lead"],
   },
   {
     key: "linkedin_ads",
@@ -228,7 +179,6 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Track B2B campaign reach and lead generation performance.",
     icon: "linkedin",
-    agentKeys: ["ceo", "cmo", "ppc_lead", "seo_lead"],
   },
   {
     key: "google_ads_mcc",
@@ -237,7 +187,6 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Manage multiple client ad accounts via MCC linking in one place.",
     icon: "mcc",
-    agentKeys: ["agency_lead", "ppc_lead"],
   },
   {
     key: "ga4_multi_property",
@@ -246,7 +195,6 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Aggregate analytics across several GA4 properties in a single view.",
     icon: "ga4",
-    agentKeys: ["agency_lead", "seo_lead"],
   },
   {
     key: "meta_business_agency",
@@ -255,7 +203,6 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Agency-grade access and governance across Meta Business portfolios.",
     icon: "meta",
-    agentKeys: ["agency_lead", "ppc_lead"],
   },
   {
     key: "tiktok_business_center",
@@ -264,7 +211,6 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Coordinate TikTok assets and permissions through Business Center.",
     icon: "tiktok",
-    agentKeys: ["agency_lead", "ppc_lead"],
   },
   {
     key: "linkedin_agency",
@@ -273,7 +219,6 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Operate client LinkedIn Ads from a unified agency workspace.",
     icon: "linkedin",
-    agentKeys: ["agency_lead", "ppc_lead", "seo_lead"],
   },
   {
     key: "git",
@@ -282,7 +227,6 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Connect repos to track deployments and pull request signals.",
     icon: "git",
-    agentKeys: ["cto", "dev_architect"],
   },
   {
     key: "google_cloud",
@@ -291,7 +235,6 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Inspect Cloud Run services and centralize log visibility.",
     icon: "gcp",
-    agentKeys: ["cto", "dev_architect"],
   },
   {
     key: "stripe",
@@ -300,7 +243,6 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Pull Stripe revenue, subscriptions, and invoice telemetry.",
     icon: "stripe",
-    agentKeys: ["ceo", "cfo", "dev_architect"],
   },
   {
     key: "tracking_debugger",
@@ -309,7 +251,6 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "QA pixels and events with a live debugger feed.",
     icon: "debug",
-    agentKeys: ["cmo", "seo_lead", "dev_architect"],
   },
   {
     key: "error_event_stream",
@@ -318,7 +259,6 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Stream errors and product events into CoolBits for triage.",
     icon: "errors",
-    agentKeys: ["cto", "dev_architect"],
   },
 ];
 
@@ -367,137 +307,62 @@ const cbPromptMeterState = {
   outcomeHint: "General reasoning",
 };
 
-const cbPublicAgentsRegistryState = {
-  loaded: false,
-  loading: false,
-  items: [],
-  byId: new Map(),
+const CANON_WORKSPACE_TO_UI = {
+  B: "business",
+  A: "agency",
+  D: "developer",
+  P: "personal",
+};
+
+const UI_WORKSPACE_TO_CANON = {
+  business: "B",
+  agency: "A",
+  developer: "D",
+  dev: "D",
+  personal: "P",
 };
 
 const cbNormalizeAgentWorkspace = (workspaceId) => {
   if (!workspaceId) return "business";
   const key = workspaceId.toString().toLowerCase();
   if (key === "dev" || key === "developer") return "developer";
+  if (key === "personal") return "personal";
   return key;
 };
 
-const cbSlugifyText = (value) =>
-  String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-const cbNormalizeAgentLabel = (label) => {
-  const raw = String(label || "");
-  const trimmed = raw.split(" – ")[0].split(" - ")[0];
-  return trimmed.trim();
-};
-
-const cbEncodeAgentNameSegment = (value) =>
-  encodeURIComponent(String(value || "").trim().replace(/\s+/g, "-"));
-
-const cbRegistryWorkspacePrefix = (workspaceId) => {
+const cbMapUiWorkspaceToCanon = (workspaceId) => {
   const normalized = cbNormalizeAgentWorkspace(workspaceId);
-  if (normalized === "business") return "-B-";
-  if (normalized === "agency") return "-A-";
-  if (normalized === "developer") return "-D-";
-  if (normalized === "personal") return "-P-";
-  return "";
+  return UI_WORKSPACE_TO_CANON[normalized] || null;
 };
 
-const cbEnsurePublicAgentsRegistry = async () => {
-  if (cbPublicAgentsRegistryState.loading || cbPublicAgentsRegistryState.loaded) {
-    return cbPublicAgentsRegistryState;
-  }
-  cbPublicAgentsRegistryState.loading = true;
-  try {
-    const res = await fetch(PUBLIC_AGENTS_REGISTRY_URL, { cache: "no-store" });
-    if (!res.ok) {
-      throw new Error("registry_unavailable");
-    }
-    const data = await res.json().catch(() => ({}));
-    const list = Array.isArray(data?.agents) ? data.agents : [];
-    cbPublicAgentsRegistryState.items = list;
-    cbPublicAgentsRegistryState.byId = new Map(list.map((agent) => [agent.id, agent]));
-    cbPublicAgentsRegistryState.loaded = true;
-  } catch (error) {
-    cbPublicAgentsRegistryState.loaded = false;
-    cbPublicAgentsRegistryState.items = [];
-    cbPublicAgentsRegistryState.byId = new Map();
-  } finally {
-    cbPublicAgentsRegistryState.loading = false;
-  }
-  return cbPublicAgentsRegistryState;
+const cbMapCanonWorkspaceToUi = (workspaceId) => {
+  const key = String(workspaceId || "").toUpperCase();
+  return CANON_WORKSPACE_TO_UI[key] || cbNormalizeAgentWorkspace(cbCurrentWorkspaceId);
 };
 
-const cbResolvePublicRegistryAgent = (agent) => {
-  if (!cbPublicAgentsRegistryState.loaded) {
-    return null;
-  }
-  if (agent?.cbAgentId && cbPublicAgentsRegistryState.byId.has(agent.cbAgentId)) {
-    return cbPublicAgentsRegistryState.byId.get(agent.cbAgentId) || null;
-  }
-  const label = cbNormalizeAgentLabel(agent?.label || agent?.key);
-  if (!label) return null;
-  const slugLabel = cbSlugifyText(label);
-  const prefix = cbRegistryWorkspacePrefix(agent?.workspace);
-  return (
-    cbPublicAgentsRegistryState.items.find((item) => {
-      if (!item || !item.id || !item.label) return false;
-      if (prefix && !item.id.includes(prefix)) return false;
-      return cbSlugifyText(item.label) === slugLabel;
-    }) || null
-  );
+const cbBuildWorkspacesFromCanon = (canon) => {
+  const workspaces = canon?.workspaces || {};
+  const order = ["P", "B", "A", "D"];
+  return order
+    .map((key) => workspaces[key])
+    .filter(Boolean)
+    .map((ws) => ({
+      id: cbMapCanonWorkspaceToUi(ws.id),
+      label: ws.label || ws.id,
+    }));
 };
 
-const cbBuildCouncilAgentProfile = (agent, registryAgent = null) => {
-  const registry = registryAgent || cbResolvePublicRegistryAgent(agent);
-  const workspaceSlug = cbNormalizeAgentWorkspace(agent?.workspace);
-  const label = cbNormalizeAgentLabel(registry?.label || agent?.label || agent?.key || "Agent");
-  const roleSlug = cbSlugifyText(registry?.label || label);
-  const agentId = registry?.id || agent?.cbAgentId || null;
+const cbBuildUiAgentFromCanon = (role) => {
+  const connectors = Array.isArray(role?.connectors) ? role.connectors.slice() : [];
+  const capabilities = Array.isArray(role?.capabilities) ? role.capabilities.slice() : [];
   return {
-    agentId,
-    workspaceSlug,
-    roleSlug,
-    defaultName: label,
-    summary: registry?.role || agent?.shortDescription || "",
+    key: role.id,
+    label: role.subtitle ? `${role.label} – ${role.subtitle}` : role.label,
+    shortDescription: role.description || "",
+    workspace: cbMapCanonWorkspaceToUi(role.workspaceId),
+    connectors,
+    capabilities,
   };
-};
-
-const CB_COUNCIL_PREVIEW_SAMPLES = {
-  business: [
-    "Review quarterly KPIs and flag risks.",
-    "Outline growth experiments for next month.",
-    "Summarize priorities for the next 30 days.",
-  ],
-  agency: [
-    "Audit paid media performance and next steps.",
-    "Draft a cross-channel optimization plan.",
-    "Identify GA4 tracking gaps and fixes.",
-  ],
-  developer: [
-    "Assess infra risks before a release.",
-    "Outline an API integration plan.",
-    "Summarize reliability guardrails.",
-  ],
-};
-
-const cbBuildCouncilHoverPreview = (agent, registryAgent = null) => {
-  const workspace = cbNormalizeAgentWorkspace(agent?.workspace);
-  const summary =
-    (registryAgent && registryAgent.role) || agent?.shortDescription || "";
-  const samples = CB_COUNCIL_PREVIEW_SAMPLES[workspace] || [];
-  if (!summary && !samples.length) return "";
-  const lines = [];
-  if (summary) lines.push(summary);
-  if (samples.length) {
-    lines.push("Samples:");
-    samples.slice(0, 3).forEach((sample) => {
-      lines.push(`- ${sample}`);
-    });
-  }
-  return lines.join("\n");
 };
 
 const cbGetWorkspaceLabel = (workspaceId) => {
@@ -510,27 +375,28 @@ const cbGetWorkspaceLabel = (workspaceId) => {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
+const cbGetCanonRoleById = (roleId) => cbCanonState.rolesById.get(roleId) || null;
+
 const cbFindAgentByKey = (agentKey, workspaceId = null) => {
   if (!agentKey) return null;
-  const normalizedWorkspace = workspaceId ? cbNormalizeAgentWorkspace(workspaceId) : null;
-  return (
-    AGENTS_CONFIG.find(
-      (agent) =>
-        agent &&
-        agent.key === agentKey &&
-        (!normalizedWorkspace || cbNormalizeAgentWorkspace(agent.workspace) === normalizedWorkspace)
-    ) ||
-    AGENTS_CONFIG.find((agent) => agent && agent.key === agentKey) ||
-    null
-  );
+  const role = cbGetCanonRoleById(agentKey);
+  if (!role) return null;
+  if (workspaceId) {
+    const workspaceKey = cbMapUiWorkspaceToCanon(workspaceId);
+    if (workspaceKey && role.workspaceId !== workspaceKey) {
+      return null;
+    }
+  }
+  return cbBuildUiAgentFromCanon(role);
 };
 
 const cbGetAgentsForWorkspace = (workspaceId) => {
   const normalized = cbNormalizeAgentWorkspace(workspaceId || cbCurrentWorkspaceId);
-  const scoped = AGENTS_CONFIG.filter(
-    (agent) => cbNormalizeAgentWorkspace(agent.workspace) === normalized
-  );
-  return scoped.length ? scoped : AGENTS_CONFIG.slice();
+  const workspaceKey = cbMapUiWorkspaceToCanon(normalized);
+  const roles = Array.isArray(cbCanonState.roles) ? cbCanonState.roles : [];
+  const scoped = workspaceKey ? roles.filter((role) => role.workspaceId === workspaceKey) : roles;
+  const list = scoped.length ? scoped : roles;
+  return list.map(cbBuildUiAgentFromCanon);
 };
 
 const cbResolveConnectorByKey = (connectorKey) =>
@@ -543,12 +409,16 @@ const cbGetConnectorsForAgent = (agent) => {
     .filter(Boolean);
 };
 
-const cbGetAgentsForConnector = (connectorKey) =>
-  AGENTS_CONFIG.filter(
-    (agent) =>
-      Array.isArray(agent.connectors) &&
-      agent.connectors.includes(connectorKey)
-  );
+const cbGetAgentsForConnector = (connectorKey) => {
+  const roles = Array.isArray(cbCanonState.roles) ? cbCanonState.roles : [];
+  return roles
+    .filter(
+      (role) =>
+        Array.isArray(role.connectors) &&
+        role.connectors.includes(connectorKey)
+    )
+    .map(cbBuildUiAgentFromCanon);
+};
 
 const cbBuildMockUsageRows = (agent) => {
   const label = agent?.label || "Agent";
@@ -559,118 +429,107 @@ const cbBuildMockUsageRows = (agent) => {
   ];
 };
 
-const AGENTS_CONFIG = [
-  {
-    workspace: "business",
-    key: "ceo",
-    label: "CEO \u2013 Strategy",
-    cbAgentId: "cbAgent-B-001-ceo",
-    shortDescription: "Executive view on priorities, ROI, and trade-offs.",
-    connectors: [],
-    showInCouncil: true,
-  },
-  {
-    workspace: "business",
-    key: "cmo",
-    label: "CMO \u2013 Growth",
-    cbAgentId: "cbAgent-B-007-cmo",
-    shortDescription: "Acquisition, paid media, and performance marketing (Google Ads, Meta, etc.).",
-    connectors: ["googleads", "meta_ads", "tiktok_ads", "linkedin_ads", "ga4", "tracking_debugger"],
-    showInCouncil: true,
-  },
-  {
-    workspace: "business",
-    key: "cfo",
-    label: "CFO \u2013 Finance",
-    cbAgentId: "cbAgent-B-003-cfo",
-    shortDescription: "Budgets, forecasts, and performance guardrails.",
-    connectors: ["stripe", "googleads"],
-    showInCouncil: true,
-  },
-  {
-    workspace: "business",
-    key: "coo",
-    label: "COO \u2013 Ops",
-    cbAgentId: "cbAgent-B-004-coo",
-    shortDescription: "Execution, processes, and cross-team alignment.",
-    connectors: ["ga4", "google_ads_mcc"],
-    showInCouncil: true,
-  },
-  {
-    workspace: "business",
-    key: "cto",
-    label: "CTO \u2013 Tech",
-    cbAgentId: "cbAgent-B-002-cto",
-    shortDescription: "Architecture, delivery, and technical risk.",
-    connectors: ["git", "google_cloud", "error_event_stream"],
-    showInCouncil: true,
-  },
-  {
-    workspace: "agency",
-    key: "agency_lead",
-    label: "Agency Lead",
-    shortDescription: "Multi-client governance and performance alignment.",
-    connectors: ["google_ads_mcc", "ga4_multi_property", "meta_business_agency", "tiktok_business_center", "linkedin_agency"],
-    showInCouncil: false,
-  },
-  {
-    workspace: "agency",
-    key: "ppc_lead",
-    label: "PPC Lead",
-    shortDescription: "Paid media performance across networks.",
-    connectors: ["googleads", "google_ads_mcc", "meta_ads", "tiktok_ads", "linkedin_ads"],
-    showInCouncil: false,
-  },
-  {
-    workspace: "business",
-    key: "seo_lead",
-    label: "SEO Lead",
-    shortDescription: "Organic growth, content, and technical SEO.",
-    connectors: ["ga4", "tracking_debugger"],
-    showInCouncil: false,
-  },
-  {
-    workspace: "developer",
-    key: "dev_architect",
-    label: "Dev Architect",
-    shortDescription: "Systems design, observability, and reliability.",
-    connectors: ["git", "google_cloud", "error_event_stream", "stripe"],
-    showInCouncil: false,
-  },
-];
+const cbCanonState = {
+  loaded: false,
+  loading: false,
+  canon: null,
+  canonHash: null,
+  councilIds: [],
+  rolesById: new Map(),
+  roles: [],
+};
 
-const CB_COUNCIL_MEMBERS = [
-  {
-    id: "ceo_strategy",
-    label: "CEO Strategy",
-    shortLabel: "CEO",
-    description: "Executive perspective & strategy",
-  },
-  {
-    id: "cto_tech",
-    label: "CTO Tech",
-    shortLabel: "CTO",
-    description: "Architecture, delivery and technical risk",
-  },
-  {
-    id: "cfo_finance",
-    label: "CFO Finance",
-    shortLabel: "CFO",
-    description: "Costs, ROI, pricing and budgets",
-  },
-  {
-    id: "cmo_growth",
-    label: "CMO Growth",
-    shortLabel: "CMO",
-    description: "Acquisition, funnels and brand",
-  },
-  {
-    id: "coo_ops",
-    label: "COO Ops",
-    shortLabel: "COO",
-    description: "Processes, operations and execution",
-  },
-];
+let CB_COUNCIL_MEMBERS = [];
+
+const cbNormalizeCanonPayload = (payload) => {
+  const canon = payload && payload.canon ? payload.canon : payload;
+  const canonHash = payload?.canonHash || payload?.hash || null;
+  const council = Array.isArray(canon?.groups?.council) ? canon.groups.council : [];
+  const roles = Array.isArray(canon?.roles) ? canon.roles.slice() : [];
+  return { canon, canonHash, council, roles };
+};
+
+const cbBuildCouncilMembersFromCanon = (canonData) => {
+  const councilIds = canonData?.council || [];
+  const byId = new Map((canonData?.roles || []).map((role) => [role.id, role]));
+  return councilIds
+    .map((id) => {
+      const role = byId.get(id);
+      if (!role) return null;
+      return {
+        id: role.id,
+        label: role.label || role.id,
+        shortLabel: role.label || role.id,
+        description: role.description || "",
+      };
+    })
+    .filter(Boolean);
+};
+
+const cbApplyCanonPayload = (payload) => {
+  const canonData = cbNormalizeCanonPayload(payload);
+  cbCanonState.loaded = true;
+  cbCanonState.loading = false;
+  cbCanonState.canon = canonData.canon;
+  cbCanonState.canonHash = canonData.canonHash;
+  cbCanonState.councilIds = canonData.council.slice();
+  cbCanonState.roles = canonData.roles.slice();
+  cbCanonState.rolesById = new Map(canonData.roles.map((role) => [role.id, role]));
+  cbWorkspaces = cbBuildWorkspacesFromCanon(canonData.canon);
+  const fallbackWorkspace = cbWorkspaces[0]?.id || cbCurrentWorkspaceId;
+  if (fallbackWorkspace && !cbWorkspaces.some((ws) => ws.id === cbCurrentWorkspaceId)) {
+    cbCurrentWorkspaceId = fallbackWorkspace;
+    cbSaveWorkspaceToStorage(cbCurrentWorkspaceId);
+  }
+  CB_COUNCIL_MEMBERS = cbBuildCouncilMembersFromCanon(canonData);
+  cbFilterCouncilSelection();
+};
+
+const cbGetCanonCouncilAgents = () => {
+  const canonData = cbCanonState.canon;
+  if (!canonData) return [];
+  const councilIds = cbCanonState.councilIds || [];
+  const byId = cbCanonState.rolesById;
+  return councilIds.map((id) => byId.get(id)).filter(Boolean);
+};
+
+const cbGetCanonAgentById = (agentId) => cbCanonState.rolesById.get(agentId) || null;
+
+const cbFilterCouncilSelection = () => {
+  if (!cbCanonState.councilIds.length) return;
+  const allowed = new Set(cbCanonState.councilIds);
+  const next = Array.from(cbCouncilSelectedIds).filter((id) => allowed.has(id));
+  if (next.length !== cbCouncilSelectedIds.size) {
+    cbCouncilSelectedIds = new Set(next);
+    window.cbCouncilSelectedIds = cbCouncilSelectedIds;
+  }
+  cbCouncilState.selectedKeys = next;
+};
+
+const cbLoadCanon = async () => {
+  if (cbCanonState.loaded) {
+    cbRenderCouncilList();
+    cbRenderWorkspaces();
+    return;
+  }
+  if (cbCanonState.loading) return;
+  cbCanonState.loading = true;
+  try {
+    const response = await fetch(API_CANON, { headers: { Accept: "application/json" } });
+    if (!response.ok) {
+      cbCanonState.loading = false;
+      console.warn("[CB_CANON] fetch failed", response.status);
+      return;
+    }
+    const data = await response.json();
+    cbApplyCanonPayload(data);
+    cbRenderCouncilList();
+    cbRenderWorkspaces();
+  } catch (error) {
+    cbCanonState.loading = false;
+    console.warn("[CB_CANON] load failed", error);
+  }
+};
 
 const CB_COUNCIL_STATUS_IDLE = "idle";
 const CB_COUNCIL_STATUS_PENDING = "pending";
@@ -726,7 +585,6 @@ function syncCouncilStateFromUi() {
   cbSyncLegacyCouncilFromState();
 
   console.log("[CB_COUNCIL] sync", { ...cbCouncilState });
-  cbQueueActivateContextFromUi("council-selection-sync");
 }
 
 const cbGetCouncilSummaryLabel = () => {
@@ -945,7 +803,6 @@ function cbUpdateCouncilPill() {
     classes: wrapper.className,
     computed: window.getComputedStyle(wrapper).background
   });
-  cbUpdateChatHeader();
 }
 
 // --- Council compatibility shim (older callers expect this) ---
@@ -1272,7 +1129,6 @@ const cbSetBillingSummary = (summary) => {
     cbRenderAccountBilling(cbLatestBillingSummary);
   }
   cbUpdatePromptMeter();
-  cbUpdateChatHeader();
 };
 
 const cbRenderPlanAndUsageFromSummary = (summary) => {
@@ -1318,273 +1174,6 @@ const cbRenderPlanAndUsageFromSummary = (summary) => {
     cbRenderPlansModal();
   }
 };
-
-const cbGetChatHeaderElements = () => {
-  const modelValue = document.getElementById("cb-active-model");
-  const contextValue = document.getElementById("cb-active-context");
-  const usageValue = document.getElementById("cb-active-usage");
-  return {
-    agentTile: document.getElementById("cb-active-agent-tile"),
-    agentName: document.getElementById("cb-active-agent-name"),
-    agentMeta: document.getElementById("cb-active-agent-meta"),
-    modelTile: modelValue ? modelValue.closest(".cb-smart-tile") : null,
-    modelValue,
-    modelMeta: document.getElementById("cb-active-model-meta"),
-    routingBadge: document.getElementById("cb-routing-badge"),
-    contextTile: contextValue ? contextValue.closest(".cb-smart-tile") : null,
-    contextValue,
-    contextMeta: document.getElementById("cb-active-context-meta"),
-    usageTile: usageValue ? usageValue.closest(".cb-smart-tile") : null,
-    usageValue,
-    usageMeta: document.getElementById("cb-active-usage-meta"),
-  };
-};
-
-const cbResolveCouncilSelections = () => {
-  cbSyncCouncilStateFromLegacy();
-  const selected =
-    Array.isArray(cbCouncilState?.selectedKeys) && cbCouncilState.selectedKeys.length
-      ? cbCouncilState.selectedKeys.slice()
-      : [];
-  if (!selected.length && cbCouncilSelectedIds && cbCouncilSelectedIds.size) {
-    return Array.from(cbCouncilSelectedIds);
-  }
-  return selected;
-};
-
-const cbResolveCouncilAgentProfile = (agentId) => {
-  const agent =
-    cbFindAgentByKey(agentId, cbCurrentWorkspaceId) || cbFindAgentByKey(agentId);
-  if (agent) {
-    return {
-      label: agent.label || agent.key || agentId,
-      description: agent.shortDescription || "",
-    };
-  }
-  const legacy = CB_COUNCIL_MEMBERS.find((member) => member.id === agentId);
-  if (legacy) {
-    return {
-      label: legacy.label || legacy.shortLabel || legacy.id,
-      description: legacy.description || "",
-    };
-  }
-  const fallback = String(agentId || "Agent").replace(/[_-]+/g, " ").trim();
-  return { label: fallback || "Agent", description: "" };
-};
-
-const cbBuildActiveAgentSummary = () => {
-  if (cbActiveContextState.context) {
-    const label = cbFormatActiveAgentName(cbActiveContextState.context);
-    const status =
-      cbActiveContextState.status === "active"
-        ? "Active"
-        : cbActiveContextState.status === "pending"
-          ? "Pending"
-          : cbActiveContextState.status === "error"
-            ? "Error"
-            : "Idle";
-    const tooltip = `Active context: ${label}\n${cbBuildActiveContextTooltip(cbActiveContextState.context)}`;
-    return { label, meta: status, tooltip };
-  }
-  const selected = cbResolveCouncilSelections();
-  if (!selected.length) {
-    return {
-      label: "Solo chat",
-      meta: "Council off",
-      tooltip: "Active context: Solo chat\nCouncil off\nNo agents selected. Open Council to add agents.",
-    };
-  }
-  const resolved = selected.map((id) => cbResolveCouncilAgentProfile(id));
-  const primary = resolved[0];
-  const extraCount = Math.max(0, resolved.length - 1);
-  const label = extraCount ? `${primary.label} +${extraCount}` : primary.label;
-  const meta = `Council on - ${resolved.length} agent${resolved.length === 1 ? "" : "s"}`;
-  const detailLines = resolved
-    .map((item) => (item.description ? `${item.label}: ${item.description}` : item.label))
-    .join("\n");
-  const tooltip = `Active context: ${label}\n${meta}${detailLines ? `\n${detailLines}` : ""}`;
-  return { label, meta, tooltip };
-};
-
-const cbBuildModelSummary = () => {
-  if (cbRoutingState.lastResolved) {
-    const providerLabel = cbFormatProviderLabel(cbRoutingState.lastResolved.provider || "auto");
-    const modelLabel = cbFormatModelLabel(cbRoutingState.lastResolved.model || "");
-    const meta = modelLabel ? `Model: ${modelLabel}` : "Model: auto";
-    return { label: providerLabel, meta };
-  }
-  const providerSelect = document.getElementById("cb-model-selector");
-  const searchInput = document.getElementById("cb-model-search");
-  const providerValue = providerSelect?.value || "auto";
-  const providerLabel =
-    providerSelect?.selectedOptions?.[0]?.textContent || providerValue || "Auto";
-  const modelHint = searchInput?.value ? searchInput.value.trim() : "";
-  let meta = "";
-  if (providerValue === "auto") {
-    meta = modelHint ? `Requested: ${modelHint}` : "Awaiting response";
-  } else {
-    meta = modelHint ? `Requested: ${modelHint}` : "Awaiting response";
-  }
-  return { label: "Not resolved", meta };
-};
-
-const cbBuildContextSummary = () => {
-  const workspace =
-    cbWorkspaces.find((item) => item.id === cbCurrentWorkspaceId) || cbWorkspaces[0];
-  const activeProject =
-    cbCurrentProjectId && cbProjects.find((proj) => proj && proj.id === cbCurrentProjectId);
-  const value = `${workspace?.label || "Workspace"} / ${activeProject?.name || "All projects"}`;
-  const connected = Object.keys(cbConnectorState || {})
-    .filter((key) => (cbConnectorState[key]?.status || "").toLowerCase() === "connected")
-    .map((key) => cbResolveConnectorByKey(key))
-    .filter(Boolean)
-    .map((connector) => connector.label || connector.key);
-  const connectorLabel = connected.length
-    ? `Connectors: ${connected.join(", ")}`
-    : "Connectors: none";
-  const councilState = cbResolveCouncilSelections().length ? "Council on" : "Council off";
-  return { value, meta: `${councilState} | ${connectorLabel}` };
-};
-
-const cbBuildUsageSummary = () => {
-  const summary = cbLatestBillingSummary || null;
-  const usageMetrics = summary ? cbDeriveUsageMetrics(summary) : null;
-  const tokensLine = usageMetrics
-    ? cbFormatTokenShortText(usageMetrics.tokensRemaining)
-    : "Tokens: n/a";
-  const promptTokens = Math.max(0, Math.round(cbPromptMeterState.tokensEffective || 0));
-  const size = cbPromptMeterState.sizeClass
-    ? cbPromptMeterState.sizeClass.toUpperCase()
-    : "";
-  const outcome = cbPromptMeterState.outcomeHint || "";
-  const promptMeta = promptTokens
-    ? `Prompt: ${promptTokens.toLocaleString()} tokens${size ? ` (${size})` : ""}${
-        outcome ? ` - ${outcome}` : ""
-      }`
-    : "Prompt: empty";
-  const liveTokens = cbStreamingState.active
-    ? Math.max(0, Math.round((cbStreamingState.promptTokens || 0) + (cbStreamingState.completionTokens || 0)))
-    : null;
-  const liveCost =
-    cbStreamingState.active &&
-    Number.isFinite(cbStreamingState.costUsd) &&
-    cbStreamingState.costUsd > 0
-      ? `$${cbStreamingState.costUsd.toFixed(4)}`
-      : null;
-  const liveMeta = liveTokens
-    ? `Live: ${liveTokens.toLocaleString()} tokens${liveCost ? ` · ${liveCost}` : ""}`
-    : "";
-  const lastTokens =
-    cbLastUsageMeta &&
-    Number.isFinite(cbLastUsageMeta.totalTokens) &&
-    cbLastUsageMeta.totalTokens > 0
-      ? cbLastUsageMeta.totalTokens
-      : null;
-  const lastCostUsd =
-    cbLastUsageMeta &&
-    Number.isFinite(cbLastUsageMeta.costUsd) &&
-    cbLastUsageMeta.costUsd > 0
-      ? `$${cbLastUsageMeta.costUsd.toFixed(4)}`
-      : null;
-  const lastCostCbT =
-    cbLastUsageMeta &&
-    Number.isFinite(cbLastUsageMeta.costCbT) &&
-    cbLastUsageMeta.costCbT > 0
-      ? `${Math.round(cbLastUsageMeta.costCbT)} cbT`
-      : null;
-  const lastCostParts = [lastCostUsd, lastCostCbT].filter(Boolean);
-  const lastMeta = lastTokens
-    ? `Last: ${lastTokens.toLocaleString()} tokens${lastCostParts.length ? ` · ${lastCostParts.join(" · ")}` : ""}`
-    : "";
-  const meta = [promptMeta, liveMeta, lastMeta].filter(Boolean).join(" · ");
-  return { value: tokensLine, meta };
-};
-
-const cbUpdateChatHeader = () => {
-  const elements = cbGetChatHeaderElements();
-  if (!elements.agentName && !elements.modelValue && !elements.contextValue) {
-    return;
-  }
-
-  const agentSummary = cbBuildActiveAgentSummary();
-  if (elements.agentName) {
-    elements.agentName.textContent = agentSummary.label;
-  }
-  if (elements.agentMeta) {
-    elements.agentMeta.textContent = agentSummary.meta;
-  }
-  if (elements.agentTile) {
-    elements.agentTile.title = agentSummary.tooltip;
-  }
-
-  const modelSummary = cbBuildModelSummary();
-  if (elements.modelValue) {
-    elements.modelValue.textContent = modelSummary.label;
-  }
-  if (elements.modelMeta) {
-    elements.modelMeta.textContent = modelSummary.meta;
-  }
-  if (elements.modelTile) {
-    elements.modelTile.title = `Model: ${modelSummary.label}\n${modelSummary.meta}`;
-  }
-
-  if (elements.routingBadge) {
-    const requested = cbRoutingState.lastRequested;
-    const resolved = cbRoutingState.lastResolved;
-    const reason = cbRoutingState.lastReason;
-    const traceId = cbRoutingState.lastTraceId;
-    const mismatch = Boolean(
-      requested &&
-        resolved &&
-        (requested.provider !== resolved.provider || requested.model !== resolved.model)
-    );
-    if (mismatch) {
-      const isFallback = typeof reason === "string" && reason.startsWith("fallback");
-      const label = isFallback ? "Fallback" : "Routed";
-      const requestedLabel = cbFormatProviderLabel(requested.provider || "auto");
-      const resolvedLabel = cbFormatProviderLabel(resolved.provider || "auto");
-      const requestedModel = cbFormatModelLabel(requested.model || "auto");
-      const resolvedModel = cbFormatModelLabel(resolved.model || "auto");
-      elements.routingBadge.textContent = label;
-      elements.routingBadge.hidden = false;
-      elements.routingBadge.title = [
-        `Requested: ${requestedLabel} / ${requestedModel}`,
-        `Resolved: ${resolvedLabel} / ${resolvedModel}`,
-        reason ? `Reason: ${reason}` : null,
-        traceId ? `Trace: ${traceId}` : null,
-      ]
-        .filter(Boolean)
-        .join("\\n");
-    } else {
-      elements.routingBadge.hidden = true;
-      elements.routingBadge.removeAttribute("title");
-    }
-  }
-
-  const contextSummary = cbBuildContextSummary();
-  if (elements.contextValue) {
-    elements.contextValue.textContent = contextSummary.value;
-  }
-  if (elements.contextMeta) {
-    elements.contextMeta.textContent = contextSummary.meta;
-  }
-  if (elements.contextTile) {
-    elements.contextTile.title = `Context: ${contextSummary.value}\n${contextSummary.meta}`;
-  }
-
-  const usageSummary = cbBuildUsageSummary();
-  if (elements.usageValue) {
-    elements.usageValue.textContent = usageSummary.value;
-  }
-  if (elements.usageMeta) {
-    elements.usageMeta.textContent = usageSummary.meta;
-  }
-  if (elements.usageTile) {
-    elements.usageTile.title = `Usage: ${usageSummary.value}\n${usageSummary.meta}`;
-  }
-};
-
-window.cbUpdateChatHeader = cbUpdateChatHeader;
 
 const cbGetAgentsElements = () => ({
   view: document.getElementById("cb-agents-view"),
@@ -2139,8 +1728,6 @@ const renderMarkdown = (value) => {
 
 const elements = {
   messages: document.querySelector("[data-chat-messages]"),
-  chatBody: document.querySelector(".chat-body"),
-  chatContainer: document.getElementById("chat-scroll"),
   suggestions: document.querySelector("[data-chat-suggestions]"),
   suggestionsHeading: document.querySelector("[data-suggestions-heading]"),
   form: document.querySelector("[data-chat-form]"),
@@ -2167,15 +1754,11 @@ const shellElements = {
   sidebarClose: document.querySelector("[data-sidebar-close]"),
   sidebarBackdrop: document.querySelector("[data-sidebar-backdrop]"),
   newChatButton: document.querySelector("[data-sidebar-new-chat]"),
-  agentsButton: document.querySelector("[data-sidebar-agents]"),
   chatsList: document.querySelector("[data-sidebar-chat-list]"),
   featureButtons: Array.from(document.querySelectorAll("[data-sidebar-feature]")),
   accountViewButtons: Array.from(document.querySelectorAll("[data-account-view-btn]")),
   accountViews: Array.from(document.querySelectorAll("[data-account-view]")),
   connectorsCategories: document.getElementById("cb-connectors-categories"),
-  connectorsSection: document.querySelector("[data-sidebar-connectors]"),
-  connectorsToggle: document.getElementById("cb-connectors-toggle"),
-  connectorsMenu: document.getElementById("cb-connectors-menu"),
   userSlot: document.getElementById("cb-sidebar-user-slot"),
   topBarRight: document.querySelector(".top-bar-right"),
   projectSection: document.querySelector("[data-projects-section]"),
@@ -2204,7 +1787,6 @@ const shellElements = {
   composerForm: document.getElementById("cb-composer"),
   chatInput: document.getElementById("chat-input"),
   councilButton: document.getElementById("cb-council-pill"),
-  councilAgentsButton: document.getElementById("cb-council-agents-btn"),
   councilActive: document.getElementById("cb-council-active"),
   councilPopover: document.getElementById("cb-council-popover"),
   councilList: document.getElementById("cb-council-list"),
@@ -2308,43 +1890,10 @@ let cbChatsUnsupported = false;
 let cbCurrentProjectId = null;
 let cbProjectMenuOpen = false;
 let cbSidebarMenuOutsideBound = false;
-const cbActiveContextState = {
-  status: "idle",
-  context: null,
-  error: null,
-  pendingReason: null,
-};
-const ACTIVE_CONTEXT_COLLAPSED_KEY = "coolbits:active-context-collapsed";
-let cbActiveContextCollapsed = false;
-const cbRoutingState = {
-  lastRequested: null,
-  lastResolved: null,
-  lastReason: null,
-  lastTraceId: null,
-};
-const cbStreamingState = {
-  active: false,
-  traceId: null,
-  promptTokens: 0,
-  completionTokens: 0,
-  costUsd: null,
-  costCbT: null,
-  isEstimate: false,
-};
-let cbLastUsageMeta = null;
-let cbStreamRenderPending = false;
-let cbActiveContextRequestId = 0;
-let cbActiveContextDebounce = null;
-let cbSuppressContextActivation = false;
 const WORKSPACE_STORAGE_KEY = "coolbits:workspace";
-const cbWorkspaces = [
-  { id: "business", label: "Business" },
-  { id: "agency", label: "Agency" },
-  { id: "developer", label: "Developer" },
-];
+let cbWorkspaces = [];
 let cbCurrentWorkspaceId = "business";
 let cbWorkspaceMenuOpen = false;
-let cbConnectorsMenuOpen = false;
 let cbPendingDeleteChatId = null;
 let cbPendingRenameChatId = null;
 const cbManualChatTitles = new Set();
@@ -2363,584 +1912,6 @@ const cbNormalizeWorkspaceId = (workspaceId) => {
     return workspaceId;
   }
   return "business";
-};
-
-const CB_PROVIDER_API_MAP = {
-  auto: "auto",
-  chatgpt: "openai",
-  claude: "anthropic",
-  gemini: "google",
-  grok: "xai",
-  copilot: "openai",
-  openai: "openai",
-  anthropic: "anthropic",
-  google: "google",
-  xai: "xai",
-  deepseek: "deepseek",
-};
-
-const CB_PROVIDER_UI_MAP = {
-  openai: "chatgpt",
-  anthropic: "claude",
-  google: "gemini",
-  xai: "grok",
-  deepseek: "auto",
-  auto: "auto",
-};
-
-const CB_PROVIDER_LABELS = {
-  auto: "Auto",
-  chatgpt: "ChatGPT",
-  claude: "Claude",
-  gemini: "Gemini",
-  grok: "Grok",
-  copilot: "Copilot",
-  openai: "ChatGPT",
-  anthropic: "Claude",
-  google: "Gemini",
-  xai: "Grok",
-  deepseek: "DeepSeek",
-};
-
-const cbNormalizeProviderForApi = (value) => {
-  if (!value) return "auto";
-  const key = String(value).trim().toLowerCase();
-  return CB_PROVIDER_API_MAP[key] || "auto";
-};
-
-const cbNormalizeProviderForUi = (value) => {
-  if (!value) return "auto";
-  const key = String(value).trim().toLowerCase();
-  return CB_PROVIDER_UI_MAP[key] || (CB_PROVIDER_API_MAP[key] ? key : "auto");
-};
-
-const cbFormatProviderLabel = (value) => {
-  if (!value) return "Auto";
-  const key = String(value).trim().toLowerCase();
-  return CB_PROVIDER_LABELS[key] || value;
-};
-
-const cbFormatModelLabel = (value) => {
-  if (!value) return "Auto";
-  const trimmed = String(value).trim();
-  return trimmed.replace(/^vertex-/, "").replace(/^openai-/, "");
-};
-
-const cbBuildRequestedContextFromUi = () => {
-  const providerSelect = document.getElementById("cb-model-selector");
-  const searchInput = document.getElementById("cb-model-search");
-  const providerValue = providerSelect?.value || "auto";
-  const provider = cbNormalizeProviderForApi(providerValue);
-  const modelHint = searchInput?.value ? searchInput.value.trim() : "";
-  const model = modelHint || "auto";
-  const agents = cbResolveCouncilSelections();
-  const mode = agents.length ? "council" : "solo";
-  return { provider, model, mode, agents };
-};
-
-const cbGenerateTraceId = () => {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return `tr_${crypto.randomUUID()}`;
-  }
-  return `tr_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-};
-
-const cbFormatRequestedLine = (requested) => {
-  if (!requested) return "Requested: Auto / Auto";
-  const providerLabel = cbFormatProviderLabel(requested.provider || "auto");
-  const modelLabel = cbFormatModelLabel(requested.model || "auto");
-  return `Requested: ${providerLabel} / ${modelLabel}`;
-};
-
-const cbSetRoutingState = (meta) => {
-  if (!meta || typeof meta !== "object") return;
-  cbRoutingState.lastRequested = meta.requested || cbRoutingState.lastRequested;
-  cbRoutingState.lastResolved = meta.resolved || cbRoutingState.lastResolved;
-  cbRoutingState.lastReason = meta.reason || cbRoutingState.lastReason;
-  cbRoutingState.lastTraceId = meta.traceId || cbRoutingState.lastTraceId;
-};
-
-const cbApplyRoutingUpdate = (payload) => {
-  if (!payload || typeof payload !== "object") return;
-  cbSetRoutingState(payload);
-  cbUpdateChatHeader();
-  cbUpdateActiveContextBar();
-};
-
-const cbSetStreamingUsage = ({ traceId, promptTokens, completionTokens, costUsd, costCbT, isEstimate } = {}) => {
-  cbStreamingState.active = true;
-  cbStreamingState.traceId = traceId || cbStreamingState.traceId;
-  if (Number.isFinite(promptTokens)) cbStreamingState.promptTokens = promptTokens;
-  if (Number.isFinite(completionTokens)) cbStreamingState.completionTokens = completionTokens;
-  if (Number.isFinite(costUsd)) cbStreamingState.costUsd = costUsd;
-  if (Number.isFinite(costCbT)) cbStreamingState.costCbT = costCbT;
-  if (typeof isEstimate === "boolean") cbStreamingState.isEstimate = isEstimate;
-  cbUpdateChatHeader();
-};
-
-const cbClearStreamingUsage = () => {
-  cbStreamingState.active = false;
-  cbStreamingState.traceId = null;
-  cbStreamingState.promptTokens = 0;
-  cbStreamingState.completionTokens = 0;
-  cbStreamingState.costUsd = null;
-  cbStreamingState.costCbT = null;
-  cbStreamingState.isEstimate = false;
-  cbUpdateChatHeader();
-};
-
-const cbScheduleStreamRender = () => {
-  if (cbStreamRenderPending) return;
-  cbStreamRenderPending = true;
-  requestAnimationFrame(() => {
-    cbStreamRenderPending = false;
-    renderMessages();
-  });
-};
-
-const cbApplyWalletMeta = (wallet) => {
-  if (!wallet || typeof wallet !== "object") return;
-  if (cbCurrentUser) {
-    if (Number.isFinite(wallet.afterCbT)) {
-      cbCurrentUser.includedCbtRemaining = Math.max(0, Math.floor(wallet.afterCbT));
-    }
-    if (Number.isFinite(wallet.allowanceAfterCbT)) {
-      cbCurrentUser.includedCbtPerMonth = Math.max(0, Math.floor(wallet.allowanceAfterCbT));
-    }
-  }
-  if (cbLatestBillingSummary && cbLatestBillingSummary.usage) {
-    if (Number.isFinite(wallet.afterCbT)) {
-      cbLatestBillingSummary.usage.tokensRemaining = Math.max(0, wallet.afterCbT);
-    }
-    if (Number.isFinite(wallet.allowanceAfterCbT)) {
-      const used = Math.max(0, wallet.allowanceAfterCbT - (wallet.afterCbT || 0));
-      cbLatestBillingSummary.usage.tokensUsedThisPeriod = used;
-    }
-    cbSetBillingSummary(cbLatestBillingSummary);
-  } else {
-    cbUpdateChatHeader();
-    cbUpdatePromptMeter();
-  }
-};
-
-const cbApplyChatMeta = (meta) => {
-  if (!meta || typeof meta !== "object") return;
-  cbSetRoutingState(meta);
-  if (meta.usage) {
-    cbLastUsageMeta = meta.usage;
-  }
-  const isEstimate = meta.usage?.isEstimate;
-  if (meta.wallet && isEstimate === false) {
-    cbApplyWalletMeta(meta.wallet);
-  }
-  cbUpdateChatHeader();
-  cbUpdateActiveContextBar();
-  if (meta.traceId || meta.resolved) {
-    console.debug("[CHAT_ROUTING]", {
-      traceId: meta.traceId,
-      requested: meta.requested,
-      resolved: meta.resolved,
-      reason: meta.reason,
-    });
-  }
-};
-
-const cbLoadActiveContextCollapsed = () => {
-  try {
-    return window.localStorage.getItem(ACTIVE_CONTEXT_COLLAPSED_KEY) === "1";
-  } catch (error) {
-    console.debug("[ACTIVE_CONTEXT] collapse read error", error);
-    return false;
-  }
-};
-
-const cbSetActiveContextCollapsed = (collapsed, { persist = true } = {}) => {
-  cbActiveContextCollapsed = Boolean(collapsed);
-  const { bar, toggle, toggleLabel, summary } = cbGetActiveContextElements();
-  if (bar) {
-    bar.classList.toggle("is-collapsed", cbActiveContextCollapsed);
-  }
-  if (toggle) {
-    toggle.setAttribute("aria-expanded", cbActiveContextCollapsed ? "false" : "true");
-    toggle.title = cbActiveContextCollapsed ? "Expand Active Context" : "Collapse Active Context";
-  }
-  if (toggleLabel) {
-    toggleLabel.textContent = cbActiveContextCollapsed
-      ? "Expand Active Context"
-      : "Collapse Active Context";
-  }
-  if (summary) {
-    summary.hidden = !cbActiveContextCollapsed;
-  }
-  if (persist) {
-    try {
-      window.localStorage.setItem(ACTIVE_CONTEXT_COLLAPSED_KEY, cbActiveContextCollapsed ? "1" : "0");
-    } catch (error) {
-      console.debug("[ACTIVE_CONTEXT] collapse persist error", error);
-    }
-  }
-};
-
-const cbInitActiveContextToggle = () => {
-  const { toggle } = cbGetActiveContextElements();
-  if (!toggle || toggle.dataset.bound) return;
-  toggle.addEventListener("click", () => {
-    cbSetActiveContextCollapsed(!cbActiveContextCollapsed);
-  });
-  toggle.dataset.bound = "true";
-  cbSetActiveContextCollapsed(cbLoadActiveContextCollapsed(), { persist: false });
-};
-
-const cbGetActiveContextElements = () => ({
-  bar: document.getElementById("cb-active-context-bar"),
-  led: document.getElementById("cb-active-context-led"),
-  mode: document.getElementById("cb-active-context-mode"),
-  primary: document.getElementById("cb-active-context-primary"),
-  requested: document.getElementById("cb-active-context-requested"),
-  summary: document.getElementById("cb-active-context-summary"),
-  chips: document.getElementById("cb-active-context-chips"),
-  detail: document.getElementById("cb-active-context-detail"),
-  toggle: document.getElementById("cb-active-context-toggle"),
-  toggleLabel: document.getElementById("cb-active-context-toggle-label"),
-});
-
-const cbUpdateComposerSendState = () => {
-  const sendButton = elements.button;
-  if (!sendButton) return;
-  const shouldDisable = isSending || cbActiveContextState.status !== "active";
-  if (shouldDisable) {
-    sendButton.setAttribute("disabled", "true");
-  } else {
-    sendButton.removeAttribute("disabled");
-  }
-};
-
-const cbFormatActiveAgentName = (context) => {
-  if (!context) return "Not active";
-  const name = context.customName || context.defaultName || context.role || context.agentId || "Agent";
-  const role = context.role && context.role !== name ? context.role : "";
-  return role ? `${role} · ${name}` : name;
-};
-
-const cbBuildShortAgentLabel = (label) => {
-  const raw = String(label || "").trim();
-  if (!raw) return "";
-  const normalized = cbNormalizeAgentLabel(raw) || raw;
-  const words = normalized.split(/\s+/).filter(Boolean);
-  if (words.length > 1) {
-    const first = words[0];
-    if (/^[A-Z0-9]{2,5}$/.test(first)) {
-      return first;
-    }
-    const acronym = words.map((word) => word[0]).join("").toUpperCase();
-    if (acronym.length >= 2 && acronym.length <= 5) {
-      return acronym;
-    }
-  }
-  return normalized;
-};
-
-const cbResolveCouncilDisplayAgent = (agentKey) => {
-  if (!agentKey) return null;
-  const agent =
-    cbFindAgentByKey(agentKey, cbCurrentWorkspaceId) || cbFindAgentByKey(agentKey);
-  const registry = cbResolvePublicRegistryAgent(agent);
-  const legacy = CB_COUNCIL_MEMBERS.find((member) => member.id === agentKey);
-  const fullLabel =
-    registry?.label || agent?.label || legacy?.label || legacy?.shortLabel || agentKey;
-  const shortSource =
-    registry?.shortLabel ||
-    registry?.role ||
-    registry?.label ||
-    agent?.label ||
-    legacy?.shortLabel ||
-    legacy?.label ||
-    agentKey;
-  const shortLabel = cbBuildShortAgentLabel(shortSource || fullLabel);
-  return {
-    key: agentKey,
-    shortLabel: shortLabel || String(fullLabel || agentKey),
-    fullLabel: String(fullLabel || shortLabel || agentKey),
-  };
-};
-
-const cbBuildActiveContextTooltip = (context, extraLines = []) => {
-  const lines = Array.isArray(extraLines) ? extraLines.filter(Boolean) : [];
-  if (!context) {
-    return lines.length ? lines.join("\n") : "Active context not confirmed yet.";
-  }
-  const providerLabel = cbFormatProviderLabel(context.provider || "auto");
-  const modelLabel = cbFormatModelLabel(context.model || "auto");
-  const billingLabel = context.billingSource === "byok" ? "BYOK" : "CoolBits";
-  lines.push(`Provider: ${providerLabel}`);
-  lines.push(`Model: ${modelLabel}`);
-  lines.push(`Billing: ${billingLabel}`);
-  return lines.join("\n");
-};
-
-const cbUpdateActiveContextBar = () => {
-  const { bar, led, mode, primary, requested, summary, chips, detail } = cbGetActiveContextElements();
-  if (!bar || !led) return;
-  bar.classList.toggle("is-collapsed", cbActiveContextCollapsed);
-  const status = cbActiveContextState.status || "idle";
-  const context = cbActiveContextState.context;
-  const confirmed = status === "active" && context?.contextId;
-  const ledStatus =
-    status === "error" ? "error" : status === "pending" ? "pending" : confirmed ? "active" : "idle";
-  led.setAttribute("data-status", ledStatus);
-
-  const selected = cbResolveCouncilSelections();
-  const councilArmed = !!cbCouncilState?.armed;
-  const councilEnabled = selected.length > 0 || councilArmed;
-  const agents = selected.map((key) => cbResolveCouncilDisplayAgent(key)).filter(Boolean);
-  const primaryAgent = agents[0] || null;
-
-  if (mode) {
-    mode.textContent = councilEnabled
-      ? agents.length
-        ? "Council mode"
-        : "Council (no agents selected)"
-      : "Solo mode";
-  }
-
-  if (primary) {
-    if (councilEnabled) {
-      primary.textContent = primaryAgent ? `Primary: ${primaryAgent.shortLabel}` : "Primary: -";
-      primary.title = primaryAgent?.fullLabel || "";
-    } else {
-      const activeName = context ? cbFormatActiveAgentName(context) : "-";
-      primary.textContent = `Agent: ${activeName}`;
-      primary.title = activeName === "-" ? "" : activeName;
-    }
-  }
-
-  if (requested) {
-    const requestedContext = cbBuildRequestedContextFromUi();
-    requested.textContent = cbFormatRequestedLine(requestedContext);
-  }
-
-  if (summary) {
-    const requestedContext = cbBuildRequestedContextFromUi();
-    const requestedProvider = cbFormatProviderLabel(requestedContext.provider || "auto");
-    const requestedModel = cbFormatModelLabel(requestedContext.model || "auto");
-    const modeLabel = councilEnabled
-      ? agents.length
-        ? "Council"
-        : "Council (none)"
-      : "Solo";
-    let primaryLabel = "Agent: -";
-    if (councilEnabled) {
-      primaryLabel = primaryAgent ? `Primary: ${primaryAgent.shortLabel}` : "Primary: -";
-    } else if (context) {
-      primaryLabel = `Agent: ${cbFormatActiveAgentName(context)}`;
-    }
-    summary.textContent = `${modeLabel} · ${primaryLabel} · Req: ${requestedProvider} / ${requestedModel}`;
-    summary.hidden = !cbActiveContextCollapsed;
-  }
-
-  if (chips) {
-    chips.textContent = "";
-    if (agents.length) {
-      const visible = agents.slice(0, 4);
-      visible.forEach((agent) => {
-        const chip = document.createElement("span");
-        chip.className = "cb-active-context-chip";
-        chip.textContent = agent.shortLabel;
-        chip.title = agent.fullLabel || agent.shortLabel;
-        chips.appendChild(chip);
-      });
-      const remaining = agents.length - visible.length;
-      if (remaining > 0) {
-        const more = document.createElement("span");
-        more.className = "cb-active-context-chip cb-active-context-chip--more";
-        more.textContent = `+${remaining}`;
-        more.title = `${remaining} more`;
-        chips.appendChild(more);
-      }
-      chips.hidden = false;
-    } else {
-      chips.hidden = true;
-    }
-  }
-
-  let detailLine = "";
-  if (agents.length) {
-    detailLine = agents
-      .map((agent) => agent.fullLabel || agent.shortLabel)
-      .filter(Boolean)
-      .join(", ");
-  }
-  if (detail) {
-    detail.textContent = detailLine;
-    detail.hidden = !detailLine;
-  }
-
-  const tooltipLines = [];
-  if (councilEnabled) {
-    tooltipLines.push(
-      agents.length ? `Council: ${detailLine}` : "Council: no agents selected"
-    );
-  }
-  bar.title = cbBuildActiveContextTooltip(context, tooltipLines);
-  if (summary) {
-    summary.title = bar.title;
-  }
-};
-
-const cbApplyActiveContextToUi = (context) => {
-  if (!context) return;
-  const providerSelect = document.getElementById("cb-model-selector");
-  const searchInput = document.getElementById("cb-model-search");
-  const listEl = document.getElementById("cb-model-search-list");
-  if (!providerSelect && !searchInput) return;
-  cbSuppressContextActivation = true;
-  const uiProvider = cbNormalizeProviderForUi(context.provider);
-  if (providerSelect && uiProvider && providerSelect.value !== uiProvider) {
-    providerSelect.value = uiProvider;
-  }
-  if (searchInput) {
-    const label = cbFormatModelLabel(context.model || "");
-    if (label && searchInput.value !== label) {
-      searchInput.value = label;
-    }
-  }
-  if (providerSelect && searchInput && listEl) {
-    cbUpdateModelSearch(providerSelect.value || "auto", searchInput, listEl);
-  }
-  cbSuppressContextActivation = false;
-};
-
-const cbSetActiveContextState = ({ status, context = null, error = null, reason = null } = {}) => {
-  if (status) cbActiveContextState.status = status;
-  cbActiveContextState.context = context;
-  cbActiveContextState.error = error;
-  cbActiveContextState.pendingReason = reason;
-  if (context) {
-    cbApplyActiveContextToUi(context);
-  }
-  cbUpdateActiveContextBar();
-  cbUpdateChatHeader();
-  cbUpdateComposerSendState();
-};
-
-const cbBuildActiveContextRequestFromUi = (overrides = {}) => {
-  const selected = cbResolveCouncilSelections();
-  const primaryKey = selected.length ? selected[0] : null;
-  const agentProfile = primaryKey ? cbFindAgentByKey(primaryKey, cbCurrentWorkspaceId) : null;
-  const agentId = agentProfile?.cbAgentId || agentProfile?.agentId || null;
-  const providerSelect = document.getElementById("cb-model-selector");
-  const searchInput = document.getElementById("cb-model-search");
-  const providerValue = providerSelect?.value || "auto";
-  const provider = cbNormalizeProviderForApi(providerValue);
-  const modelHint = searchInput?.value ? searchInput.value.trim() : "";
-  const model = modelHint || "auto";
-
-  return {
-    workspace: cbNormalizeWorkspaceId(cbCurrentWorkspaceId),
-    agentId,
-    provider,
-    model,
-    billingSource: "coolbits",
-    ...overrides,
-  };
-};
-
-const cbActivateContext = async (requested = {}, { reason = null } = {}) => {
-  if (!cbIsAuthenticated()) {
-    return null;
-  }
-  const requestId = ++cbActiveContextRequestId;
-  cbSetActiveContextState({ status: "pending", context: cbActiveContextState.context, error: null, reason });
-  const { ok, status, json } = await cbFetchJson(API_CONTEXT_ACTIVATE, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(requested || {}),
-  });
-  if (requestId !== cbActiveContextRequestId) {
-    return null;
-  }
-  if (!ok || !json?.ok) {
-    const message = json?.error?.message || json?.error || "Unable to activate context.";
-    cbSetActiveContextState({
-      status: "error",
-      context: cbActiveContextState.context,
-      error: json?.error || { message },
-      reason,
-    });
-    showComposerError(message);
-    return null;
-  }
-  cbSetActiveContextState({ status: "active", context: json.context, error: null, reason });
-  clearComposerError();
-  return json.context;
-};
-
-const cbActivateContextFromUi = (reason) => {
-  if (cbSuppressContextActivation) return;
-  const payload = cbBuildActiveContextRequestFromUi();
-  return cbActivateContext(payload, { reason });
-};
-
-const cbQueueActivateContextFromUi = (reason, delay = 350) => {
-  if (cbSuppressContextActivation) return;
-  if (cbActiveContextDebounce) {
-    clearTimeout(cbActiveContextDebounce);
-  }
-  cbActiveContextDebounce = setTimeout(() => {
-    cbActivateContextFromUi(reason);
-  }, delay);
-};
-
-const cbLoadActiveContext = async () => {
-  if (!cbIsAuthenticated()) {
-    cbSetActiveContextState({ status: "idle", context: null, error: null });
-    return null;
-  }
-  const { ok, json } = await cbFetchJson(API_CONTEXT_ACTIVE, { method: "GET" });
-  if (ok && json?.context) {
-    cbSetActiveContextState({ status: json.context.status || "active", context: json.context, error: null });
-    return json.context;
-  }
-  cbSetActiveContextState({ status: "idle", context: null, error: null });
-  cbActivateContextFromUi("context-bootstrap");
-  return null;
-};
-
-window.cbActivateContext = cbActivateContext;
-window.cbActiveContextState = cbActiveContextState;
-
-const CB_AGENTS_WORKSPACE_PARAM = {
-  business: "cbB",
-  agency: "cbA",
-  developer: "cbD",
-  personal: "cbP",
-};
-
-const cbBuildAgentsDirectoryUrl = ({ includeWorkspace = false, workspaceId = null } = {}) => {
-  const base = "/agents/";
-  if (!includeWorkspace) {
-    return base;
-  }
-  const resolved = cbNormalizeWorkspaceId(workspaceId || cbCurrentWorkspaceId);
-  const param = CB_AGENTS_WORKSPACE_PARAM[resolved];
-  if (!param) {
-    return base;
-  }
-  const params = new URLSearchParams({ workspace: param });
-  return `${base}?${params.toString()}`;
-};
-
-const cbBuildAgentProfileUrl = (profile, { fromCouncil = false } = {}) => {
-  if (!profile || !profile.agentId) {
-    return cbBuildAgentsDirectoryUrl({ includeWorkspace: true, workspaceId: profile?.workspaceSlug });
-  }
-  const nameSegment = cbEncodeAgentNameSegment(profile.defaultName);
-  const base = `/agents/${profile.workspaceSlug}/${profile.roleSlug}/${profile.agentId}/${nameSegment}`;
-  if (!fromCouncil) {
-    return base;
-  }
-  const params = new URLSearchParams({ fromCouncil: "true" });
-  return `${base}?${params.toString()}`;
 };
 
 const cbSyncCurrentWorkspaceChatsCache = () => {
@@ -3065,7 +2036,6 @@ const cbApplyAuthPayload = (data, { persist = true } = {}) => {
     cbFetchAgentsRegistry();
   }
   closeOnboardingModal();
-  cbLoadActiveContext().catch((error) => console.warn("[ACTIVE_CONTEXT] load failed", error));
 };
 
 async function cbFetchAndApplyAuthMe() {
@@ -3166,105 +2136,6 @@ const cbGetUserEmail = (user) => {
   );
 };
 
-const COUNCIL_BY_WORKSPACE = {
-  business: [
-    {
-      id: "ceo",
-      label: "CEO",
-      badge: "Strategy",
-      desc: "High-level decisions, priorities, and trade-offs for the business.",
-    },
-    {
-      id: "cto",
-      label: "CTO",
-      badge: "Tech",
-      desc: "Architecture, technical decisions, and integration trade-offs.",
-    },
-    {
-      id: "cfo",
-      label: "CFO",
-      badge: "Finance",
-      desc: "Costs, ROI, pricing structure, and financial risk.",
-    },
-    {
-      id: "cmo",
-      label: "CMO",
-      badge: "Growth",
-      desc: "Marketing strategy, channels, and messaging.",
-    },
-    {
-      id: "ops",
-      label: "COO",
-      badge: "Ops",
-      desc: "Processes, automation, and operational efficiency.",
-    },
-  ],
-  agency: [
-    {
-      id: "ppc",
-      label: "PPC Lead",
-      badge: "Ads",
-      desc: "Google Ads / Meta Ads structure, bids, and optimizations.",
-    },
-    {
-      id: "seo",
-      label: "SEO Lead",
-      badge: "SEO",
-      desc: "Search strategy, content, and on-site optimizations.",
-    },
-    {
-      id: "content",
-      label: "Content Lead",
-      badge: "Content",
-      desc: "Angles, hooks, and creative briefs.",
-    },
-    {
-      id: "analytics",
-      label: "Analytics",
-      badge: "Data",
-      desc: "Tracking, attribution, and reporting views.",
-    },
-    {
-      id: "am",
-      label: "Account Lead",
-      badge: "Client",
-      desc: "Expectations, communication, and packaging.",
-    },
-  ],
-  developer: [
-    {
-      id: "arch",
-      label: "System Architect",
-      badge: "Arch",
-      desc: "System design, boundaries, and trade-offs.",
-    },
-    {
-      id: "backend",
-      label: "Backend Dev",
-      badge: "Backend",
-      desc: "APIs, DB, performance, and integrations.",
-    },
-    {
-      id: "frontend",
-      label: "Frontend Dev",
-      badge: "Frontend",
-      desc: "UI/UX, components, and state management.",
-    },
-    {
-      id: "devops",
-      label: "DevOps",
-      badge: "Infra",
-      desc: "Deployment, monitoring, and scaling.",
-    },
-    {
-      id: "ai",
-      label: "AI Engineer",
-      badge: "AI",
-      desc: "Models, prompts, and orchestration.",
-    },
-  ],
-};
-
 let cbActiveCouncilMembers = [];
 
 const cbIsAuthenticated = () => {
@@ -3324,13 +2195,7 @@ const cbUpdateGuestHint = () => {
   if (!hint) {
     return;
   }
-  const hasUser = Boolean(cbCurrentUser && cbCurrentUser.email);
-  const badgeEmail = document
-    .querySelector(".cb-user-badge-email")
-    ?.textContent?.trim()
-    .toLowerCase();
-  const hasBadgeUser = Boolean(badgeEmail && badgeEmail !== "guest");
-  hint.hidden = cbIsAuthenticated() || hasUser || hasBadgeUser;
+  hint.hidden = cbIsAuthenticated();
 };
 
 const cbMaybeSendPendingSeed = () => {
@@ -3549,84 +2414,10 @@ const saveHistory = () => {
   }
 };
 
-let cbChatForceScrollToBottom = false;
-
-const cbGetChatScrollContainer = () =>
-  (elements.chatBody && elements.chatBody instanceof HTMLElement
-    ? elements.chatBody
-    : document.querySelector(".chat-body")) ||
-  (elements.messages && elements.messages instanceof HTMLElement ? elements.messages : null);
-
-const cbIsChatNearBottom = (container, threshold = 120) => {
-  if (!container) return true;
-  const maxScrollTop = container.scrollHeight - container.clientHeight;
-  const current = container.scrollTop;
-  return maxScrollTop - current <= threshold;
-};
-
-const cbEnsureChatScrollToBottomButton = () => {
-  const host =
-    (elements.chatContainer && elements.chatContainer instanceof HTMLElement
-      ? elements.chatContainer
-      : document.getElementById("chat-scroll")) ||
-    null;
-  if (!host) return null;
-
-  const existing = document.getElementById("cb-scroll-to-bottom");
-  if (existing) return existing;
-
-  const button = document.createElement("button");
-  button.type = "button";
-  button.id = "cb-scroll-to-bottom";
-  button.className = "cb-scroll-to-bottom";
-  button.setAttribute("aria-label", "Scroll to bottom");
-  button.setAttribute("aria-hidden", "true");
-  button.tabIndex = -1;
-  button.innerHTML = `
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-      <path d="M6 10l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  `;
-  button.addEventListener("click", () => {
-    cbChatForceScrollToBottom = true;
-    scrollToBottom();
-  });
-  host.appendChild(button);
-  return button;
-};
-
-const cbUpdateChatScrollToBottomButton = () => {
-  const container = cbGetChatScrollContainer();
-  const button = cbEnsureChatScrollToBottomButton();
-  if (!container || !button) return;
-  const shouldShow = !cbIsChatNearBottom(container, 140);
-  button.classList.toggle("is-visible", shouldShow);
-  button.setAttribute("aria-hidden", shouldShow ? "false" : "true");
-  button.tabIndex = shouldShow ? 0 : -1;
-};
-
-const cbBindChatScrollToBottomButton = () => {
-  cbEnsureChatScrollToBottomButton();
-  const container = cbGetChatScrollContainer();
-  if (!container) return;
-  if (container.dataset.cbScrollBottomBound === "true") return;
-  container.addEventListener(
-    "scroll",
-    debounce(() => cbUpdateChatScrollToBottomButton(), 60),
-    { passive: true }
-  );
-  container.dataset.cbScrollBottomBound = "true";
-};
-
 const scrollToBottom = () => {
-  const container = cbGetChatScrollContainer();
-  if (!container) return;
+  if (!elements.messages) return;
   requestAnimationFrame(() => {
-    container.scrollTop = container.scrollHeight;
-    requestAnimationFrame(() => {
-      container.scrollTop = container.scrollHeight;
-      cbUpdateChatScrollToBottomButton();
-    });
+    elements.messages.scrollTop = elements.messages.scrollHeight;
   });
 };
 
@@ -4311,7 +3102,6 @@ const updateUserBadge = () => {
     usageLine,
   });
   cbSetTokenLimitBannerVisible(cbIsTokenExhaustedFromSummary());
-  cbUpdateGuestHint();
 };
 
 const loadSidebarCollapsedFromStorage = () => {
@@ -4622,7 +3412,6 @@ const cbUpdatePromptMeter = () => {
     cbPromptMeterState.sizeClass = "xs";
     cbPromptMeterState.outcomeHint = "General reasoning";
     cbRenderPromptMeter();
-    cbUpdateChatHeader();
     return;
   }
 
@@ -4661,7 +3450,6 @@ const cbUpdatePromptMeter = () => {
   cbPromptMeterState.sizeClass = cbClassifyPromptSize(effectiveTokens);
   cbPromptMeterState.outcomeHint = cbClassifyOutcomeHint(text, ctx);
   cbRenderPromptMeter();
-  cbUpdateChatHeader();
 };
 
 const cbResizeComposerInput = () => {
@@ -4674,14 +3462,18 @@ const cbResizeComposerInput = () => {
   const paddingTop = parseFloat(styles.paddingTop) || 0;
   const paddingBottom = parseFloat(styles.paddingBottom) || 0;
   const cssMinHeight = parseFloat(styles.minHeight) || 52;
-  const maxRowsRaw = parseFloat(styles.getPropertyValue("--cb-composer-max-rows"));
-  const maxRows = Number.isFinite(maxRowsRaw) && maxRowsRaw > 0 ? maxRowsRaw : 7;
-  const cssMaxHeight = parseFloat(styles.maxHeight);
-  const fallbackMax = (lineHeight * maxRows) + paddingTop + paddingBottom;
-  const maxHeight = Number.isFinite(cssMaxHeight) && cssMaxHeight > 0 ? cssMaxHeight : fallbackMax;
-  const minHeight = cssMinHeight;
-  input.dataset.composerMaxHeight = String(Math.round(maxHeight));
-  input.dataset.composerMinHeight = String(Math.round(minHeight));
+  const storedMax = parseFloat(input.dataset.composerMaxHeight || "");
+  const baseMax = 260; // Match CSS max-height (10 lines)
+  const maxHeight = Number.isFinite(storedMax) ? storedMax : baseMax;
+  if (!Number.isFinite(storedMax)) {
+    input.dataset.composerMaxHeight = String(Math.round(maxHeight));
+  }
+  const storedMin = parseFloat(input.dataset.composerMinHeight || "");
+  const baseMin = cssMinHeight;
+  const minHeight = Number.isFinite(storedMin) ? storedMin : baseMin;
+  if (!Number.isFinite(storedMin)) {
+    input.dataset.composerMinHeight = String(Math.round(minHeight));
+  }
   input.style.height = "auto";
   const rawTarget = input.scrollHeight;
   const targetHeight = Math.max(minHeight, Math.min(maxHeight, rawTarget));
@@ -4713,29 +3505,18 @@ const cbSetupComposerInput = () => {
   if (!input.dataset.composerEnhanced) {
     input.addEventListener("input", cbResizeComposerInput);
     input.addEventListener("keydown", cbHandleComposerKeydown);
-    window.addEventListener("resize", cbResizeComposerInput);
     input.dataset.composerEnhanced = "true";
   }
   cbResizeComposerInput();
 };
 
 const cbRepositionSidebarMenus = () => {
-  const {
-    projectMenu,
-    projectSelector,
-    workspaceMenu,
-    workspaceSelector,
-    connectorsMenu,
-    connectorsToggle,
-  } = shellElements;
+  const { projectMenu, projectSelector, workspaceMenu, workspaceSelector } = shellElements;
   if (cbProjectMenuOpen && projectMenu && projectSelector && !projectMenu.hidden) {
     cbPositionSidebarMenu(projectMenu, projectSelector);
   }
   if (cbWorkspaceMenuOpen && workspaceMenu && workspaceSelector && !workspaceMenu.hidden) {
     cbPositionSidebarMenu(workspaceMenu, workspaceSelector);
-  }
-  if (cbConnectorsMenuOpen && connectorsMenu && connectorsToggle && !connectorsMenu.hidden) {
-    cbPositionSidebarMenu(connectorsMenu, connectorsToggle);
   }
   if (userMenuOpen) {
     cbPositionUserMenu();
@@ -4788,40 +3569,14 @@ const cbToggleWorkspaceMenu = (open) => {
   }
 };
 
-const cbToggleConnectorsMenu = (open) => {
-  if (typeof open === "boolean") {
-    cbConnectorsMenuOpen = open;
-  } else {
-    cbConnectorsMenuOpen = !cbConnectorsMenuOpen;
-  }
-  const { connectorsMenu, connectorsToggle } = shellElements;
-  if (connectorsMenu) {
-    connectorsMenu.hidden = !cbConnectorsMenuOpen;
-    if (cbConnectorsMenuOpen) {
-      if (connectorsToggle) {
-        cbPositionSidebarMenu(connectorsMenu, connectorsToggle);
-      }
-    } else {
-      cbResetFloatingMenuStyles(connectorsMenu);
-    }
-  }
-  if (connectorsToggle) {
-    connectorsToggle.setAttribute("aria-expanded", cbConnectorsMenuOpen ? "true" : "false");
-    connectorsToggle.setAttribute("data-open", cbConnectorsMenuOpen ? "true" : "false");
-  }
-};
-
 const cbHandleSidebarMenuOutside = (event) => {
   const target = event.target;
-  const { projectSection, workspaceSection, connectorsSection } = shellElements;
+  const { projectSection, workspaceSection } = shellElements;
   if (cbProjectMenuOpen && projectSection && !projectSection.contains(target)) {
     cbToggleProjectMenu(false);
   }
   if (cbWorkspaceMenuOpen && workspaceSection && !workspaceSection.contains(target)) {
     cbToggleWorkspaceMenu(false);
-  }
-  if (cbConnectorsMenuOpen && connectorsSection && !connectorsSection.contains(target)) {
-    cbToggleConnectorsMenu(false);
   }
 };
 
@@ -4917,7 +3672,6 @@ const cbRenderProjects = () => {
   if (cbProjectMenuOpen && !projectMenu.hidden && projectSelector) {
     cbPositionSidebarMenu(projectMenu, projectSelector);
   }
-  cbUpdateChatHeader();
 };
 
 const cbApplyChatTitleLocally = (chatId, title) => {
@@ -4987,7 +3741,6 @@ const cbRenderWorkspaces = () => {
   } else if (workspaceSelector && cbWorkspaceMenuOpen) {
     cbPositionSidebarMenu(workspaceMenu, workspaceSelector);
   }
-  cbUpdateChatHeader();
 };
 
 const cbRenderCouncilActive = () => {
@@ -5026,12 +3779,12 @@ const cbRenderCouncilList = () => {
     document.getElementById("cb-council-list") ||
     document.querySelector('[data-role="council-list"]');
   if (container) {
-    let agents = cbGetAgentsForWorkspace(cbCurrentWorkspaceId).filter(
-      (agent) => agent.showInCouncil !== false
-    );
-    if (!agents.length) {
-      agents = AGENTS_CONFIG.filter((agent) => agent.showInCouncil !== false);
+    const canonAgents = cbGetCanonCouncilAgents();
+    if (!canonAgents.length) {
+      container.innerHTML = "";
+      return;
     }
+    const agents = canonAgents.map((agent) => cbBuildUiAgentFromCanon(agent));
     container.innerHTML = "";
     agents.forEach((agent) => {
       const row = document.createElement("div");
@@ -5062,13 +3815,6 @@ const cbRenderCouncilList = () => {
       toggle.appendChild(role);
       toggle.appendChild(desc);
 
-      const registryAgent = cbResolvePublicRegistryAgent(agent);
-      const profile = cbBuildCouncilAgentProfile(agent, registryAgent);
-      const preview = cbBuildCouncilHoverPreview(agent, registryAgent);
-      if (preview) {
-        toggle.title = preview;
-      }
-
       const detailsBtn = document.createElement("button");
       detailsBtn.type = "button";
       detailsBtn.className = "cb-council-detail-btn";
@@ -5076,11 +3822,7 @@ const cbRenderCouncilList = () => {
       detailsBtn.addEventListener("click", (event) => {
         event?.preventDefault?.();
         event?.stopPropagation?.();
-        const url = cbBuildAgentProfileUrl(profile, { fromCouncil: true });
-        if (typeof cbOnCouncilModalClose === "function") {
-          cbOnCouncilModalClose();
-        }
-        window.location.href = url;
+        cbOpenAgentDetail(agent.workspace, agent.key);
       });
 
       row.appendChild(toggle);
@@ -5102,8 +3844,10 @@ const cbSelectProject = (projectId) => {
 };
 
 const cbSelectWorkspace = (workspaceId) => {
+  const fallbackId = cbWorkspaces[0]?.id || cbCurrentWorkspaceId || workspaceId;
   const nextWorkspaceId =
-    cbWorkspaces.find((workspace) => workspace.id === workspaceId)?.id || cbWorkspaces[0].id;
+    cbWorkspaces.find((workspace) => workspace.id === workspaceId)?.id || fallbackId;
+  if (!nextWorkspaceId) return;
   cbToggleWorkspaceMenu(false);
   cbOnWorkspaceChanged(nextWorkspaceId);
 };
@@ -5501,7 +4245,6 @@ let cbMobileSidebarOpen = false;
 const cbCloseMobileSidebarMenus = () => {
   cbToggleProjectMenu(false);
   cbToggleWorkspaceMenu(false);
-  cbToggleConnectorsMenu(false);
   hideUserMenu();
 };
 
@@ -5684,7 +4427,7 @@ const cbResetCouncilStatusSoon = (ids, delay = 1500) => {
   }, delay);
 };
 
-const legacyRequestChatReply = async (message, options = {}) => {
+const legacyRequestChatReply = async (message) => {
   await ensureProfile();
   const councilPayload = getCouncilPayload();
   const hasCouncil = Array.isArray(councilPayload.agents) && councilPayload.agents.length > 0;
@@ -5693,21 +4436,12 @@ const legacyRequestChatReply = async (message, options = {}) => {
   if (hasCouncil) {
     cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_PENDING);
   }
-  const requestedContext = options.requestedContext || cbBuildRequestedContextFromUi();
-  const traceId = options.traceId || cbGenerateTraceId();
   const payload = {
     message,
     history: history.map((entry) => ({ ...entry })),
     tier: profile?.capabilities?.tier || profile?.tier || "guest",
     visitorId,
   };
-  if (requestedContext) {
-    payload.provider = requestedContext.provider;
-    payload.model = requestedContext.model;
-  }
-  if (traceId) {
-    payload.traceId = traceId;
-  }
   if (hasCouncil) {
     payload.agents = councilMembers;
     payload.agentsArmed = true;
@@ -5715,19 +4449,6 @@ const legacyRequestChatReply = async (message, options = {}) => {
   }
   console.log("[CB_COUNCIL] payload", councilPayload, payload);
   cbUpdateCouncilPill();
-  if (options.stream) {
-    try {
-      const data = await cbStreamChatRequest(API_CHAT_STREAM, payload, options.streamHandlers || {});
-      if (useCouncil) {
-        cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ACK);
-        cbResetCouncilStatusSoon(councilMembers);
-      }
-      return data;
-    } catch (streamError) {
-      if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
-      throw streamError;
-    }
-  }
   let response;
   try {
     response = await fetch(API_CHAT, {
@@ -5831,121 +4552,6 @@ const cbFetchJson = async (input, init = {}) => {
   }
 };
 
-const cbParseSsePayload = (raw) => {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch (_err) {
-    return raw;
-  }
-};
-
-const cbConsumeSse = async (response, onEvent) => {
-  const reader = response.body?.getReader?.();
-  if (!reader) {
-    throw new Error("Streaming response unavailable.");
-  }
-  const decoder = new TextDecoder();
-  let buffer = "";
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let boundary = buffer.indexOf("\n\n");
-    while (boundary !== -1) {
-      const block = buffer.slice(0, boundary);
-      buffer = buffer.slice(boundary + 2);
-      boundary = buffer.indexOf("\n\n");
-      const lines = block.split(/\r?\n/);
-      let event = "message";
-      const dataLines = [];
-      lines.forEach((line) => {
-        if (line.startsWith("event:")) {
-          event = line.slice(6).trim();
-        } else if (line.startsWith("data:")) {
-          dataLines.push(line.slice(5).trim());
-        }
-      });
-      const raw = dataLines.join("\n");
-      if (!raw) continue;
-      const parsed = cbParseSsePayload(raw);
-      await onEvent({ event, data: parsed });
-    }
-  }
-  if (buffer.trim()) {
-    const lines = buffer.split(/\r?\n/);
-    let event = "message";
-    const dataLines = [];
-    lines.forEach((line) => {
-      if (line.startsWith("event:")) {
-        event = line.slice(6).trim();
-      } else if (line.startsWith("data:")) {
-        dataLines.push(line.slice(5).trim());
-      }
-    });
-    const raw = dataLines.join("\n");
-    if (raw) {
-      await onEvent({ event, data: cbParseSsePayload(raw) });
-    }
-  }
-};
-
-const cbStreamChatRequest = async (url, payload, handlers = {}) => {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: cbGetAuthHeaders({
-      "Content-Type": "application/json",
-      Accept: "text/event-stream",
-    }),
-    credentials: "include",
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const errorPayload = await safeJson(response);
-    const message =
-      errorPayload?.message || errorPayload?.error || "Unable to send message.";
-    const err = new Error(message);
-    err.status = response.status;
-    err.payload = errorPayload;
-    throw err;
-  }
-
-  let finalPayload = null;
-  await cbConsumeSse(response, async ({ event, data }) => {
-    if (event === "error") {
-      const errorPayload = data && typeof data === "object" ? data : { message: String(data || "") };
-      const err = new Error(errorPayload.message || "Stream error.");
-      err.code = errorPayload.errorCode || errorPayload.code || "STREAM_ERROR";
-      err.payload = errorPayload;
-      throw err;
-    }
-    if (event === "route.resolved") {
-      handlers.onRoute?.(data);
-      return;
-    }
-    if (event === "chat.delta") {
-      handlers.onDelta?.(data);
-      return;
-    }
-    if (event === "usage.update") {
-      handlers.onUsage?.(data);
-      return;
-    }
-    if (event === "chat.final") {
-      finalPayload = data;
-      handlers.onFinal?.(data);
-    }
-  });
-
-  if (!finalPayload) {
-    const err = new Error("Stream ended without final response.");
-    err.code = "STREAM_EOF";
-    throw err;
-  }
-  return finalPayload;
-};
-
 const cbSetActiveChatMessages = (messageList = []) => {
   const normalizedList = Array.isArray(messageList) ? [...messageList] : [];
   cbActiveChatMessages = normalizedList;
@@ -5967,7 +4573,6 @@ const cbSetActiveChatMessages = (messageList = []) => {
     }
   });
   saveHistory();
-  cbChatForceScrollToBottom = true;
   renderMessages();
 };
 
@@ -6059,7 +4664,6 @@ function cbRenderChatsList() {
 
 const cbHandleFeatureButtonClick = (key) => {
   if (key === "connectors") {
-    cbToggleConnectorsMenu(false);
     cbSetAccountView("connectors");
     cbRenderConnectorsPanel();
     cbOpenAccountBilling({ view: "connectors" });
@@ -6112,7 +4716,6 @@ const setupProjectControls = () => {
     projectCancelButton,
     projectNameInput,
     workspaceSelector,
-    connectorsToggle,
   } = shellElements;
   if (projectSelector && !projectSelector.dataset.projectSelectorBound) {
     projectSelector.addEventListener("click", (event) => {
@@ -6160,13 +4763,6 @@ const setupProjectControls = () => {
       cbToggleWorkspaceMenu();
     });
     workspaceSelector.dataset.workspaceSelectorBound = "true";
-  }
-  if (connectorsToggle && !connectorsToggle.dataset.connectorsToggleBound) {
-    connectorsToggle.addEventListener("click", (event) => {
-      event.preventDefault();
-      cbToggleConnectorsMenu();
-    });
-    connectorsToggle.dataset.connectorsToggleBound = "true";
   }
   cbRenderProjects();
   cbRenderWorkspaces();
@@ -6290,10 +4886,6 @@ async function cbOpenChat(chatId, { userInitiated = false } = {}) {
   }
   if (userInitiated) {
     cbHasManualChatSelection = true;
-    const params = new URLSearchParams(window.location.search || "");
-    if (params.get("view")) {
-      cbSetDashboardView("chat");
-    }
   }
   try {
     const response = await fetch(`${API_CHATS}/${encodeURIComponent(chatId)}`, {
@@ -6327,7 +4919,7 @@ function cbHandleStartNewChat() {
   focusChatInput();
 }
 
-async function cbCreateChat(firstMessage, options = {}) {
+async function cbCreateChat(firstMessage) {
   if (cbChatsUnsupported) {
     throw new Error("Chat persistence unavailable.");
   }
@@ -6337,20 +4929,11 @@ async function cbCreateChat(firstMessage, options = {}) {
   const councilMembers = hasCouncil ? councilPayload.agents.slice() : [];
   const useCouncil = hasCouncil;
   if (hasCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_PENDING);
-  const requestedContext = options.requestedContext || cbBuildRequestedContextFromUi();
-  const traceId = options.traceId || null;
   const payload = {
     firstMessage,
     workspaceId: workspaceKey,
     projectId: cbCurrentProjectId || null,
   };
-  if (requestedContext) {
-    payload.provider = requestedContext.provider;
-    payload.model = requestedContext.model;
-  }
-  if (traceId) {
-    payload.traceId = traceId;
-  }
   if (hasCouncil) {
     payload.agents = councilMembers;
     payload.agentsArmed = true;
@@ -6358,30 +4941,20 @@ async function cbCreateChat(firstMessage, options = {}) {
   }
   console.log("[CB_COUNCIL] payload", councilPayload, payload);
   cbUpdateCouncilPill();
-  let data = null;
-  if (options.stream) {
-    try {
-      data = await cbStreamChatRequest(`${API_CHATS}?stream=1`, payload, options.streamHandlers || {});
-    } catch (err) {
-      if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
-      throw err;
+  const response = await fetch(API_CHATS, {
+    method: "POST",
+    headers: cbGetAuthHeaders({ "Content-Type": "application/json" }),
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  const data = await safeJson(response);
+  if (!response.ok) {
+    if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
+    if (response.status === 401 || response.status === 403) {
+      clearAuthState({ showOnboarding: true });
     }
-  } else {
-    const response = await fetch(API_CHATS, {
-      method: "POST",
-      headers: cbGetAuthHeaders({ "Content-Type": "application/json" }),
-      credentials: "include",
-      body: JSON.stringify(payload),
-    });
-    data = await safeJson(response);
-    if (!response.ok) {
-      if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
-      if (response.status === 401 || response.status === 403) {
-        clearAuthState({ showOnboarding: true });
-      }
-      console.error("[CHATS] create failed", response.status, response.statusText);
-      throw new Error(data?.error || "Unable to create chat.");
-    }
+    console.error("[CHATS] create failed", response.status, response.statusText);
+    throw new Error(data?.error || "Unable to create chat.");
   }
   if (useCouncil) {
     cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ACK);
@@ -6402,13 +4975,11 @@ async function cbCreateChat(firstMessage, options = {}) {
       cbRenderChatsList();
     }
   }
-  if (!data?.meta?.wallet) {
-    refreshAccountUsage().catch((error) => console.warn("[USAGE] refresh after chat create failed", error));
-  }
+  refreshAccountUsage().catch((error) => console.warn("[USAGE] refresh after chat create failed", error));
   return data;
 }
 
-async function cbAppendChatMessage(chatId, content, options = {}) {
+async function cbAppendChatMessage(chatId, content) {
   if (cbChatsUnsupported) {
     throw new Error("Chat persistence unavailable.");
   }
@@ -6417,16 +4988,7 @@ async function cbAppendChatMessage(chatId, content, options = {}) {
   const councilMembers = hasCouncil ? councilPayload.agents.slice() : [];
   const useCouncil = hasCouncil;
   if (hasCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_PENDING);
-  const requestedContext = options.requestedContext || cbBuildRequestedContextFromUi();
-  const traceId = options.traceId || null;
   const payload = { content };
-  if (requestedContext) {
-    payload.provider = requestedContext.provider;
-    payload.model = requestedContext.model;
-  }
-  if (traceId) {
-    payload.traceId = traceId;
-  }
   if (hasCouncil) {
     payload.agents = councilMembers;
     payload.agentsArmed = true;
@@ -6434,42 +4996,26 @@ async function cbAppendChatMessage(chatId, content, options = {}) {
   }
   console.log("[CB_COUNCIL] payload", councilPayload, payload);
   cbUpdateCouncilPill();
-  let data = null;
-  if (options.stream) {
-    try {
-      data = await cbStreamChatRequest(
-        `${API_CHATS}/${encodeURIComponent(chatId)}/messages?stream=1`,
-        payload,
-        options.streamHandlers || {}
-      );
-    } catch (err) {
-      if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
-      throw err;
+  const response = await fetch(`${API_CHATS}/${encodeURIComponent(chatId)}/messages`, {
+    method: "POST",
+    headers: cbGetAuthHeaders({ "Content-Type": "application/json" }),
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+  const data = await safeJson(response);
+  if (!response.ok) {
+    if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
+    if (response.status === 401 || response.status === 403) {
+      clearAuthState({ showOnboarding: true });
     }
-  } else {
-    const response = await fetch(`${API_CHATS}/${encodeURIComponent(chatId)}/messages`, {
-      method: "POST",
-      headers: cbGetAuthHeaders({ "Content-Type": "application/json" }),
-      credentials: "include",
-      body: JSON.stringify(payload),
-    });
-    data = await safeJson(response);
-    if (!response.ok) {
-      if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
-      if (response.status === 401 || response.status === 403) {
-        clearAuthState({ showOnboarding: true });
-      }
-      console.error("[CHATS] append failed", response.status, response.statusText);
-      throw new Error(data?.error || "Unable to send message.");
-    }
+    console.error("[CHATS] append failed", response.status, response.statusText);
+    throw new Error(data?.error || "Unable to send message.");
   }
   if (useCouncil) {
     cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ACK);
     cbResetCouncilStatusSoon(councilMembers);
   }
-  if (!data?.meta?.wallet) {
-    refreshAccountUsage().catch((error) => console.warn("[USAGE] refresh after chat append failed", error));
-  }
+  refreshAccountUsage().catch((error) => console.warn("[USAGE] refresh after chat append failed", error));
   return data;
 }
 
@@ -6578,7 +5124,6 @@ const clearAuthState = ({ showOnboarding = false } = {}) => {
   if (showOnboarding) {
     openOnboardingModal();
   }
-  cbSetActiveContextState({ status: "idle", context: null, error: null });
 };
 
 const loadAuthFromStorage = () => {
@@ -6635,16 +5180,6 @@ const focusChatInput = () => {
   }
 };
 
-const cbIsChatShellPage = () =>
-  !!document.querySelector("[data-chat-form]") ||
-  !!document.querySelector("[data-chat-messages]");
-
-const cbNavigateToChatView = (view) => {
-  const target = view && view !== "chat" ? view : "";
-  const query = target ? `?view=${encodeURIComponent(target)}` : "";
-  window.location.href = `/chat${query}`;
-};
-
 const setupSidebarInteractions = () => {
   const {
     sidebar,
@@ -6654,7 +5189,6 @@ const setupSidebarInteractions = () => {
     sidebarClose,
     sidebarBackdrop,
     newChatButton,
-    agentsButton,
   } = shellElements;
   if (!sidebar) {
     return;
@@ -6705,48 +5239,13 @@ const setupSidebarInteractions = () => {
   if (newChatButton) {
     newChatButton.addEventListener("click", (event) => {
       event.preventDefault();
-      if (!cbIsChatShellPage()) {
-        cbNavigateToChatView("chat");
-        return;
-      }
       if (!cbRequireAuthForChat("new-chat")) {
         return;
-      }
-      const params = new URLSearchParams(window.location.search || "");
-      if (params.get("view")) {
-        cbSetDashboardView("chat");
       }
       cbHandleStartNewChat();
       closeMobileSidebar();
     });
   }
-
-  if (agentsButton && agentsButton.dataset.sidebarAgentsBound !== "true") {
-    agentsButton.addEventListener("click", (event) => {
-      event.preventDefault();
-      const url = cbBuildAgentsDirectoryUrl();
-      closeMobileSidebar();
-      window.location.href = url;
-    });
-    agentsButton.dataset.sidebarAgentsBound = "true";
-  }
-
-  const dashboardButtons = document.querySelectorAll("[data-sidebar-view]");
-  dashboardButtons.forEach((button) => {
-    if (!button || button.dataset.sidebarViewBound === "true") return;
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      const target = button.dataset.sidebarView;
-      if (!cbIsChatShellPage()) {
-        cbNavigateToChatView(target);
-        return;
-      }
-      cbToggleConnectorsMenu(false);
-      cbSetDashboardView(target);
-      closeMobileSidebar();
-    });
-    button.dataset.sidebarViewBound = "true";
-  });
   setupProjectControls();
   cbApplyFeatureFlags();
   cbApplyResponsiveSidebarState();
@@ -6786,7 +5285,6 @@ const MODAL_IDS = [
   "cb-settings-modal",
   "cb-project-modal",
   "cb-delete-modal",
-  "cb-council-share-modal",
   "cb-council-popover",
 ];
 let activeModalId = null;
@@ -6919,7 +5417,6 @@ const DEFAULT_SETTINGS = {
   showBetaNotices: false,
 };
 let cbSettings = { ...DEFAULT_SETTINGS };
-let cbProfileFocusTarget = null;
 // TODO: sync cbSettings with a future PATCH /api/account/settings endpoint once available.
 
 const saveSettingsToStorage = () => {
@@ -7018,7 +5515,6 @@ const populateProfileModal = async () => {
   const detailsBlock = document.getElementById("cb-profile-details");
   const connectBtn = document.getElementById("cb-profile-connect");
   configureConnectButton(connectBtn, "cb-profile-modal");
-  cbBindProfileModalActions();
 
   if (!cbIsAuthenticated()) {
     if (guestBlock) guestBlock.hidden = false;
@@ -7050,45 +5546,6 @@ const populateProfileModal = async () => {
   setElementText("cb-profile-plan", planLabel);
   setElementText("cb-profile-tokens", tokens);
   setElementText("cb-profile-verification", verificationMessage);
-  syncSettingsUI();
-};
-
-const cbBindProfileModalActions = () => {
-  const openAccountBtn = document.getElementById("cb-profile-open-account");
-  const openConnectorsBtn = document.getElementById("cb-profile-open-connectors");
-  const signOutBtn = document.getElementById("cb-profile-signout");
-  if (openAccountBtn && openAccountBtn.dataset.bound !== "true") {
-    openAccountBtn.addEventListener("click", async () => {
-      closeModal("cb-profile-modal", { silentFocus: true });
-      await cbOpenAccountBilling({ view: "overview" });
-    });
-    openAccountBtn.dataset.bound = "true";
-  }
-  if (openConnectorsBtn && openConnectorsBtn.dataset.bound !== "true") {
-    openConnectorsBtn.addEventListener("click", async () => {
-      closeModal("cb-profile-modal", { silentFocus: true });
-      await cbOpenAccountBilling({ view: "connectors" });
-    });
-    openConnectorsBtn.dataset.bound = "true";
-  }
-  if (signOutBtn && signOutBtn.dataset.bound !== "true") {
-    signOutBtn.addEventListener("click", () => {
-      closeModal("cb-profile-modal", { silentFocus: true });
-      cbSignOut();
-    });
-    signOutBtn.dataset.bound = "true";
-  }
-};
-
-const cbFocusProfileSection = () => {
-  if (!cbProfileFocusTarget) return;
-  const targetId =
-    cbProfileFocusTarget === "preferences" ? "cb-profile-preferences" : null;
-  const target = targetId ? document.getElementById(targetId) : null;
-  if (target) {
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-  cbProfileFocusTarget = null;
 };
 
 const fetchBillingSummary = async () => {
@@ -7332,7 +5789,6 @@ const cbUpdateConnectorState = (key, partial = {}) => {
   cbConnectorState[key] = {
     status: "unknown",
     customerId: null,
-    loginCustomerId: null,
     customerName: null,
     propertyId: null,
     lastSyncAt: null,
@@ -7342,7 +5798,6 @@ const cbUpdateConnectorState = (key, partial = {}) => {
     ...partial,
   };
   cbRenderConnectorsPanel();
-  cbUpdateChatHeader();
   if (cbConnectorDetailState.connector && cbConnectorDetailState.connector.key === key) {
     cbRenderConnectorDetail(cbConnectorDetailState.connector);
   }
@@ -7352,26 +5807,24 @@ const cbFetchConnectorStatusGoogleAds = async () => {
   const connector = CONNECTORS_CONFIG.find((c) => c.key === "googleads");
   if (!connector || !connector.apiBase) return;
   const { ok, status, json } = await cbFetchJson(`${connector.apiBase}/status`);
-	  if (ok && json) {
-	    const customerId = json.customerId || json.customer_id || null;
-	    const loginCustomerId = json.loginCustomerId || json.login_customer_id || null;
-	    const customerName = json.customerName || json.customer_name || null;
-	    const lastSync =
-	      json.lastSyncAt || json.last_sync_at || json.lastSync || null;
-	    cbUpdateConnectorState("googleads", {
+  if (ok && json) {
+    const customerId = json.customerId || json.customer_id || null;
+    const customerName = json.customerName || json.customer_name || null;
+    const lastSync =
+      json.lastSyncAt || json.last_sync_at || json.lastSync || null;
+    cbUpdateConnectorState("googleads", {
       status: json.connected
         ? "connected"
         : (json.status || "").toLowerCase() === "error"
         ? "error"
         : "disconnected",
-	      customerId,
-	      loginCustomerId,
-	      customerName,
-	      lastSyncAt: lastSync,
-	      lastError: json.error ? String(json.error) : null,
-	    });
-	    return;
-	  }
+      customerId,
+      customerName,
+      lastSyncAt: lastSync,
+      lastError: json.error ? String(json.error) : null,
+    });
+    return;
+  }
   let lastError = "Unable to fetch status.";
   if (status === 401) {
     lastError = "Please sign in to view Google Ads status.";
@@ -7384,12 +5837,7 @@ const cbFetchConnectorStatusGoogleAds = async () => {
 const cbFetchConnectorStatusGa4 = async () => {
   const connector = CONNECTORS_CONFIG.find((c) => c.key === "ga4");
   if (!connector || !connector.apiBase) return;
-  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  const params = new URLSearchParams();
-  if (ws) params.set("workspaceId", ws);
-  const { ok, status, json } = await cbFetchJson(
-    `${connector.apiBase}/status${params.toString() ? `?${params.toString()}` : ""}`
-  );
+  const { ok, status, json } = await cbFetchJson(`${connector.apiBase}/status`);
   if (ok && json) {
     const connected =
       typeof json.connected === "boolean"
@@ -7475,2691 +5923,19 @@ const cbFetchGoogleAdsSummary = async (workspaceId) => {
 };
 
 const cbFetchGa4Summary = async (workspaceId) => {
-  if (!workspaceId) return { error: "workspace_missing" };
+  if (!workspaceId) return null;
   const params = new URLSearchParams({
     workspaceId: workspaceId,
     dateRange: "last_7_days",
   });
-  const { ok, json, status } = await cbFetchJson(
+  const { ok, json } = await cbFetchJson(
     `/api/connectors/ga4/summary?${params.toString()}`
   );
   if (ok && json) {
     return json;
   }
-  const errorCode = (json && (json.error || json.code)) || "summary_failed";
-  return { error: errorCode, status: status || null, message: json?.message || null };
+  throw new Error("Failed to load GA4 summary.");
 };
-
-// --- Dashboards (GA4 + Google Ads placeholder) ---
-const CB_GA4_REPORT_BLOCKS_DEFAULT = ["overview", "series", "pages", "sources", "events"];
-const CB_GA4_REPORT_BLOCKS_OPTIONAL = ["geo", "device"];
-const CB_GA4_REPORT_BLOCKS_ALL = [
-  ...CB_GA4_REPORT_BLOCKS_DEFAULT,
-  ...CB_GA4_REPORT_BLOCKS_OPTIONAL,
-];
-
-const cbNormalizeGa4ReportBlocks = (blocks) => {
-  const raw = Array.isArray(blocks) ? blocks : [];
-  const normalized = raw
-    .map((b) => (b == null ? "" : String(b)).trim().toLowerCase())
-    .filter(Boolean)
-    .filter((b) => CB_GA4_REPORT_BLOCKS_ALL.includes(b));
-  const unique = Array.from(new Set(normalized));
-  return unique.length ? unique : CB_GA4_REPORT_BLOCKS_DEFAULT.slice();
-};
-
-const cbGa4BlocksStorageKey = (workspaceId) => {
-  const ws = cbNormalizeWorkspaceId(workspaceId);
-  return `coolbits:ga4_blocks:${ws}`;
-};
-
-const cbLoadGa4BlocksFromStorage = (workspaceId) => {
-  try {
-    const raw = window.localStorage.getItem(cbGa4BlocksStorageKey(workspaceId));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-    return cbNormalizeGa4ReportBlocks(parsed);
-  } catch (_err) {
-    return null;
-  }
-};
-
-const cbPersistGa4BlocksToStorage = (workspaceId, blocks) => {
-  try {
-    const normalized = cbNormalizeGa4ReportBlocks(blocks);
-    window.localStorage.setItem(cbGa4BlocksStorageKey(workspaceId), JSON.stringify(normalized));
-  } catch (_err) {
-    // ignore
-  }
-};
-
-const cbGa4DashboardState = {
-  initialized: false,
-  blocksWorkspaceId: null,
-  preset: "last_7_days",
-  from: null,
-  to: null,
-  selectedBlocks: new Set(CB_GA4_REPORT_BLOCKS_DEFAULT),
-  compareEnabled: false,
-  compareMode: "previous_period",
-  compareFrom: null,
-  compareTo: null,
-  loading: false,
-  error: null,
-  report: null,
-  lastSuccessfulFingerprint: null,
-  snapshotsLoading: false,
-  snapshotsError: null,
-  snapshots: [],
-  selectedSnapshotId: "",
-  snapshotLabel: "",
-};
-
-const CB_COUNCIL_SHARE_QUESTION_DEFAULT = "Explain what changed, likely drivers, and next actions.";
-
-const cbCouncilShareState = {
-  source: "ga4",
-  snapshotId: null,
-  mode: "compact",
-  includeBlocks: new Set(CB_GA4_REPORT_BLOCKS_DEFAULT),
-  topN: 10,
-  question: CB_COUNCIL_SHARE_QUESTION_DEFAULT,
-  previewPrompt: "",
-  previewMeta: null,
-  briefId: null,
-  loading: false,
-  error: null,
-};
-
-const cbCouncilShareModeOptions = [
-  { value: "compact", label: "Compact" },
-  { value: "standard", label: "Standard" },
-  { value: "full", label: "Full" },
-];
-
-const cbNormalizeCouncilShareMode = (mode) => {
-  const raw = (mode || "").toString().trim().toLowerCase();
-  if (raw === "standard") return "standard";
-  if (raw === "full") return "full";
-  return "compact";
-};
-
-const cbCouncilShareTopNCap = (mode) => {
-  const m = cbNormalizeCouncilShareMode(mode);
-  if (m === "compact") return 5;
-  if (m === "standard") return 10;
-  return 20;
-};
-
-const cbCreateCouncilBrief = async ({ snapshotId, mode, includeBlocks, topN, question }) => {
-  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  return cbFetchJson("/api/council/briefs", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      workspaceId: ws,
-      source: "ga4",
-      snapshotId,
-      mode: cbNormalizeCouncilShareMode(mode),
-      includeBlocks: cbNormalizeGa4ReportBlocks(includeBlocks),
-      topN,
-      question: (question || "").toString(),
-    }),
-  });
-};
-
-const cbGetGa4SnapshotMeta = (snapshotId) => {
-  const id = (snapshotId || "").toString();
-  return (cbGa4DashboardState.snapshots || []).find((s) => s && String(s.id) === id) || null;
-};
-
-const cbSetCouncilShareSnapshot = (snapshotId) => {
-  cbCouncilShareState.source = "ga4";
-  cbCouncilShareState.snapshotId = snapshotId ? String(snapshotId) : null;
-  cbCouncilShareState.mode = "compact";
-  cbCouncilShareState.topN = 10;
-  cbCouncilShareState.question = CB_COUNCIL_SHARE_QUESTION_DEFAULT;
-  cbCouncilShareState.previewPrompt = "";
-  cbCouncilShareState.previewMeta = null;
-  cbCouncilShareState.briefId = null;
-  cbCouncilShareState.loading = false;
-  cbCouncilShareState.error = null;
-
-  const meta = cbGetGa4SnapshotMeta(snapshotId);
-  const blocksFromSnapshot = Array.isArray(meta?.blocks) ? meta.blocks : null;
-  const fallbackBlocks = cbGetGa4DashboardSelectedBlocks();
-  cbCouncilShareState.includeBlocks = new Set(cbNormalizeGa4ReportBlocks(blocksFromSnapshot || fallbackBlocks));
-};
-
-const cbRenderCouncilShareModal = () => {
-  const body = document.getElementById("cb-council-share-body");
-  const actions = document.getElementById("cb-council-share-actions");
-  if (!body || !actions) return;
-  body.innerHTML = "";
-  actions.innerHTML = "";
-
-  if (!cbIsAuthenticated()) {
-    const err = document.createElement("p");
-    err.className = "cb-form-error";
-    err.textContent = "Sign in required to share with Council.";
-    body.appendChild(err);
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn btn-primary";
-    btn.textContent = "Continue with Google";
-    btn.addEventListener("click", () => startGoogleLogin());
-    actions.appendChild(btn);
-    return;
-  }
-
-  const snapshotId = cbCouncilShareState.snapshotId;
-  if (!snapshotId) {
-    const err = document.createElement("p");
-    err.className = "cb-form-error";
-    err.textContent = "Select a snapshot first.";
-    body.appendChild(err);
-    const closeBtn = document.createElement("button");
-    closeBtn.type = "button";
-    closeBtn.className = "btn btn-secondary";
-    closeBtn.textContent = "Close";
-    closeBtn.addEventListener("click", () => closeModal("cb-council-share-modal"));
-    actions.appendChild(closeBtn);
-    return;
-  }
-
-  const meta = cbGetGa4SnapshotMeta(snapshotId);
-  const headline = document.createElement("div");
-  headline.className = "cb-dashboard-banner";
-  const label = meta?.label || (meta?.from && meta?.to ? `${meta.from} → ${meta.to}` : `Snapshot ${snapshotId}`);
-  headline.innerHTML = `<strong>GA4 snapshot</strong><div class="cb-dashboard-muted">${label}</div>`;
-  body.appendChild(headline);
-
-  const controls = document.createElement("div");
-  controls.className = "cb-dashboard-controls";
-
-  const modeField = document.createElement("div");
-  modeField.className = "cb-dashboard-field";
-  const modeLabel = document.createElement("label");
-  modeLabel.textContent = "Mode";
-  const modeSelect = document.createElement("select");
-  modeSelect.className = "cb-dashboard-input";
-  modeSelect.innerHTML = cbCouncilShareModeOptions
-    .map((opt) => `<option value="${opt.value}">${opt.label}</option>`)
-    .join("");
-  modeSelect.value = cbNormalizeCouncilShareMode(cbCouncilShareState.mode);
-  modeSelect.disabled = cbCouncilShareState.loading;
-  modeSelect.addEventListener("change", () => {
-    cbCouncilShareState.mode = modeSelect.value;
-    const cap = cbCouncilShareTopNCap(cbCouncilShareState.mode);
-    if (cbCouncilShareState.topN > cap) cbCouncilShareState.topN = cap;
-    cbRenderCouncilShareModal();
-  });
-  modeField.appendChild(modeLabel);
-  modeField.appendChild(modeSelect);
-  controls.appendChild(modeField);
-
-  const topNField = document.createElement("div");
-  topNField.className = "cb-dashboard-field";
-  const topNLabel = document.createElement("label");
-  topNLabel.textContent = "Top N";
-  const topNSelect = document.createElement("select");
-  topNSelect.className = "cb-dashboard-input";
-  const cap = cbCouncilShareTopNCap(cbCouncilShareState.mode);
-  const options = [5, 10, 20].map((n) => ({ n, disabled: n > cap }));
-  topNSelect.innerHTML = options
-    .map((o) => `<option value="${o.n}" ${o.disabled ? "disabled" : ""}>${o.n}</option>`)
-    .join("");
-  topNSelect.value = String(Math.min(cbCouncilShareState.topN || 10, cap));
-  topNSelect.disabled = cbCouncilShareState.loading;
-  topNSelect.addEventListener("change", () => {
-    cbCouncilShareState.topN = Number(topNSelect.value) || 10;
-    cbRenderCouncilShareModal();
-  });
-  topNField.appendChild(topNLabel);
-  topNField.appendChild(topNSelect);
-  controls.appendChild(topNField);
-
-  body.appendChild(controls);
-
-  const blocksPanel = document.createElement("div");
-  blocksPanel.className = "cb-dashboard-panel cb-ga4-blocks-panel";
-  const blocksTitle = document.createElement("h3");
-  blocksTitle.className = "cb-dashboard-panel-title";
-  blocksTitle.textContent = "Include blocks";
-  blocksPanel.appendChild(blocksTitle);
-
-  const blocksGrid = document.createElement("div");
-  blocksGrid.className = "cb-ga4-blocks-grid";
-  const blockLabels = {
-    overview: "Overview",
-    series: "Series",
-    pages: "Pages",
-    sources: "Sources",
-    events: "Events",
-    geo: "Geo",
-    device: "Device",
-  };
-  const selected = new Set(cbNormalizeGa4ReportBlocks(Array.from(cbCouncilShareState.includeBlocks || [])));
-  CB_GA4_REPORT_BLOCKS_ALL.forEach((key) => {
-    const wrap = document.createElement("label");
-    wrap.className = "cb-dashboard-toggle cb-ga4-block-toggle";
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.checked = selected.has(key);
-    input.disabled = cbCouncilShareState.loading;
-    input.addEventListener("change", () => {
-      if (input.checked) {
-        selected.add(key);
-      } else {
-        selected.delete(key);
-      }
-      if (!selected.size) {
-        input.checked = true;
-        selected.add(key);
-      }
-      cbCouncilShareState.includeBlocks = new Set(cbNormalizeGa4ReportBlocks(Array.from(selected)));
-      cbCouncilShareState.previewPrompt = "";
-      cbCouncilShareState.previewMeta = null;
-      cbCouncilShareState.briefId = null;
-      cbRenderCouncilShareModal();
-    });
-    const labelEl = document.createElement("span");
-    labelEl.textContent = blockLabels[key] || key;
-    wrap.appendChild(input);
-    wrap.appendChild(labelEl);
-    blocksGrid.appendChild(wrap);
-  });
-  blocksPanel.appendChild(blocksGrid);
-  body.appendChild(blocksPanel);
-
-  const questionField = document.createElement("div");
-  questionField.className = "cb-dashboard-field";
-  const questionLabel = document.createElement("label");
-  questionLabel.textContent = "Question";
-  const questionInput = document.createElement("textarea");
-  questionInput.className = "cb-dashboard-input";
-  questionInput.rows = 4;
-  questionInput.value = cbCouncilShareState.question || "";
-  questionInput.disabled = cbCouncilShareState.loading;
-  questionInput.addEventListener("input", () => {
-    cbCouncilShareState.question = questionInput.value;
-  });
-  questionField.appendChild(questionLabel);
-  questionField.appendChild(questionInput);
-  body.appendChild(questionField);
-
-  const preview = document.createElement("details");
-  preview.className = "cb-council-share-preview";
-  if (cbCouncilShareState.previewPrompt) {
-    preview.open = true;
-  }
-  const previewSummary = document.createElement("summary");
-  previewSummary.textContent = "Preview";
-  preview.appendChild(previewSummary);
-  const previewContent = document.createElement("pre");
-  previewContent.className = "cb-council-share-preview__content";
-  previewContent.textContent = cbCouncilShareState.previewPrompt || "Generate preview to see the brief.";
-  preview.appendChild(previewContent);
-  if (cbCouncilShareState.previewMeta) {
-    const metaEl = document.createElement("div");
-    metaEl.className = "cb-dashboard-muted";
-    const tokens = cbCouncilShareState.previewMeta.estimatedTokens;
-    const truncated = cbCouncilShareState.previewMeta.truncated;
-    metaEl.textContent = `Estimated tokens: ${tokens || "—"}${truncated ? " · truncated" : ""}`;
-    preview.appendChild(metaEl);
-  }
-  body.appendChild(preview);
-
-  if (cbCouncilShareState.error) {
-    const err = document.createElement("p");
-    err.className = "cb-form-error";
-    err.textContent = cbCouncilShareState.error;
-    body.appendChild(err);
-  }
-
-  const cancelBtn = document.createElement("button");
-  cancelBtn.type = "button";
-  cancelBtn.className = "btn btn-secondary";
-  cancelBtn.textContent = "Cancel";
-  cancelBtn.addEventListener("click", () => closeModal("cb-council-share-modal"));
-  actions.appendChild(cancelBtn);
-
-  const previewBtn = document.createElement("button");
-  previewBtn.type = "button";
-  previewBtn.className = "btn btn-secondary";
-  previewBtn.textContent = cbCouncilShareState.loading ? "Generating..." : "Generate preview";
-  previewBtn.disabled = cbCouncilShareState.loading;
-  previewBtn.addEventListener("click", async () => {
-    cbCouncilShareState.loading = true;
-    cbCouncilShareState.error = null;
-    cbRenderCouncilShareModal();
-    const includeBlocks = cbNormalizeGa4ReportBlocks(Array.from(cbCouncilShareState.includeBlocks || []));
-    const { ok, json, status } = await cbCreateCouncilBrief({
-      snapshotId: Number(snapshotId),
-      mode: cbCouncilShareState.mode,
-      includeBlocks,
-      topN: cbCouncilShareState.topN,
-      question: cbCouncilShareState.question,
-    });
-    if (ok && json && json.prompt) {
-      cbCouncilShareState.previewPrompt = json.prompt;
-      cbCouncilShareState.previewMeta = json.meta || null;
-      cbCouncilShareState.briefId = json.briefId || null;
-      cbCouncilShareState.error = null;
-    } else {
-      const message =
-        (json && (json.message || json.error)) ||
-        (status === 401 ? "Please sign in to create a council brief." : "Could not generate preview.");
-      cbCouncilShareState.previewPrompt = "";
-      cbCouncilShareState.previewMeta = null;
-      cbCouncilShareState.briefId = null;
-      cbCouncilShareState.error = message;
-    }
-    cbCouncilShareState.loading = false;
-    cbRenderCouncilShareModal();
-  });
-  actions.appendChild(previewBtn);
-
-  const sendBtn = document.createElement("button");
-  sendBtn.type = "button";
-  sendBtn.className = "btn btn-primary";
-  sendBtn.textContent = "Send";
-  sendBtn.disabled = cbCouncilShareState.loading || !cbCouncilShareState.previewPrompt;
-  sendBtn.addEventListener("click", () => {
-    if (!cbCouncilShareState.previewPrompt) {
-      cbShowBillingToast("cancel", "Generate preview first.");
-      return;
-    }
-    const prompt = cbCouncilShareState.previewPrompt;
-    closeModal("cb-council-share-modal", { silentFocus: true });
-    if (typeof cbSetDashboardView === "function") {
-      cbSetDashboardView("chat");
-    }
-    const input = cbGetComposerInput();
-    if (input) {
-      input.value = prompt;
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.focus();
-      if (typeof input.setSelectionRange === "function") {
-        input.setSelectionRange(input.value.length, input.value.length);
-      }
-    }
-    if (typeof cbOpenCouncilModal === "function") {
-      cbOpenCouncilModal();
-    } else if (typeof window.cbOpenCouncilModal === "function") {
-      window.cbOpenCouncilModal();
-    }
-  });
-  actions.appendChild(sendBtn);
-};
-
-const cbOpenCouncilShareModalForGa4Snapshot = (snapshotId) => {
-  cbSetCouncilShareSnapshot(snapshotId);
-  cbRenderCouncilShareModal();
-  openModal("cb-council-share-modal");
-};
-
-const cbFormatLocalYmd = (date) => {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-};
-
-const cbParseLocalYmd = (value) => {
-  const raw = (value || "").toString().trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
-  const d = new Date(`${raw}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? null : d;
-};
-
-const cbAddLocalDays = (date, days) => {
-  const d = new Date(date.getTime());
-  d.setDate(d.getDate() + days);
-  return d;
-};
-
-const cbComputePresetRange = (preset) => {
-  const today = new Date();
-  const todayYmd = cbFormatLocalYmd(today);
-  const yesterday = cbAddLocalDays(today, -1);
-  const yesterdayYmd = cbFormatLocalYmd(yesterday);
-  const now = new Date();
-  const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-  const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-
-  switch ((preset || "").toString().toLowerCase()) {
-    case "today":
-      return { from: todayYmd, to: todayYmd };
-    case "yesterday":
-      return { from: yesterdayYmd, to: yesterdayYmd };
-    case "last_7_days": {
-      const from = cbFormatLocalYmd(cbAddLocalDays(yesterday, -6));
-      return { from, to: yesterdayYmd };
-    }
-    case "last_30_days": {
-      const from = cbFormatLocalYmd(cbAddLocalDays(yesterday, -29));
-      return { from, to: yesterdayYmd };
-    }
-    case "this_month":
-      return { from: cbFormatLocalYmd(firstOfThisMonth), to: todayYmd };
-    case "last_month":
-      return { from: cbFormatLocalYmd(firstOfLastMonth), to: cbFormatLocalYmd(lastOfLastMonth) };
-    default:
-      return null;
-  }
-};
-
-const cbGetGa4DashboardRange = () => {
-  if (cbGa4DashboardState.preset === "custom") {
-    return {
-      from: cbGa4DashboardState.from,
-      to: cbGa4DashboardState.to,
-    };
-  }
-  const computed = cbComputePresetRange(cbGa4DashboardState.preset);
-  return computed || { from: cbGa4DashboardState.from, to: cbGa4DashboardState.to };
-};
-
-const CB_GA4_COMPARE_MODES = [
-  { value: "previous_period", label: "Previous period" },
-  { value: "previous_year", label: "Previous year" },
-  { value: "custom", label: "Custom" },
-];
-
-const cbNormalizeGa4CompareMode = (mode) => {
-  const raw = (mode || "").toString().trim().toLowerCase();
-  if (raw === "previous_period") return "previous_period";
-  if (raw === "previous_year") return "previous_year";
-  if (raw === "custom") return "custom";
-  return "previous_period";
-};
-
-const cbGetGa4DashboardSelectedBlocks = () =>
-  cbNormalizeGa4ReportBlocks(Array.from(cbGa4DashboardState.selectedBlocks || []));
-
-const cbSetGa4DashboardSelectedBlocks = (blocks, { persist = true } = {}) => {
-  const normalized = cbNormalizeGa4ReportBlocks(blocks);
-  cbGa4DashboardState.selectedBlocks = new Set(normalized);
-  if (persist) {
-    cbPersistGa4BlocksToStorage(cbCurrentWorkspaceId, normalized);
-  }
-};
-
-const cbGetGa4DashboardSelection = () => {
-  const range = cbGetGa4DashboardRange();
-  const blocks = cbGetGa4DashboardSelectedBlocks();
-  const compareEnabled = !!cbGa4DashboardState.compareEnabled;
-  if (!compareEnabled) {
-    return {
-      from: range.from,
-      to: range.to,
-      blocks,
-      compareMode: "none",
-      compareFrom: null,
-      compareTo: null,
-    };
-  }
-  const compareMode = cbNormalizeGa4CompareMode(cbGa4DashboardState.compareMode);
-  const compareFrom =
-    compareMode === "custom" ? (cbGa4DashboardState.compareFrom || "").toString().trim() : null;
-  const compareTo =
-    compareMode === "custom" ? (cbGa4DashboardState.compareTo || "").toString().trim() : null;
-  return { from: range.from, to: range.to, blocks, compareMode, compareFrom, compareTo };
-};
-
-const cbBuildGa4ReportFingerprint = (selection) => {
-  const blocks = cbNormalizeGa4ReportBlocks(selection?.blocks);
-  const compareMode = (selection?.compareMode || "none").toString().trim().toLowerCase() || "none";
-  const base = {
-    from: selection?.from || "",
-    to: selection?.to || "",
-    blocks: blocks.join(","),
-    compareMode,
-  };
-  if (compareMode === "custom") {
-    base.compareFrom = selection?.compareFrom || "";
-    base.compareTo = selection?.compareTo || "";
-  }
-  return JSON.stringify(base);
-};
-
-const cbValidateGa4DashboardSelection = (selection) => {
-  const fromDate = cbParseLocalYmd(selection?.from);
-  const toDate = cbParseLocalYmd(selection?.to);
-  if (!fromDate || !toDate || fromDate.getTime() > toDate.getTime()) return "invalid_range";
-  const blocks = cbNormalizeGa4ReportBlocks(selection?.blocks);
-  if (!blocks.length) return "no_blocks";
-  if ((selection?.compareMode || "none") === "custom") {
-    const compareFromDate = cbParseLocalYmd(selection?.compareFrom);
-    const compareToDate = cbParseLocalYmd(selection?.compareTo);
-    if (!compareFromDate || !compareToDate || compareFromDate.getTime() > compareToDate.getTime()) {
-      return "invalid_compare_range";
-    }
-  }
-  return null;
-};
-
-const cbNormalizeGa4ReportPayload = (payload) => {
-  if (!payload || typeof payload !== "object") return payload;
-  if (payload.data && payload.blocks) return payload;
-  if (payload.totals || payload.series || payload.tables) {
-    return {
-      range: payload.range || { from: null, to: null },
-      compare: payload.compareRange
-        ? { mode: "previous_period", from: payload.compareRange.from, to: payload.compareRange.to }
-        : null,
-      blocks: CB_GA4_REPORT_BLOCKS_DEFAULT.slice(),
-      data: {
-        overview: payload.totals || {},
-        series: payload.series || { daily: [] },
-        pages: { rows: payload.tables?.pages || [] },
-        sources: { rows: payload.tables?.sourceMedium || [] },
-        events: { rows: payload.tables?.events || [] },
-      },
-    };
-  }
-  return payload;
-};
-
-const cbFetchGa4DashboardReport = async ({
-  from,
-  to,
-  blocks,
-  compareMode,
-  compareFrom,
-  compareTo,
-}) => {
-  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  const params = new URLSearchParams({
-    workspaceId: ws,
-    from,
-    to,
-    blocks: Array.isArray(blocks) ? blocks.join(",") : "",
-    compareMode: compareMode || "none",
-  });
-  if ((compareMode || "").toLowerCase() === "custom") {
-    if (compareFrom) params.set("compareFrom", compareFrom);
-    if (compareTo) params.set("compareTo", compareTo);
-  }
-  return cbFetchJson(`/api/connectors/ga4/report?${params.toString()}`);
-};
-
-const cbFetchGa4DashboardSnapshots = async (limit = 20) => {
-  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  const params = new URLSearchParams({ workspaceId: ws, limit: String(limit) });
-  return cbFetchJson(`/api/connectors/ga4/snapshots?${params.toString()}`);
-};
-
-const cbFetchGa4DashboardSnapshotById = async (snapshotId) => {
-  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  const params = new URLSearchParams({ workspaceId: ws });
-  return cbFetchJson(`/api/connectors/ga4/snapshots/${encodeURIComponent(snapshotId)}?${params.toString()}`);
-};
-
-const cbRestoreGa4DashboardSnapshot = async (snapshotId) => {
-  const nextId = (snapshotId || "").toString().trim();
-  if (!nextId) return;
-
-  cbGa4DashboardState.snapshotsLoading = true;
-  cbGa4DashboardState.error = null;
-  cbRenderGa4Dashboard();
-  const { ok, json, status } = await cbFetchGa4DashboardSnapshotById(nextId);
-  const snapshot = json?.snapshot;
-  if (ok && snapshot && snapshot.payload) {
-    cbGa4DashboardState.selectedSnapshotId = String(snapshot.id || nextId);
-    cbGa4DashboardState.preset = "custom";
-    cbGa4DashboardState.from = snapshot.from;
-    cbGa4DashboardState.to = snapshot.to;
-    const restoredBlocks = cbNormalizeGa4ReportBlocks(snapshot.blocks);
-    cbSetGa4DashboardSelectedBlocks(restoredBlocks, { persist: true });
-
-    const compareModeRaw = (snapshot.compareMode || "").toString().trim();
-    const hasCompareRange = !!(snapshot.compareFrom && snapshot.compareTo);
-    cbGa4DashboardState.compareEnabled = !!(compareModeRaw || hasCompareRange);
-    cbGa4DashboardState.compareMode = compareModeRaw
-      ? cbNormalizeGa4CompareMode(compareModeRaw)
-      : hasCompareRange
-      ? "custom"
-      : "previous_period";
-    cbGa4DashboardState.compareFrom = snapshot.compareFrom || null;
-    cbGa4DashboardState.compareTo = snapshot.compareTo || null;
-
-    const payload = cbNormalizeGa4ReportPayload(snapshot.payload);
-    cbGa4DashboardState.report = payload;
-    cbGa4DashboardState.lastSuccessfulFingerprint = cbBuildGa4ReportFingerprint({
-      from: snapshot.from,
-      to: snapshot.to,
-      blocks: restoredBlocks,
-      compareMode: cbGa4DashboardState.compareEnabled
-        ? cbNormalizeGa4CompareMode(cbGa4DashboardState.compareMode)
-        : "none",
-      compareFrom: cbGa4DashboardState.compareMode === "custom" ? cbGa4DashboardState.compareFrom : null,
-      compareTo: cbGa4DashboardState.compareMode === "custom" ? cbGa4DashboardState.compareTo : null,
-    });
-    cbGa4DashboardState.error = null;
-  } else {
-    cbGa4DashboardState.report = null;
-    cbGa4DashboardState.error = cbDescribeGa4Error(
-      status,
-      json?.error || "snapshot_get_failed",
-      json?.message || "Could not load snapshot."
-    );
-  }
-  cbGa4DashboardState.snapshotsLoading = false;
-  cbRenderGa4Dashboard();
-};
-
-const cbCreateGa4DashboardSnapshot = async ({
-  from,
-  to,
-  blocks,
-  compareMode,
-  compareFrom,
-  compareTo,
-  label,
-}) => {
-  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  return cbFetchJson(`/api/connectors/ga4/snapshots`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      workspaceId: ws,
-      from,
-      to,
-      blocks: Array.isArray(blocks) ? blocks : [],
-      compareMode: compareMode || "none",
-      compareFrom: compareFrom || "",
-      compareTo: compareTo || "",
-      label: label || "",
-    }),
-  });
-};
-
-const cbLoadGa4DashboardSnapshots = async () => {
-  cbGa4DashboardState.snapshotsLoading = true;
-  cbGa4DashboardState.snapshotsError = null;
-  cbRenderGa4Dashboard();
-  const { ok, json, status } = await cbFetchGa4DashboardSnapshots(20);
-  if (ok && json && Array.isArray(json.snapshots)) {
-    cbGa4DashboardState.snapshots = json.snapshots;
-    cbGa4DashboardState.snapshotsError = null;
-  } else {
-    cbGa4DashboardState.snapshots = [];
-    cbGa4DashboardState.snapshotsError = cbDescribeGa4Error(
-      status,
-      json?.error,
-      json?.message || json?.error || "Unable to load GA4 snapshots."
-    );
-  }
-  cbGa4DashboardState.snapshotsLoading = false;
-  cbRenderGa4Dashboard();
-};
-
-const cbRunGa4DashboardReport = async () => {
-  const ga4State = cbConnectorState.ga4 || {};
-  if (ga4State.status !== "connected") {
-    cbGa4DashboardState.error = "Connect GA4 first (not_connected).";
-    cbRenderGa4Dashboard();
-    return;
-  }
-  if (!ga4State.propertyId) {
-    cbGa4DashboardState.error = "Select a GA4 property first (property_not_set).";
-    cbRenderGa4Dashboard();
-    return;
-  }
-  const selection = cbGetGa4DashboardSelection();
-  const selectionError = cbValidateGa4DashboardSelection(selection);
-  if (selectionError) {
-    cbGa4DashboardState.error =
-      selectionError === "invalid_compare_range"
-        ? "Select a valid compare range (invalid_compare_range)."
-        : selectionError === "no_blocks"
-        ? "Select at least one report block (no_blocks)."
-        : "Select a valid date range (invalid_range).";
-    cbRenderGa4Dashboard();
-    return;
-  }
-
-  const fingerprint = cbBuildGa4ReportFingerprint(selection);
-  cbGa4DashboardState.loading = true;
-  cbGa4DashboardState.error = null;
-  cbRenderGa4Dashboard();
-  const { ok, json, status } = await cbFetchGa4DashboardReport({
-    from: selection.from,
-    to: selection.to,
-    blocks: selection.blocks,
-    compareMode: selection.compareMode,
-    compareFrom: selection.compareFrom,
-    compareTo: selection.compareTo,
-  });
-  if (ok && json && !json.error) {
-    cbGa4DashboardState.report = cbNormalizeGa4ReportPayload(json);
-    cbGa4DashboardState.error = null;
-    cbGa4DashboardState.lastSuccessfulFingerprint = fingerprint;
-  } else {
-    cbGa4DashboardState.error = cbDescribeGa4Error(
-      status,
-      json?.error,
-      json?.message || json?.error || "GA4 report failed."
-    );
-  }
-  cbGa4DashboardState.loading = false;
-  cbRenderGa4Dashboard();
-};
-
-const cbFormatNumber = (value) => {
-  const n = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(n)) return "—";
-  try {
-    return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(n);
-  } catch (_err) {
-    return String(n);
-  }
-};
-
-const cbFormatMoney = (value) => {
-  const n = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(n)) return "—";
-  try {
-    return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(n);
-  } catch (_err) {
-    return String(n);
-  }
-};
-
-const cbBuildGa4LineChartSvg = (daily = [], compareDaily = null) => {
-  const points = Array.isArray(daily) ? daily : [];
-  if (points.length < 2) {
-    return '<p class="cb-modal-note">Not enough data to plot a chart.</p>';
-  }
-  const comparePoints = Array.isArray(compareDaily) ? compareDaily : null;
-  const width = 720;
-  const height = 220;
-  const padding = { left: 34, right: 10, top: 12, bottom: 24 };
-  const innerW = width - padding.left - padding.right;
-  const innerH = height - padding.top - padding.bottom;
-  const values = points
-    .map((p) => (typeof p.sessions === "number" ? p.sessions : Number(p.sessions) || 0))
-    .concat(
-      comparePoints
-        ? comparePoints.map((p) => (typeof p.sessions === "number" ? p.sessions : Number(p.sessions) || 0))
-        : []
-    );
-  const maxY = Math.max(1, ...values);
-  const stepX = points.length > 1 ? innerW / (points.length - 1) : innerW;
-  const toX = (idx) => padding.left + idx * stepX;
-  const toY = (val) => padding.top + innerH - (val / maxY) * innerH;
-  const sessionsPath = points
-    .map((p, idx) => `${toX(idx).toFixed(1)},${toY(Number(p.sessions) || 0).toFixed(1)}`)
-    .join(" ");
-  const shouldPlotCompare =
-    Array.isArray(comparePoints) && comparePoints.length === points.length && comparePoints.length >= 2;
-  const comparePath = shouldPlotCompare
-    ? comparePoints
-        .map((p, idx) => `${toX(idx).toFixed(1)},${toY(Number(p.sessions) || 0).toFixed(1)}`)
-        .join(" ")
-    : "";
-
-  const lastLabel = points[points.length - 1]?.date || "";
-  const firstLabel = points[0]?.date || "";
-
-  return `
-    <svg class="cb-dashboard-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Sessions per day">
-      <rect x="0" y="0" width="${width}" height="${height}" fill="rgba(15,23,42,0.45)" rx="14"></rect>
-      <line x1="${padding.left}" y1="${padding.top + innerH}" x2="${padding.left + innerW}" y2="${padding.top + innerH}" stroke="rgba(255,255,255,0.12)" stroke-width="1"></line>
-      <polyline points="${sessionsPath}" fill="none" stroke="rgba(95,225,207,0.95)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
-      ${
-        shouldPlotCompare
-          ? `<polyline points="${comparePath}" fill="none" stroke="rgba(147, 197, 253, 0.75)" stroke-width="2" stroke-dasharray="6 6" stroke-linecap="round" stroke-linejoin="round"></polyline>`
-          : ""
-      }
-      <text x="${padding.left}" y="${height - 8}" fill="rgba(226,232,240,0.65)" font-size="10">${firstLabel}</text>
-      <text x="${padding.left + innerW}" y="${height - 8}" fill="rgba(226,232,240,0.65)" font-size="10" text-anchor="end">${lastLabel}</text>
-      <text x="${padding.left}" y="${padding.top + 10}" fill="rgba(226,232,240,0.65)" font-size="10">${cbFormatNumber(maxY)}</text>
-    </svg>
-  `;
-};
-
-const cbRenderGa4Dashboard = () => {
-  const root = document.getElementById("cb-ga4-dashboard-root");
-  if (!root) return;
-  root.innerHTML = "";
-
-  if (!cbIsAuthenticated()) {
-    const banner = document.createElement("div");
-    banner.className = "cb-dashboard-banner";
-    banner.innerHTML = `
-      <strong>Sign in required.</strong>
-      <div class="cb-dashboard-muted">Connect your account to view GA4 dashboards.</div>
-    `;
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn btn-primary";
-    btn.textContent = "Continue with Google";
-    btn.addEventListener("click", () => startGoogleLogin());
-    banner.appendChild(btn);
-    root.appendChild(banner);
-    return;
-  }
-
-  if (!cbGa4DashboardState.initialized) {
-    const defaults = cbComputePresetRange(cbGa4DashboardState.preset) || cbComputePresetRange("last_7_days");
-    if (defaults) {
-      cbGa4DashboardState.from = defaults.from;
-      cbGa4DashboardState.to = defaults.to;
-    }
-    cbGa4DashboardState.initialized = true;
-  }
-
-  const ga4State = cbConnectorState.ga4 || {};
-  const connected = ga4State.status === "connected";
-  const hasProperty = !!ga4State.propertyId;
-  if (!connected || !hasProperty) {
-    const banner = document.createElement("div");
-    banner.className = "cb-dashboard-banner";
-    banner.innerHTML = connected
-      ? `<strong>Select a GA4 property.</strong><div class="cb-dashboard-muted">Open the connector settings to choose a property.</div>`
-      : `<strong>GA4 is not connected.</strong><div class="cb-dashboard-muted">Connect GA4 to unlock dashboard reporting.</div>`;
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn btn-primary";
-    btn.textContent = connected ? "Choose property" : "Connect GA4";
-    btn.addEventListener("click", () => cbOpenConnectorDetail("ga4"));
-    banner.appendChild(btn);
-    root.appendChild(banner);
-    return;
-  }
-
-  const currentWorkspaceKey = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  if (cbGa4DashboardState.blocksWorkspaceId !== currentWorkspaceKey) {
-    cbGa4DashboardState.blocksWorkspaceId = currentWorkspaceKey;
-    const storedBlocks = cbLoadGa4BlocksFromStorage(currentWorkspaceKey);
-    cbSetGa4DashboardSelectedBlocks(storedBlocks || CB_GA4_REPORT_BLOCKS_DEFAULT, { persist: false });
-    cbGa4DashboardState.selectedSnapshotId = "";
-    cbGa4DashboardState.snapshotLabel = "";
-    cbGa4DashboardState.report = null;
-    cbGa4DashboardState.error = null;
-    cbGa4DashboardState.lastSuccessfulFingerprint = null;
-    cbLoadGa4DashboardSnapshots();
-  }
-
-  const selection = cbGetGa4DashboardSelection();
-  const selectionError = cbValidateGa4DashboardSelection(selection);
-  const fingerprint = cbBuildGa4ReportFingerprint(selection);
-
-  const controls = document.createElement("div");
-  controls.className = "cb-dashboard-controls";
-
-  const presetField = document.createElement("div");
-  presetField.className = "cb-dashboard-field";
-  const presetLabel = document.createElement("label");
-  presetLabel.textContent = "Time range";
-  const presetSelect = document.createElement("select");
-  presetSelect.className = "cb-dashboard-input";
-  presetSelect.innerHTML = `
-    <option value="today">Today</option>
-    <option value="yesterday">Yesterday</option>
-    <option value="last_7_days">Last 7 days</option>
-    <option value="last_30_days">Last 30 days</option>
-    <option value="this_month">This month</option>
-    <option value="last_month">Last month</option>
-    <option value="custom">Custom</option>
-  `;
-  presetSelect.value = cbGa4DashboardState.preset;
-  presetSelect.disabled = cbGa4DashboardState.loading;
-  presetSelect.addEventListener("change", () => {
-    cbGa4DashboardState.preset = presetSelect.value;
-    const next = cbComputePresetRange(cbGa4DashboardState.preset);
-    if (next) {
-      cbGa4DashboardState.from = next.from;
-      cbGa4DashboardState.to = next.to;
-    }
-    cbRenderGa4Dashboard();
-  });
-  presetField.appendChild(presetLabel);
-  presetField.appendChild(presetSelect);
-  controls.appendChild(presetField);
-
-  const fromField = document.createElement("div");
-  fromField.className = "cb-dashboard-field";
-  const fromLabel = document.createElement("label");
-  fromLabel.textContent = "From";
-  const fromInput = document.createElement("input");
-  fromInput.type = "date";
-  fromInput.className = "cb-dashboard-input";
-  fromInput.value = cbGa4DashboardState.from || "";
-  fromInput.disabled = cbGa4DashboardState.loading || cbGa4DashboardState.preset !== "custom";
-  fromInput.addEventListener("change", () => {
-    cbGa4DashboardState.from = fromInput.value;
-    cbRenderGa4Dashboard();
-  });
-  fromField.appendChild(fromLabel);
-  fromField.appendChild(fromInput);
-  controls.appendChild(fromField);
-
-  const toField = document.createElement("div");
-  toField.className = "cb-dashboard-field";
-  const toLabel = document.createElement("label");
-  toLabel.textContent = "To";
-  const toInput = document.createElement("input");
-  toInput.type = "date";
-  toInput.className = "cb-dashboard-input";
-  toInput.value = cbGa4DashboardState.to || "";
-  toInput.disabled = cbGa4DashboardState.loading || cbGa4DashboardState.preset !== "custom";
-  toInput.addEventListener("change", () => {
-    cbGa4DashboardState.to = toInput.value;
-    cbRenderGa4Dashboard();
-  });
-  toField.appendChild(toLabel);
-  toField.appendChild(toInput);
-  controls.appendChild(toField);
-
-  const compareWrap = document.createElement("label");
-  compareWrap.className = "cb-dashboard-toggle";
-  const compareInput = document.createElement("input");
-  compareInput.type = "checkbox";
-  compareInput.checked = !!cbGa4DashboardState.compareEnabled;
-  compareInput.disabled = cbGa4DashboardState.loading;
-  compareInput.addEventListener("change", () => {
-    cbGa4DashboardState.compareEnabled = compareInput.checked;
-    cbRenderGa4Dashboard();
-  });
-  const compareText = document.createElement("span");
-  compareText.textContent = "Compare";
-  compareWrap.appendChild(compareInput);
-  compareWrap.appendChild(compareText);
-  controls.appendChild(compareWrap);
-
-  if (cbGa4DashboardState.compareEnabled) {
-    const modeField = document.createElement("div");
-    modeField.className = "cb-dashboard-field";
-    const modeLabel = document.createElement("label");
-    modeLabel.textContent = "Compare mode";
-    const modeSelect = document.createElement("select");
-    modeSelect.className = "cb-dashboard-input";
-    modeSelect.innerHTML = CB_GA4_COMPARE_MODES.map(
-      (opt) => `<option value="${opt.value}">${opt.label}</option>`
-    ).join("");
-    modeSelect.value = cbNormalizeGa4CompareMode(cbGa4DashboardState.compareMode);
-    modeSelect.disabled = cbGa4DashboardState.loading;
-    modeSelect.addEventListener("change", () => {
-      cbGa4DashboardState.compareMode = modeSelect.value;
-      cbRenderGa4Dashboard();
-    });
-    modeField.appendChild(modeLabel);
-    modeField.appendChild(modeSelect);
-    controls.appendChild(modeField);
-
-    if (cbNormalizeGa4CompareMode(cbGa4DashboardState.compareMode) === "custom") {
-      const compareFromField = document.createElement("div");
-      compareFromField.className = "cb-dashboard-field";
-      const compareFromLabel = document.createElement("label");
-      compareFromLabel.textContent = "Compare from";
-      const compareFromInput = document.createElement("input");
-      compareFromInput.type = "date";
-      compareFromInput.className = "cb-dashboard-input";
-      compareFromInput.value = cbGa4DashboardState.compareFrom || "";
-      compareFromInput.disabled = cbGa4DashboardState.loading;
-      compareFromInput.addEventListener("change", () => {
-        cbGa4DashboardState.compareFrom = compareFromInput.value;
-        cbRenderGa4Dashboard();
-      });
-      compareFromField.appendChild(compareFromLabel);
-      compareFromField.appendChild(compareFromInput);
-      controls.appendChild(compareFromField);
-
-      const compareToField = document.createElement("div");
-      compareToField.className = "cb-dashboard-field";
-      const compareToLabel = document.createElement("label");
-      compareToLabel.textContent = "Compare to";
-      const compareToInput = document.createElement("input");
-      compareToInput.type = "date";
-      compareToInput.className = "cb-dashboard-input";
-      compareToInput.value = cbGa4DashboardState.compareTo || "";
-      compareToInput.disabled = cbGa4DashboardState.loading;
-      compareToInput.addEventListener("change", () => {
-        cbGa4DashboardState.compareTo = compareToInput.value;
-        cbRenderGa4Dashboard();
-      });
-      compareToField.appendChild(compareToLabel);
-      compareToField.appendChild(compareToInput);
-      controls.appendChild(compareToField);
-    }
-  }
-
-  const runBtn = document.createElement("button");
-  runBtn.type = "button";
-  runBtn.className = "btn btn-primary";
-  runBtn.textContent = cbGa4DashboardState.loading ? "Running..." : "Run report";
-  runBtn.disabled = cbGa4DashboardState.loading || !!selectionError;
-  runBtn.addEventListener("click", () => cbRunGa4DashboardReport());
-  controls.appendChild(runBtn);
-
-  root.appendChild(controls);
-
-  if (selectionError === "invalid_compare_range") {
-    const inlineErr = document.createElement("p");
-    inlineErr.className = "cb-form-error";
-    inlineErr.textContent = "Compare range is invalid. Set Compare from/to.";
-    root.appendChild(inlineErr);
-  } else if (selectionError === "no_blocks") {
-    const inlineErr = document.createElement("p");
-    inlineErr.className = "cb-form-error";
-    inlineErr.textContent = "Select at least one block to run the report.";
-    root.appendChild(inlineErr);
-  }
-
-  const blocksPanel = document.createElement("div");
-  blocksPanel.className = "cb-dashboard-panel cb-ga4-blocks-panel";
-  const blocksTitle = document.createElement("h3");
-  blocksTitle.className = "cb-dashboard-panel-title";
-  blocksTitle.textContent = "Blocks";
-  blocksPanel.appendChild(blocksTitle);
-  const blocksGrid = document.createElement("div");
-  blocksGrid.className = "cb-ga4-blocks-grid";
-  const blocksConfig = [
-    { key: "overview", label: "Overview" },
-    { key: "series", label: "Series" },
-    { key: "pages", label: "Pages" },
-    { key: "sources", label: "Sources" },
-    { key: "events", label: "Events" },
-    { key: "geo", label: "Geo" },
-    { key: "device", label: "Device" },
-  ];
-  const selectedBlocks = cbGetGa4DashboardSelectedBlocks();
-  blocksConfig.forEach((block) => {
-    const wrap = document.createElement("label");
-    wrap.className = "cb-dashboard-toggle cb-ga4-block-toggle";
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.checked = selectedBlocks.includes(block.key);
-    input.disabled = cbGa4DashboardState.loading;
-    input.addEventListener("change", () => {
-      const next = new Set(cbGetGa4DashboardSelectedBlocks());
-      if (input.checked) {
-        next.add(block.key);
-      } else {
-        next.delete(block.key);
-      }
-      if (!next.size) {
-        input.checked = true;
-        return;
-      }
-      cbSetGa4DashboardSelectedBlocks(Array.from(next), { persist: true });
-      cbRenderGa4Dashboard();
-    });
-    const label = document.createElement("span");
-    label.textContent = block.label;
-    wrap.appendChild(input);
-    wrap.appendChild(label);
-    blocksGrid.appendChild(wrap);
-  });
-  blocksPanel.appendChild(blocksGrid);
-  root.appendChild(blocksPanel);
-
-  const snapshotControls = document.createElement("div");
-  snapshotControls.className = "cb-dashboard-controls";
-
-  const labelField = document.createElement("div");
-  labelField.className = "cb-dashboard-field";
-  const labelLbl = document.createElement("label");
-  labelLbl.textContent = "Snapshot label (optional)";
-  const labelInput = document.createElement("input");
-  labelInput.type = "text";
-  labelInput.className = "cb-dashboard-input";
-  labelInput.value = cbGa4DashboardState.snapshotLabel || "";
-  labelInput.placeholder = "e.g. Weekly baseline";
-  labelInput.disabled = cbGa4DashboardState.loading || cbGa4DashboardState.snapshotsLoading;
-  labelInput.addEventListener("input", () => {
-    cbGa4DashboardState.snapshotLabel = labelInput.value;
-  });
-  labelField.appendChild(labelLbl);
-  labelField.appendChild(labelInput);
-  snapshotControls.appendChild(labelField);
-
-  const canSaveSnapshot =
-    !!cbGa4DashboardState.lastSuccessfulFingerprint &&
-    cbGa4DashboardState.lastSuccessfulFingerprint === fingerprint &&
-    !!cbGa4DashboardState.report &&
-    !cbGa4DashboardState.report?.error;
-
-  const saveBtn = document.createElement("button");
-  saveBtn.type = "button";
-  saveBtn.className = "btn btn-secondary";
-  saveBtn.textContent = cbGa4DashboardState.snapshotsLoading ? "Saving..." : "Save snapshot";
-  saveBtn.disabled = cbGa4DashboardState.loading || cbGa4DashboardState.snapshotsLoading || !canSaveSnapshot;
-  saveBtn.addEventListener("click", async () => {
-    if (!canSaveSnapshot) {
-      cbShowBillingToast("cancel", "Run the report successfully before saving a snapshot.");
-      return;
-    }
-    const snapshotSelection = cbGetGa4DashboardSelection();
-    const { ok, json, status } = await cbCreateGa4DashboardSnapshot({
-      from: snapshotSelection.from,
-      to: snapshotSelection.to,
-      blocks: snapshotSelection.blocks,
-      compareMode: snapshotSelection.compareMode,
-      compareFrom: snapshotSelection.compareFrom,
-      compareTo: snapshotSelection.compareTo,
-      label: cbGa4DashboardState.snapshotLabel,
-    });
-	    if (ok && json && json.snapshotId) {
-	      cbShowBillingToast("success", "GA4 snapshot saved.");
-	      cbGa4DashboardState.snapshotLabel = "";
-	      cbGa4DashboardState.selectedSnapshotId = String(json.snapshotId);
-	      await cbLoadGa4DashboardSnapshots();
-	      cbRenderGa4Dashboard();
-	    } else {
-	      const errMsg = cbDescribeGa4Error(
-	        status,
-        json?.error,
-        json?.message || json?.error || "Snapshot save failed."
-      );
-      cbShowBillingToast("cancel", errMsg);
-    }
-	  });
-	  snapshotControls.appendChild(saveBtn);
-
-	  const shareBtn = document.createElement("button");
-	  shareBtn.type = "button";
-	  shareBtn.className = "btn btn-primary";
-	  shareBtn.textContent = "Send snapshot to Council";
-	  shareBtn.disabled =
-	    cbGa4DashboardState.loading ||
-	    cbGa4DashboardState.snapshotsLoading ||
-	    !cbGa4DashboardState.selectedSnapshotId;
-	  shareBtn.addEventListener("click", () => {
-	    const snapshotId = cbGa4DashboardState.selectedSnapshotId;
-	    if (!snapshotId) {
-	      cbShowBillingToast("cancel", "Select a snapshot first.");
-	      return;
-	    }
-	    cbOpenCouncilShareModalForGa4Snapshot(snapshotId);
-	  });
-	  snapshotControls.appendChild(shareBtn);
-
-  const snapshotsField = document.createElement("div");
-  snapshotsField.className = "cb-dashboard-field";
-  const snapsLbl = document.createElement("label");
-  snapsLbl.textContent = "Restore snapshot";
-  const snapshotsSelect = document.createElement("select");
-  snapshotsSelect.className = "cb-dashboard-input";
-  snapshotsSelect.disabled = cbGa4DashboardState.snapshotsLoading;
-  const defaultOpt = document.createElement("option");
-  defaultOpt.value = "";
-  defaultOpt.textContent = cbGa4DashboardState.snapshotsLoading ? "Loading..." : "Select a snapshot";
-  snapshotsSelect.appendChild(defaultOpt);
-  (cbGa4DashboardState.snapshots || []).forEach((snap) => {
-    const opt = document.createElement("option");
-    opt.value = snap.id;
-    const label = snap.label || `${snap.from} → ${snap.to}`;
-    opt.textContent = `${label} (${snap.id})`;
-    snapshotsSelect.appendChild(opt);
-  });
-	  snapshotsSelect.value = cbGa4DashboardState.selectedSnapshotId || "";
-	  snapshotsSelect.addEventListener("change", () => {
-	    cbGa4DashboardState.selectedSnapshotId = snapshotsSelect.value || "";
-	    cbRenderGa4Dashboard();
-	  });
-	  snapshotsField.appendChild(snapsLbl);
-	  snapshotsField.appendChild(snapshotsSelect);
-	  snapshotControls.appendChild(snapshotsField);
-
-	  const restoreBtn = document.createElement("button");
-	  restoreBtn.type = "button";
-	  restoreBtn.className = "btn btn-secondary";
-	  restoreBtn.textContent = cbGa4DashboardState.snapshotsLoading ? "Restoring..." : "Restore";
-	  restoreBtn.disabled =
-	    cbGa4DashboardState.loading ||
-	    cbGa4DashboardState.snapshotsLoading ||
-	    !cbGa4DashboardState.selectedSnapshotId;
-	  restoreBtn.addEventListener("click", () => {
-	    const nextId = cbGa4DashboardState.selectedSnapshotId;
-	    if (!nextId) {
-	      cbShowBillingToast("cancel", "Select a snapshot first.");
-	      return;
-	    }
-	    cbRestoreGa4DashboardSnapshot(nextId);
-	  });
-	  snapshotControls.appendChild(restoreBtn);
-
-	  const quickShareBtn = document.createElement("button");
-	  quickShareBtn.type = "button";
-	  quickShareBtn.className = "btn btn-secondary";
-	  quickShareBtn.textContent = "Send";
-	  quickShareBtn.title = "Send selected snapshot to Council";
-	  quickShareBtn.disabled =
-	    cbGa4DashboardState.loading ||
-	    cbGa4DashboardState.snapshotsLoading ||
-	    !cbGa4DashboardState.selectedSnapshotId;
-	  quickShareBtn.addEventListener("click", () => {
-	    const snapshotId = cbGa4DashboardState.selectedSnapshotId;
-	    if (!snapshotId) {
-	      cbShowBillingToast("cancel", "Select a snapshot first.");
-	      return;
-	    }
-	    cbOpenCouncilShareModalForGa4Snapshot(snapshotId);
-	  });
-	  snapshotControls.appendChild(quickShareBtn);
-
-	  root.appendChild(snapshotControls);
-
-  if (cbGa4DashboardState.snapshotsError) {
-    const err = document.createElement("p");
-    err.className = "cb-form-error";
-    err.textContent = cbGa4DashboardState.snapshotsError;
-    root.appendChild(err);
-  }
-
-  if (cbGa4DashboardState.loading) {
-    const note = document.createElement("p");
-    note.className = "cb-modal-note";
-    note.textContent = "Running GA4 report...";
-    root.appendChild(note);
-    return;
-  }
-
-  if (cbGa4DashboardState.error) {
-    const err = document.createElement("p");
-    err.className = "cb-form-error";
-    err.textContent = cbGa4DashboardState.error;
-    root.appendChild(err);
-  }
-
-  const normalizedReport = cbNormalizeGa4ReportPayload(cbGa4DashboardState.report);
-  if (!normalizedReport || normalizedReport.error) {
-    const hint = document.createElement("p");
-    hint.className = "cb-modal-note";
-    hint.textContent = "Run a report to see results.";
-    root.appendChild(hint);
-    return;
-  }
-
-  const activeBlocks = cbGetGa4DashboardSelectedBlocks();
-  const reportData = normalizedReport.data || {};
-
-  if (activeBlocks.includes("overview")) {
-    const cards = document.createElement("div");
-    cards.className = "cb-dashboard-cards";
-    const totals = reportData.overview || {};
-    const deltas = totals.deltas || null;
-    const formatDelta = (pct) => {
-      if (pct == null) return "—";
-      const n = Number(pct);
-      if (!Number.isFinite(n)) return "—";
-      const sign = n > 0 ? "+" : "";
-      return `${sign}${n}%`;
-    };
-    const cardItems = [
-      { title: "Users", value: cbFormatNumber(totals.users), delta: deltas ? formatDelta(deltas.users) : null },
-      {
-        title: "Sessions",
-        value: cbFormatNumber(totals.sessions),
-        delta: deltas ? formatDelta(deltas.sessions) : null,
-      },
-      {
-        title: "Conversions",
-        value: totals.conversions == null ? "—" : cbFormatNumber(totals.conversions),
-        delta: deltas ? formatDelta(deltas.conversions) : null,
-      },
-      {
-        title: "Revenue",
-        value: totals.revenue == null ? "—" : cbFormatMoney(totals.revenue),
-        delta: deltas ? formatDelta(deltas.revenue) : null,
-      },
-    ];
-    cardItems.forEach((item) => {
-      const card = document.createElement("div");
-      card.className = "cb-dashboard-panel";
-      const t = document.createElement("p");
-      t.className = "cb-dashboard-card-title";
-      t.textContent = item.title;
-      const v = document.createElement("p");
-      v.className = "cb-dashboard-card-value";
-      v.textContent = item.value;
-      card.appendChild(t);
-      card.appendChild(v);
-      if (item.delta != null && normalizedReport.compare) {
-        const d = document.createElement("p");
-        d.className = "cb-dashboard-card-delta";
-        d.textContent = item.delta;
-        card.appendChild(d);
-      }
-      cards.appendChild(card);
-    });
-    root.appendChild(cards);
-  }
-
-  const rangePanel = document.createElement("div");
-  rangePanel.className = "cb-dashboard-panel";
-  const rangeTitle = document.createElement("h3");
-  rangeTitle.className = "cb-dashboard-panel-title";
-  rangeTitle.textContent = "Range";
-  rangePanel.appendChild(rangeTitle);
-  const rangeNote = document.createElement("p");
-  rangeNote.className = "cb-modal-note";
-  rangeNote.textContent = `${normalizedReport.range?.from || "—"} → ${normalizedReport.range?.to || "—"}`;
-  rangePanel.appendChild(rangeNote);
-  if (normalizedReport.compare) {
-    const compNote = document.createElement("p");
-    compNote.className = "cb-modal-note";
-    const modeLabel =
-      normalizedReport.compare.mode === "previous_year"
-        ? "Previous year"
-        : normalizedReport.compare.mode === "custom"
-        ? "Custom"
-        : "Previous period";
-    compNote.textContent = `Compare (${modeLabel}): ${normalizedReport.compare.from} → ${normalizedReport.compare.to}`;
-    rangePanel.appendChild(compNote);
-  }
-
-  if (activeBlocks.includes("series")) {
-    const grid = document.createElement("div");
-    grid.className = "cb-dashboard-grid";
-
-    const chartPanel = document.createElement("div");
-    chartPanel.className = "cb-dashboard-panel";
-    const chartTitle = document.createElement("h3");
-    chartTitle.className = "cb-dashboard-panel-title";
-    chartTitle.textContent = "Sessions per day";
-    chartPanel.appendChild(chartTitle);
-    const chartHtml = document.createElement("div");
-    chartHtml.innerHTML = cbBuildGa4LineChartSvg(
-      reportData.series?.daily || [],
-      reportData.series?.compareDaily || null
-    );
-    chartPanel.appendChild(chartHtml);
-    grid.appendChild(chartPanel);
-
-    grid.appendChild(rangePanel);
-    root.appendChild(grid);
-  } else {
-    root.appendChild(rangePanel);
-  }
-
-  const tablesWrap = document.createElement("div");
-  tablesWrap.className = "cb-dashboard-tables";
-
-  const renderTable = (title, headers, rows) => {
-    const panel = document.createElement("div");
-    panel.className = "cb-dashboard-panel";
-    const h = document.createElement("h3");
-    h.className = "cb-dashboard-panel-title";
-    h.textContent = title;
-    panel.appendChild(h);
-    if (!rows || !rows.length) {
-      const empty = document.createElement("p");
-      empty.className = "cb-modal-note";
-      empty.textContent = "No data.";
-      panel.appendChild(empty);
-      return panel;
-    }
-    const table = document.createElement("table");
-    table.className = "cb-dashboard-table";
-    const thead = document.createElement("thead");
-    const trh = document.createElement("tr");
-    headers.forEach((hdr) => {
-      const th = document.createElement("th");
-      th.textContent = hdr;
-      trh.appendChild(th);
-    });
-    thead.appendChild(trh);
-    table.appendChild(thead);
-    const tbody = document.createElement("tbody");
-    rows.forEach((cols) => {
-      const tr = document.createElement("tr");
-      cols.forEach((col) => {
-        const td = document.createElement("td");
-        if (col && col.nodeType) {
-          td.appendChild(col);
-        } else {
-          td.textContent = col == null ? "—" : String(col);
-        }
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    panel.appendChild(table);
-    return panel;
-  };
-
-  let tablesAdded = 0;
-
-  if (activeBlocks.includes("pages")) {
-    const pagesRows = (reportData.pages?.rows || []).map((row) => {
-      const pageEl = document.createElement("div");
-      const title = row.title || "";
-      const path = row.page || "";
-      if (title) {
-        const titleNode = document.createElement("div");
-        titleNode.textContent = title;
-        const pathNode = document.createElement("div");
-        pathNode.className = "cb-dashboard-muted";
-        pathNode.textContent = path;
-        pageEl.appendChild(titleNode);
-        pageEl.appendChild(pathNode);
-      } else {
-        const pathNode = document.createElement("div");
-        pathNode.textContent = path;
-        pageEl.appendChild(pathNode);
-      }
-      return [
-        pageEl,
-        cbFormatNumber(row.sessions),
-        row.conversions == null ? "—" : cbFormatNumber(row.conversions),
-      ];
-    });
-    tablesWrap.appendChild(renderTable("Top pages", ["Page", "Sessions", "Conversions"], pagesRows));
-    tablesAdded += 1;
-  }
-
-  if (activeBlocks.includes("sources")) {
-    const srcRows = (reportData.sources?.rows || []).map((row) => [
-      row.sourceMedium || "—",
-      cbFormatNumber(row.sessions),
-      row.conversions == null ? "—" : cbFormatNumber(row.conversions),
-    ]);
-    tablesWrap.appendChild(renderTable("Top source / medium", ["Source", "Sessions", "Conversions"], srcRows));
-    tablesAdded += 1;
-  }
-
-  if (activeBlocks.includes("events")) {
-    const eventRows = (reportData.events?.rows || []).map((row) => [
-      row.eventName || "—",
-      cbFormatNumber(row.count),
-    ]);
-    tablesWrap.appendChild(renderTable("Top events", ["Event", "Count"], eventRows));
-    tablesAdded += 1;
-  }
-
-  if (activeBlocks.includes("geo")) {
-    const countryRows = (reportData.geo?.countries || []).map((row) => [
-      row.country || "—",
-      cbFormatNumber(row.sessions),
-      row.conversions == null ? "—" : cbFormatNumber(row.conversions),
-    ]);
-    tablesWrap.appendChild(renderTable("Top countries", ["Country", "Sessions", "Conversions"], countryRows));
-    tablesAdded += 1;
-
-    const cityRows = (reportData.geo?.cities || []).map((row) => [
-      row.city || "—",
-      cbFormatNumber(row.sessions),
-      row.conversions == null ? "—" : cbFormatNumber(row.conversions),
-    ]);
-    tablesWrap.appendChild(renderTable("Top cities", ["City", "Sessions", "Conversions"], cityRows));
-    tablesAdded += 1;
-  }
-
-  if (activeBlocks.includes("device")) {
-    const deviceRows = (reportData.device?.deviceCategory || []).map((row) => [
-      row.deviceCategory || "—",
-      cbFormatNumber(row.sessions),
-      row.conversions == null ? "—" : cbFormatNumber(row.conversions),
-    ]);
-    tablesWrap.appendChild(renderTable("Device category", ["Device", "Sessions", "Conversions"], deviceRows));
-    tablesAdded += 1;
-
-    const osRows = (reportData.device?.os || []).map((row) => [
-      row.os || "—",
-      cbFormatNumber(row.sessions),
-      row.conversions == null ? "—" : cbFormatNumber(row.conversions),
-    ]);
-    tablesWrap.appendChild(renderTable("Operating system", ["OS", "Sessions", "Conversions"], osRows));
-    tablesAdded += 1;
-  }
-
-  if (tablesAdded) {
-    root.appendChild(tablesWrap);
-  }
-};
-
-const cbInitGa4Dashboard = () => {
-  cbRenderGa4Dashboard();
-};
-
-window.cbInitGa4Dashboard = cbInitGa4Dashboard;
-window.cbRenderGa4Dashboard = cbRenderGa4Dashboard;
-
-// --- Google Ads Dashboard (v0) ---
-const CB_GOOGLEADS_REPORT_BLOCKS_DEFAULT = ["overview", "series", "campaigns", "devices"];
-const CB_GOOGLEADS_REPORT_BLOCKS_OPTIONAL = ["networks", "search_terms", "keywords"];
-const CB_GOOGLEADS_REPORT_BLOCKS_ALL = [
-  ...CB_GOOGLEADS_REPORT_BLOCKS_DEFAULT,
-  ...CB_GOOGLEADS_REPORT_BLOCKS_OPTIONAL,
-];
-
-const cbNormalizeGoogleAdsReportBlocks = (blocks) => {
-  const raw = Array.isArray(blocks) ? blocks : [];
-  const normalized = raw
-    .map((b) => (b == null ? "" : String(b)).trim().toLowerCase())
-    .filter(Boolean)
-    .filter((b) => CB_GOOGLEADS_REPORT_BLOCKS_ALL.includes(b));
-  const unique = Array.from(new Set(normalized));
-  return unique.length ? unique : CB_GOOGLEADS_REPORT_BLOCKS_DEFAULT.slice();
-};
-
-const cbGoogleAdsBlocksStorageKey = (workspaceId) => {
-  const ws = cbNormalizeWorkspaceId(workspaceId);
-  return `coolbits:googleads_blocks:${ws}`;
-};
-
-const cbLoadGoogleAdsBlocksFromStorage = (workspaceId) => {
-  try {
-    const raw = window.localStorage.getItem(cbGoogleAdsBlocksStorageKey(workspaceId));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-    return cbNormalizeGoogleAdsReportBlocks(parsed);
-  } catch (_err) {
-    return null;
-  }
-};
-
-const cbPersistGoogleAdsBlocksToStorage = (workspaceId, blocks) => {
-  try {
-    const normalized = cbNormalizeGoogleAdsReportBlocks(blocks);
-    window.localStorage.setItem(cbGoogleAdsBlocksStorageKey(workspaceId), JSON.stringify(normalized));
-  } catch (_err) {
-    // ignore
-  }
-};
-
-const CB_GOOGLEADS_COMPARE_MODES = [
-  { value: "previous_period", label: "Previous period" },
-  { value: "previous_year", label: "Previous year" },
-  { value: "custom", label: "Custom" },
-];
-
-const cbNormalizeGoogleAdsCompareMode = (mode) => {
-  const raw = (mode || "").toString().trim().toLowerCase();
-  if (raw === "previous_period") return "previous_period";
-  if (raw === "previous_year") return "previous_year";
-  if (raw === "custom") return "custom";
-  return "previous_period";
-};
-
-const cbDescribeGoogleAdsError = (status, errorCode, message) => {
-  const code = (errorCode || "").toString().trim();
-  if (status === 401) return "Please sign in to view Google Ads reports.";
-  if (code === "invalid_grant") return "Google authorization expired. Disconnect and reconnect (invalid_grant).";
-  if (code === "insufficient_permissions")
-    return "The connected Google account does not have access to this customer (insufficient_permissions).";
-  if (code === "customer_not_set")
-    return "Select a Google Ads customer in connector settings (customer_not_set).";
-  if (code === "rate_limited") return "Google Ads API rate limited. Please retry soon (rate_limited).";
-  if (code === "quota_exceeded") return "Google Ads API quota exceeded. Please try again later (quota_exceeded).";
-  if (code) return `${message || "Google Ads request failed."} (${code})`;
-  return message || "Google Ads request failed.";
-};
-
-const cbNormalizeGoogleAdsReportPayload = (payload) => {
-  if (!payload || typeof payload !== "object") return payload;
-  if (payload.data && payload.blocks && payload.range) return payload;
-  return payload;
-};
-
-const cbGoogleAdsDashboardState = {
-  initialized: false,
-  identityKey: null,
-  preset: "last_7_days",
-  from: null,
-  to: null,
-  selectedBlocks: new Set(CB_GOOGLEADS_REPORT_BLOCKS_DEFAULT),
-  compareEnabled: false,
-  compareMode: "previous_period",
-  compareFrom: null,
-  compareTo: null,
-  loading: false,
-  error: null,
-  errorCode: null,
-  report: null,
-  lastSuccessfulFingerprint: null,
-  snapshotsLoading: false,
-  snapshotsError: null,
-  snapshots: [],
-  selectedSnapshotId: "",
-  snapshotLabel: "",
-};
-
-const cbGetGoogleAdsDashboardRange = () => {
-  if (cbGoogleAdsDashboardState.preset === "custom") {
-    return {
-      from: cbGoogleAdsDashboardState.from,
-      to: cbGoogleAdsDashboardState.to,
-    };
-  }
-  const computed = cbComputePresetRange(cbGoogleAdsDashboardState.preset);
-  return computed || { from: cbGoogleAdsDashboardState.from, to: cbGoogleAdsDashboardState.to };
-};
-
-const cbGetGoogleAdsDashboardSelectedBlocks = () =>
-  cbNormalizeGoogleAdsReportBlocks(Array.from(cbGoogleAdsDashboardState.selectedBlocks || []));
-
-const cbSetGoogleAdsDashboardSelectedBlocks = (blocks, { persist = true } = {}) => {
-  const normalized = cbNormalizeGoogleAdsReportBlocks(blocks);
-  cbGoogleAdsDashboardState.selectedBlocks = new Set(normalized);
-  if (persist) {
-    cbPersistGoogleAdsBlocksToStorage(cbCurrentWorkspaceId, normalized);
-  }
-};
-
-const cbGetGoogleAdsDashboardSelection = () => {
-  const range = cbGetGoogleAdsDashboardRange();
-  const blocks = cbGetGoogleAdsDashboardSelectedBlocks();
-  const compareEnabled = !!cbGoogleAdsDashboardState.compareEnabled;
-  if (!compareEnabled) {
-    return {
-      from: range.from,
-      to: range.to,
-      blocks,
-      compareMode: "none",
-      compareFrom: null,
-      compareTo: null,
-    };
-  }
-  const compareMode = cbNormalizeGoogleAdsCompareMode(cbGoogleAdsDashboardState.compareMode);
-  const compareFrom =
-    compareMode === "custom"
-      ? (cbGoogleAdsDashboardState.compareFrom || "").toString().trim()
-      : null;
-  const compareTo =
-    compareMode === "custom" ? (cbGoogleAdsDashboardState.compareTo || "").toString().trim() : null;
-  return { from: range.from, to: range.to, blocks, compareMode, compareFrom, compareTo };
-};
-
-const cbBuildGoogleAdsReportFingerprint = (selection) => {
-  const blocks = cbNormalizeGoogleAdsReportBlocks(selection?.blocks);
-  const compareMode = (selection?.compareMode || "none").toString().trim().toLowerCase() || "none";
-  const base = {
-    from: selection?.from || "",
-    to: selection?.to || "",
-    blocks: blocks.join(","),
-    compareMode,
-  };
-  if (compareMode === "custom") {
-    base.compareFrom = selection?.compareFrom || "";
-    base.compareTo = selection?.compareTo || "";
-  }
-  return JSON.stringify(base);
-};
-
-const cbValidateGoogleAdsDashboardSelection = (selection) => {
-  const fromDate = cbParseLocalYmd(selection?.from);
-  const toDate = cbParseLocalYmd(selection?.to);
-  if (!fromDate || !toDate || fromDate.getTime() > toDate.getTime()) return "invalid_range";
-  const blocks = cbNormalizeGoogleAdsReportBlocks(selection?.blocks);
-  if (!blocks.length) return "no_blocks";
-  if ((selection?.compareMode || "none") === "custom") {
-    const compareFromDate = cbParseLocalYmd(selection?.compareFrom);
-    const compareToDate = cbParseLocalYmd(selection?.compareTo);
-    if (!compareFromDate || !compareToDate || compareFromDate.getTime() > compareToDate.getTime()) {
-      return "invalid_compare_range";
-    }
-  }
-  return null;
-};
-
-const cbFetchGoogleAdsDashboardReport = async ({
-  from,
-  to,
-  blocks,
-  compareMode,
-  compareFrom,
-  compareTo,
-}) => {
-  const base = "/api/connectors/googleads/report";
-  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  const params = new URLSearchParams({
-    workspaceId: ws,
-    from,
-    to,
-    blocks: Array.isArray(blocks) ? blocks.join(",") : "",
-    compareMode: compareMode || "none",
-  });
-  if ((compareMode || "").toLowerCase() === "custom") {
-    if (compareFrom) params.set("compareFrom", compareFrom);
-    if (compareTo) params.set("compareTo", compareTo);
-  }
-  const url = `${base}?${params.toString()}`;
-  return cbFetchJson(url);
-};
-
-const cbFetchGoogleAdsDashboardSnapshots = async (limit = 20) => {
-  const base = "/api/connectors/googleads/snapshots";
-  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  const params = new URLSearchParams({ workspaceId: ws, limit: String(limit) });
-  const url = `${base}?${params.toString()}`;
-  return cbFetchJson(url);
-};
-
-const cbFetchGoogleAdsDashboardSnapshotById = async (snapshotId) => {
-  const base = `/api/connectors/googleads/snapshots/${encodeURIComponent(snapshotId)}`;
-  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  const params = new URLSearchParams({ workspaceId: ws });
-  const url = `${base}?${params.toString()}`;
-  return cbFetchJson(url);
-};
-
-const cbCreateGoogleAdsDashboardSnapshot = async ({
-  from,
-  to,
-  blocks,
-  compareMode,
-  compareFrom,
-  compareTo,
-  label,
-}) => {
-  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  return cbFetchJson(`/api/connectors/googleads/snapshots`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      workspaceId: ws,
-      from,
-      to,
-      blocks: Array.isArray(blocks) ? blocks : [],
-      compareMode: compareMode || "none",
-      compareFrom: compareFrom || "",
-      compareTo: compareTo || "",
-      label: label || "",
-    }),
-  });
-};
-
-const cbLoadGoogleAdsDashboardSnapshots = async () => {
-  cbGoogleAdsDashboardState.snapshotsLoading = true;
-  cbGoogleAdsDashboardState.snapshotsError = null;
-  cbRenderGoogleAdsDashboard();
-  const { ok, json, status } = await cbFetchGoogleAdsDashboardSnapshots(20);
-  if (ok && json && Array.isArray(json.snapshots)) {
-    cbGoogleAdsDashboardState.snapshots = json.snapshots;
-    cbGoogleAdsDashboardState.snapshotsError = null;
-  } else {
-    cbGoogleAdsDashboardState.snapshots = [];
-    cbGoogleAdsDashboardState.snapshotsError = cbDescribeGoogleAdsError(
-      status,
-      json?.error,
-      json?.message || json?.error || "Unable to load Google Ads snapshots."
-    );
-  }
-  cbGoogleAdsDashboardState.snapshotsLoading = false;
-  cbRenderGoogleAdsDashboard();
-};
-
-const cbRestoreGoogleAdsDashboardSnapshot = async (snapshotId) => {
-  const nextId = (snapshotId || "").toString().trim();
-  if (!nextId) return;
-
-  cbGoogleAdsDashboardState.snapshotsLoading = true;
-  cbGoogleAdsDashboardState.error = null;
-  cbGoogleAdsDashboardState.errorCode = null;
-  cbRenderGoogleAdsDashboard();
-  const { ok, json, status } = await cbFetchGoogleAdsDashboardSnapshotById(nextId);
-  const snapshot = json?.snapshot;
-  if (ok && snapshot && snapshot.payload) {
-    cbGoogleAdsDashboardState.selectedSnapshotId = String(snapshot.id || nextId);
-    cbGoogleAdsDashboardState.preset = "custom";
-    cbGoogleAdsDashboardState.from = snapshot.from;
-    cbGoogleAdsDashboardState.to = snapshot.to;
-    const restoredBlocks = cbNormalizeGoogleAdsReportBlocks(snapshot.blocks);
-    cbSetGoogleAdsDashboardSelectedBlocks(restoredBlocks, { persist: true });
-
-    const compareModeRaw = (snapshot.compareMode || "").toString().trim();
-    const hasCompareRange = !!(snapshot.compareFrom && snapshot.compareTo);
-    cbGoogleAdsDashboardState.compareEnabled = !!(compareModeRaw || hasCompareRange);
-    cbGoogleAdsDashboardState.compareMode = compareModeRaw
-      ? cbNormalizeGoogleAdsCompareMode(compareModeRaw)
-      : hasCompareRange
-      ? "custom"
-      : "previous_period";
-    cbGoogleAdsDashboardState.compareFrom = snapshot.compareFrom || null;
-    cbGoogleAdsDashboardState.compareTo = snapshot.compareTo || null;
-
-    const payload = cbNormalizeGoogleAdsReportPayload(snapshot.payload);
-    cbGoogleAdsDashboardState.report = payload;
-    cbGoogleAdsDashboardState.lastSuccessfulFingerprint = cbBuildGoogleAdsReportFingerprint({
-      from: snapshot.from,
-      to: snapshot.to,
-      blocks: restoredBlocks,
-      compareMode: cbGoogleAdsDashboardState.compareEnabled
-        ? cbNormalizeGoogleAdsCompareMode(cbGoogleAdsDashboardState.compareMode)
-        : "none",
-      compareFrom: cbGoogleAdsDashboardState.compareMode === "custom" ? cbGoogleAdsDashboardState.compareFrom : null,
-      compareTo: cbGoogleAdsDashboardState.compareMode === "custom" ? cbGoogleAdsDashboardState.compareTo : null,
-    });
-    cbGoogleAdsDashboardState.error = null;
-    cbGoogleAdsDashboardState.errorCode = null;
-  } else {
-    cbGoogleAdsDashboardState.report = null;
-    cbGoogleAdsDashboardState.errorCode = json?.error || "snapshot_get_failed";
-    cbGoogleAdsDashboardState.error = cbDescribeGoogleAdsError(
-      status,
-      cbGoogleAdsDashboardState.errorCode,
-      json?.message || "Could not load snapshot."
-    );
-  }
-  cbGoogleAdsDashboardState.snapshotsLoading = false;
-  cbRenderGoogleAdsDashboard();
-};
-
-const cbRunGoogleAdsDashboardReport = async () => {
-  const adsState = cbConnectorState.googleads || {};
-  if (adsState.status !== "connected") {
-    cbGoogleAdsDashboardState.error = "Connect Google Ads first (not_connected).";
-    cbGoogleAdsDashboardState.errorCode = "not_connected";
-    cbRenderGoogleAdsDashboard();
-    return;
-  }
-  if (!adsState.customerId) {
-    cbGoogleAdsDashboardState.error = "Select a Google Ads customer first (customer_not_set).";
-    cbGoogleAdsDashboardState.errorCode = "customer_not_set";
-    cbRenderGoogleAdsDashboard();
-    return;
-  }
-  const selection = cbGetGoogleAdsDashboardSelection();
-  const selectionError = cbValidateGoogleAdsDashboardSelection(selection);
-  if (selectionError) {
-    cbGoogleAdsDashboardState.error =
-      selectionError === "invalid_compare_range"
-        ? "Select a valid compare range (invalid_compare_range)."
-        : selectionError === "no_blocks"
-        ? "Select at least one report block (no_blocks)."
-        : "Select a valid date range (invalid_range).";
-    cbGoogleAdsDashboardState.errorCode = selectionError;
-    cbRenderGoogleAdsDashboard();
-    return;
-  }
-
-  const fingerprint = cbBuildGoogleAdsReportFingerprint(selection);
-  cbGoogleAdsDashboardState.loading = true;
-  cbGoogleAdsDashboardState.error = null;
-  cbGoogleAdsDashboardState.errorCode = null;
-  cbRenderGoogleAdsDashboard();
-  const { ok, json, status } = await cbFetchGoogleAdsDashboardReport({
-    from: selection.from,
-    to: selection.to,
-    blocks: selection.blocks,
-    compareMode: selection.compareMode,
-    compareFrom: selection.compareFrom,
-    compareTo: selection.compareTo,
-  });
-  if (ok && json && !json.error) {
-    cbGoogleAdsDashboardState.report = cbNormalizeGoogleAdsReportPayload(json);
-    cbGoogleAdsDashboardState.error = null;
-    cbGoogleAdsDashboardState.errorCode = null;
-    cbGoogleAdsDashboardState.lastSuccessfulFingerprint = fingerprint;
-  } else {
-    cbGoogleAdsDashboardState.errorCode = json?.error || "googleads_report_failed";
-    cbGoogleAdsDashboardState.error = cbDescribeGoogleAdsError(
-      status,
-      cbGoogleAdsDashboardState.errorCode,
-      json?.message || json?.error || "Google Ads report failed."
-    );
-    cbGoogleAdsDashboardState.report = null;
-  }
-  cbGoogleAdsDashboardState.loading = false;
-  cbRenderGoogleAdsDashboard();
-};
-
-const cbFormatPercent = (ratio, { digits = 1 } = {}) => {
-  const n = typeof ratio === "number" ? ratio : Number(ratio);
-  if (!Number.isFinite(n)) return "—";
-  const pct = n * 100;
-  const formatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: digits });
-  return `${formatter.format(pct)}%`;
-};
-
-const cbFormatRatio = (ratio) => {
-  const n = typeof ratio === "number" ? ratio : Number(ratio);
-  if (!Number.isFinite(n)) return "—";
-  return `${Math.round(n * 100) / 100}x`;
-};
-
-const cbBuildGoogleAdsLineChartSvg = (daily = [], compareDaily = null) => {
-  const points = Array.isArray(daily) ? daily : [];
-  if (points.length < 2) {
-    return '<p class="cb-modal-note">Not enough data to plot a chart.</p>';
-  }
-  const comparePoints = Array.isArray(compareDaily) ? compareDaily : null;
-  const width = 720;
-  const height = 220;
-  const padding = { left: 34, right: 10, top: 12, bottom: 24 };
-  const innerW = width - padding.left - padding.right;
-  const innerH = height - padding.top - padding.bottom;
-  const values = points
-    .map((p) => (typeof p.cost === "number" ? p.cost : Number(p.cost) || 0))
-    .concat(
-      comparePoints ? comparePoints.map((p) => (typeof p.cost === "number" ? p.cost : Number(p.cost) || 0)) : []
-    );
-  const maxY = Math.max(1, ...values);
-  const stepX = points.length > 1 ? innerW / (points.length - 1) : innerW;
-  const toX = (idx) => padding.left + idx * stepX;
-  const toY = (val) => padding.top + innerH - (val / maxY) * innerH;
-  const costPath = points
-    .map((p, idx) => `${toX(idx).toFixed(1)},${toY(Number(p.cost) || 0).toFixed(1)}`)
-    .join(" ");
-  const shouldPlotCompare =
-    Array.isArray(comparePoints) && comparePoints.length === points.length && comparePoints.length >= 2;
-  const comparePath = shouldPlotCompare
-    ? comparePoints.map((p, idx) => `${toX(idx).toFixed(1)},${toY(Number(p.cost) || 0).toFixed(1)}`).join(" ")
-    : "";
-
-  const lastLabel = points[points.length - 1]?.date || "";
-  const firstLabel = points[0]?.date || "";
-
-  return `
-    <svg class="cb-dashboard-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Cost per day">
-      <rect x="0" y="0" width="${width}" height="${height}" fill="rgba(15,23,42,0.45)" rx="14"></rect>
-      <line x1="${padding.left}" y1="${padding.top + innerH}" x2="${padding.left + innerW}" y2="${padding.top + innerH}" stroke="rgba(255,255,255,0.12)" stroke-width="1"></line>
-      <polyline points="${costPath}" fill="none" stroke="rgba(95,225,207,0.95)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
-      ${
-        shouldPlotCompare
-          ? `<polyline points="${comparePath}" fill="none" stroke="rgba(147, 197, 253, 0.75)" stroke-width="2" stroke-dasharray="6 6" stroke-linecap="round" stroke-linejoin="round"></polyline>`
-          : ""
-      }
-      <text x="${padding.left}" y="${height - 8}" fill="rgba(226,232,240,0.65)" font-size="10">${firstLabel}</text>
-      <text x="${padding.left + innerW}" y="${height - 8}" fill="rgba(226,232,240,0.65)" font-size="10" text-anchor="end">${lastLabel}</text>
-      <text x="${padding.left}" y="${padding.top + 10}" fill="rgba(226,232,240,0.65)" font-size="10">${cbFormatMoney(maxY)}</text>
-    </svg>
-  `;
-};
-
-const cbRenderGoogleAdsDashboard = () => {
-  const root = document.getElementById("cb-googleads-dashboard-root");
-  if (!root) return;
-  root.innerHTML = "";
-
-  if (!cbIsAuthenticated()) {
-    const banner = document.createElement("div");
-    banner.className = "cb-dashboard-banner";
-    banner.innerHTML = `
-      <strong>Sign in required.</strong>
-      <div class="cb-dashboard-muted">Connect your account to view Google Ads dashboards.</div>
-    `;
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn btn-primary";
-    btn.textContent = "Continue with Google";
-    btn.addEventListener("click", () => startGoogleLogin());
-    banner.appendChild(btn);
-    root.appendChild(banner);
-    return;
-  }
-
-  if (!cbGoogleAdsDashboardState.initialized) {
-    const defaults = cbComputePresetRange(cbGoogleAdsDashboardState.preset) || cbComputePresetRange("last_7_days");
-    if (defaults) {
-      cbGoogleAdsDashboardState.from = defaults.from;
-      cbGoogleAdsDashboardState.to = defaults.to;
-    }
-    cbGoogleAdsDashboardState.initialized = true;
-  }
-
-  const adsState = cbConnectorState.googleads || {};
-  const connected = adsState.status === "connected";
-  const hasCustomer = !!adsState.customerId;
-  if (!connected || !hasCustomer) {
-    const banner = document.createElement("div");
-    banner.className = "cb-dashboard-banner";
-    banner.innerHTML = !connected
-      ? `<strong>Google Ads is not connected.</strong><div class="cb-dashboard-muted">Connect Google Ads to unlock dashboard reporting.</div>`
-      : `<strong>Select a Google Ads customer.</strong><div class="cb-dashboard-muted">Open the connector settings to choose a client customer.</div>`;
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn btn-primary";
-    btn.textContent = !connected ? "Connect Google Ads" : "Choose customer";
-    btn.addEventListener("click", () => cbOpenConnectorDetail("googleads"));
-    banner.appendChild(btn);
-    root.appendChild(banner);
-  }
-
-  const workspaceKey = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  const customerKey = (adsState.customerId || "").toString().trim() || "none";
-  const identityKey = `${workspaceKey}:${customerKey}`;
-  if (cbGoogleAdsDashboardState.identityKey !== identityKey) {
-    cbGoogleAdsDashboardState.identityKey = identityKey;
-    const storedBlocks = cbLoadGoogleAdsBlocksFromStorage(workspaceKey);
-    cbSetGoogleAdsDashboardSelectedBlocks(storedBlocks || CB_GOOGLEADS_REPORT_BLOCKS_DEFAULT, { persist: false });
-    cbGoogleAdsDashboardState.selectedSnapshotId = "";
-    cbGoogleAdsDashboardState.snapshotLabel = "";
-    cbGoogleAdsDashboardState.report = null;
-    cbGoogleAdsDashboardState.error = null;
-    cbGoogleAdsDashboardState.errorCode = null;
-    cbGoogleAdsDashboardState.lastSuccessfulFingerprint = null;
-    cbGoogleAdsDashboardState.snapshots = [];
-    cbGoogleAdsDashboardState.snapshotsError = null;
-    if (connected && hasCustomer) {
-      cbLoadGoogleAdsDashboardSnapshots();
-    }
-  }
-
-  const selection = cbGetGoogleAdsDashboardSelection();
-  const selectionError = cbValidateGoogleAdsDashboardSelection(selection);
-  const fingerprint = cbBuildGoogleAdsReportFingerprint(selection);
-
-  const controls = document.createElement("div");
-  controls.className = "cb-dashboard-controls";
-
-  const presetField = document.createElement("div");
-  presetField.className = "cb-dashboard-field";
-  const presetLabel = document.createElement("label");
-  presetLabel.textContent = "Time range";
-  const presetSelect = document.createElement("select");
-  presetSelect.className = "cb-dashboard-input";
-  presetSelect.innerHTML = `
-    <option value="today">Today</option>
-    <option value="yesterday">Yesterday</option>
-    <option value="last_7_days">Last 7 days</option>
-    <option value="last_30_days">Last 30 days</option>
-    <option value="this_month">This month</option>
-    <option value="last_month">Last month</option>
-    <option value="custom">Custom</option>
-  `;
-  presetSelect.value = cbGoogleAdsDashboardState.preset;
-  presetSelect.disabled = cbGoogleAdsDashboardState.loading;
-  presetSelect.addEventListener("change", () => {
-    cbGoogleAdsDashboardState.preset = presetSelect.value;
-    const next = cbComputePresetRange(cbGoogleAdsDashboardState.preset);
-    if (next) {
-      cbGoogleAdsDashboardState.from = next.from;
-      cbGoogleAdsDashboardState.to = next.to;
-    }
-    cbRenderGoogleAdsDashboard();
-  });
-  presetField.appendChild(presetLabel);
-  presetField.appendChild(presetSelect);
-  controls.appendChild(presetField);
-
-  const fromField = document.createElement("div");
-  fromField.className = "cb-dashboard-field";
-  const fromLabel = document.createElement("label");
-  fromLabel.textContent = "From";
-  const fromInput = document.createElement("input");
-  fromInput.type = "date";
-  fromInput.className = "cb-dashboard-input";
-  fromInput.value = cbGoogleAdsDashboardState.from || "";
-  fromInput.disabled = cbGoogleAdsDashboardState.loading || cbGoogleAdsDashboardState.preset !== "custom";
-  fromInput.addEventListener("change", () => {
-    cbGoogleAdsDashboardState.from = fromInput.value;
-    cbRenderGoogleAdsDashboard();
-  });
-  fromField.appendChild(fromLabel);
-  fromField.appendChild(fromInput);
-  controls.appendChild(fromField);
-
-  const toField = document.createElement("div");
-  toField.className = "cb-dashboard-field";
-  const toLabel = document.createElement("label");
-  toLabel.textContent = "To";
-  const toInput = document.createElement("input");
-  toInput.type = "date";
-  toInput.className = "cb-dashboard-input";
-  toInput.value = cbGoogleAdsDashboardState.to || "";
-  toInput.disabled = cbGoogleAdsDashboardState.loading || cbGoogleAdsDashboardState.preset !== "custom";
-  toInput.addEventListener("change", () => {
-    cbGoogleAdsDashboardState.to = toInput.value;
-    cbRenderGoogleAdsDashboard();
-  });
-  toField.appendChild(toLabel);
-  toField.appendChild(toInput);
-  controls.appendChild(toField);
-
-  const compareWrap = document.createElement("label");
-  compareWrap.className = "cb-dashboard-toggle";
-  const compareInput = document.createElement("input");
-  compareInput.type = "checkbox";
-  compareInput.checked = !!cbGoogleAdsDashboardState.compareEnabled;
-  compareInput.disabled = cbGoogleAdsDashboardState.loading;
-  compareInput.addEventListener("change", () => {
-    cbGoogleAdsDashboardState.compareEnabled = compareInput.checked;
-    cbRenderGoogleAdsDashboard();
-  });
-  const compareText = document.createElement("span");
-  compareText.textContent = "Compare";
-  compareWrap.appendChild(compareInput);
-  compareWrap.appendChild(compareText);
-  controls.appendChild(compareWrap);
-
-  if (cbGoogleAdsDashboardState.compareEnabled) {
-    const modeField = document.createElement("div");
-    modeField.className = "cb-dashboard-field";
-    const modeLabel = document.createElement("label");
-    modeLabel.textContent = "Compare mode";
-    const modeSelect = document.createElement("select");
-    modeSelect.className = "cb-dashboard-input";
-    modeSelect.innerHTML = CB_GOOGLEADS_COMPARE_MODES.map(
-      (opt) => `<option value="${opt.value}">${opt.label}</option>`
-    ).join("");
-    modeSelect.value = cbNormalizeGoogleAdsCompareMode(cbGoogleAdsDashboardState.compareMode);
-    modeSelect.disabled = cbGoogleAdsDashboardState.loading;
-    modeSelect.addEventListener("change", () => {
-      cbGoogleAdsDashboardState.compareMode = modeSelect.value;
-      cbRenderGoogleAdsDashboard();
-    });
-    modeField.appendChild(modeLabel);
-    modeField.appendChild(modeSelect);
-    controls.appendChild(modeField);
-
-    if (cbNormalizeGoogleAdsCompareMode(cbGoogleAdsDashboardState.compareMode) === "custom") {
-      const compareFromField = document.createElement("div");
-      compareFromField.className = "cb-dashboard-field";
-      const compareFromLabel = document.createElement("label");
-      compareFromLabel.textContent = "Compare from";
-      const compareFromInput = document.createElement("input");
-      compareFromInput.type = "date";
-      compareFromInput.className = "cb-dashboard-input";
-      compareFromInput.value = cbGoogleAdsDashboardState.compareFrom || "";
-      compareFromInput.disabled = cbGoogleAdsDashboardState.loading;
-      compareFromInput.addEventListener("change", () => {
-        cbGoogleAdsDashboardState.compareFrom = compareFromInput.value;
-        cbRenderGoogleAdsDashboard();
-      });
-      compareFromField.appendChild(compareFromLabel);
-      compareFromField.appendChild(compareFromInput);
-      controls.appendChild(compareFromField);
-
-      const compareToField = document.createElement("div");
-      compareToField.className = "cb-dashboard-field";
-      const compareToLabel = document.createElement("label");
-      compareToLabel.textContent = "Compare to";
-      const compareToInput = document.createElement("input");
-      compareToInput.type = "date";
-      compareToInput.className = "cb-dashboard-input";
-      compareToInput.value = cbGoogleAdsDashboardState.compareTo || "";
-      compareToInput.disabled = cbGoogleAdsDashboardState.loading;
-      compareToInput.addEventListener("change", () => {
-        cbGoogleAdsDashboardState.compareTo = compareToInput.value;
-        cbRenderGoogleAdsDashboard();
-      });
-      compareToField.appendChild(compareToLabel);
-      compareToField.appendChild(compareToInput);
-      controls.appendChild(compareToField);
-    }
-  }
-
-  const runBtn = document.createElement("button");
-  runBtn.type = "button";
-  runBtn.className = "btn btn-primary";
-  runBtn.textContent = cbGoogleAdsDashboardState.loading ? "Running..." : "Run report";
-  runBtn.disabled = cbGoogleAdsDashboardState.loading || !!selectionError || !connected || !hasCustomer;
-  runBtn.addEventListener("click", () => cbRunGoogleAdsDashboardReport());
-  controls.appendChild(runBtn);
-
-  root.appendChild(controls);
-
-  if (selectionError === "invalid_compare_range") {
-    const inlineErr = document.createElement("p");
-    inlineErr.className = "cb-form-error";
-    inlineErr.textContent = "Compare range is invalid. Set Compare from/to.";
-    root.appendChild(inlineErr);
-  } else if (selectionError === "no_blocks") {
-    const inlineErr = document.createElement("p");
-    inlineErr.className = "cb-form-error";
-    inlineErr.textContent = "Select at least one block to run the report.";
-    root.appendChild(inlineErr);
-  }
-
-  const blocksPanel = document.createElement("div");
-  blocksPanel.className = "cb-dashboard-panel cb-ga4-blocks-panel";
-  const blocksTitle = document.createElement("h3");
-  blocksTitle.className = "cb-dashboard-panel-title";
-  blocksTitle.textContent = "Blocks";
-  blocksPanel.appendChild(blocksTitle);
-  const blocksGrid = document.createElement("div");
-  blocksGrid.className = "cb-ga4-blocks-grid";
-  const blocksConfig = [
-    { key: "overview", label: "Overview" },
-    { key: "series", label: "Series" },
-    { key: "campaigns", label: "Campaigns" },
-    { key: "devices", label: "Devices" },
-    { key: "networks", label: "Networks" },
-    { key: "search_terms", label: "Search terms" },
-    { key: "keywords", label: "Keywords" },
-  ];
-  const selectedBlocks = cbGetGoogleAdsDashboardSelectedBlocks();
-  blocksConfig.forEach((block) => {
-    const wrap = document.createElement("label");
-    wrap.className = "cb-dashboard-toggle cb-ga4-block-toggle";
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.checked = selectedBlocks.includes(block.key);
-    input.disabled = cbGoogleAdsDashboardState.loading;
-    input.addEventListener("change", () => {
-      const next = new Set(cbGetGoogleAdsDashboardSelectedBlocks());
-      if (input.checked) {
-        next.add(block.key);
-      } else {
-        next.delete(block.key);
-      }
-      if (!next.size) {
-        input.checked = true;
-        return;
-      }
-      cbSetGoogleAdsDashboardSelectedBlocks(Array.from(next), { persist: true });
-      cbRenderGoogleAdsDashboard();
-    });
-    const label = document.createElement("span");
-    label.textContent = block.label;
-    wrap.appendChild(input);
-    wrap.appendChild(label);
-    blocksGrid.appendChild(wrap);
-  });
-  blocksPanel.appendChild(blocksGrid);
-  root.appendChild(blocksPanel);
-
-  const snapshotControls = document.createElement("div");
-  snapshotControls.className = "cb-dashboard-controls";
-
-  const labelField = document.createElement("div");
-  labelField.className = "cb-dashboard-field";
-  const labelLbl = document.createElement("label");
-  labelLbl.textContent = "Snapshot label (optional)";
-  const labelInput = document.createElement("input");
-  labelInput.type = "text";
-  labelInput.className = "cb-dashboard-input";
-  labelInput.value = cbGoogleAdsDashboardState.snapshotLabel || "";
-  labelInput.placeholder = "e.g. Weekly baseline";
-  labelInput.disabled = cbGoogleAdsDashboardState.loading || cbGoogleAdsDashboardState.snapshotsLoading;
-  labelInput.addEventListener("input", () => {
-    cbGoogleAdsDashboardState.snapshotLabel = labelInput.value;
-  });
-  labelField.appendChild(labelLbl);
-  labelField.appendChild(labelInput);
-  snapshotControls.appendChild(labelField);
-
-  const canSaveSnapshot =
-    !!cbGoogleAdsDashboardState.lastSuccessfulFingerprint &&
-    cbGoogleAdsDashboardState.lastSuccessfulFingerprint === fingerprint &&
-    !!cbGoogleAdsDashboardState.report &&
-    !cbGoogleAdsDashboardState.report?.error;
-
-  const saveBtn = document.createElement("button");
-  saveBtn.type = "button";
-  saveBtn.className = "btn btn-secondary";
-  saveBtn.textContent = cbGoogleAdsDashboardState.snapshotsLoading ? "Saving..." : "Save snapshot";
-  saveBtn.disabled =
-    cbGoogleAdsDashboardState.loading ||
-    cbGoogleAdsDashboardState.snapshotsLoading ||
-    !connected ||
-    !hasCustomer ||
-    !canSaveSnapshot;
-  saveBtn.addEventListener("click", async () => {
-    if (!canSaveSnapshot) {
-      cbShowBillingToast("cancel", "Run the report successfully before saving a snapshot.");
-      return;
-    }
-    const snapshotSelection = cbGetGoogleAdsDashboardSelection();
-    const { ok, json, status } = await cbCreateGoogleAdsDashboardSnapshot({
-      from: snapshotSelection.from,
-      to: snapshotSelection.to,
-      blocks: snapshotSelection.blocks,
-      compareMode: snapshotSelection.compareMode,
-      compareFrom: snapshotSelection.compareFrom,
-      compareTo: snapshotSelection.compareTo,
-      label: cbGoogleAdsDashboardState.snapshotLabel,
-    });
-    if (ok && json && json.snapshotId) {
-      cbShowBillingToast("success", "Google Ads snapshot saved.");
-      cbGoogleAdsDashboardState.snapshotLabel = "";
-      cbGoogleAdsDashboardState.selectedSnapshotId = String(json.snapshotId);
-      await cbLoadGoogleAdsDashboardSnapshots();
-      cbRenderGoogleAdsDashboard();
-    } else {
-      const errMsg = cbDescribeGoogleAdsError(
-        status,
-        json?.error,
-        json?.message || json?.error || "Snapshot save failed."
-      );
-      cbShowBillingToast("cancel", errMsg);
-    }
-  });
-  snapshotControls.appendChild(saveBtn);
-
-  const snapshotsField = document.createElement("div");
-  snapshotsField.className = "cb-dashboard-field";
-  const snapsLbl = document.createElement("label");
-  snapsLbl.textContent = "Restore snapshot";
-  const snapshotsSelect = document.createElement("select");
-  snapshotsSelect.className = "cb-dashboard-input";
-  snapshotsSelect.disabled = cbGoogleAdsDashboardState.snapshotsLoading || !connected || !hasCustomer;
-  const defaultOpt = document.createElement("option");
-  defaultOpt.value = "";
-  defaultOpt.textContent = cbGoogleAdsDashboardState.snapshotsLoading ? "Loading..." : "Select a snapshot";
-  snapshotsSelect.appendChild(defaultOpt);
-  (cbGoogleAdsDashboardState.snapshots || []).forEach((snap) => {
-    const opt = document.createElement("option");
-    opt.value = snap.id;
-    const label = snap.label || `${snap.from} → ${snap.to}`;
-    opt.textContent = `${label} (${snap.id})`;
-    snapshotsSelect.appendChild(opt);
-  });
-  snapshotsSelect.value = cbGoogleAdsDashboardState.selectedSnapshotId || "";
-  snapshotsSelect.addEventListener("change", () => {
-    cbGoogleAdsDashboardState.selectedSnapshotId = snapshotsSelect.value || "";
-    cbRenderGoogleAdsDashboard();
-  });
-  snapshotsField.appendChild(snapsLbl);
-  snapshotsField.appendChild(snapshotsSelect);
-  snapshotControls.appendChild(snapshotsField);
-
-  const restoreBtn = document.createElement("button");
-  restoreBtn.type = "button";
-  restoreBtn.className = "btn btn-secondary";
-  restoreBtn.textContent = cbGoogleAdsDashboardState.snapshotsLoading ? "Restoring..." : "Restore";
-  restoreBtn.disabled =
-    cbGoogleAdsDashboardState.loading ||
-    cbGoogleAdsDashboardState.snapshotsLoading ||
-    !connected ||
-    !hasCustomer ||
-    !cbGoogleAdsDashboardState.selectedSnapshotId;
-  restoreBtn.addEventListener("click", () => {
-    const nextId = cbGoogleAdsDashboardState.selectedSnapshotId;
-    if (!nextId) {
-      cbShowBillingToast("cancel", "Select a snapshot first.");
-      return;
-    }
-    cbRestoreGoogleAdsDashboardSnapshot(nextId);
-  });
-  snapshotControls.appendChild(restoreBtn);
-
-  root.appendChild(snapshotControls);
-
-  if (cbGoogleAdsDashboardState.snapshotsError) {
-    const err = document.createElement("p");
-    err.className = "cb-form-error";
-    err.textContent = cbGoogleAdsDashboardState.snapshotsError;
-    root.appendChild(err);
-  }
-
-  if (cbGoogleAdsDashboardState.loading) {
-    const note = document.createElement("p");
-    note.className = "cb-modal-note";
-    note.textContent = "Running Google Ads report...";
-    root.appendChild(note);
-    return;
-  }
-
-  if (cbGoogleAdsDashboardState.errorCode === "DEVELOPER_TOKEN_NOT_APPROVED") {
-    const errBanner = document.createElement("div");
-    errBanner.className = "cb-dashboard-banner";
-    errBanner.innerHTML = `
-      <strong>Developer token not approved / not enabled for this feature. Reporting is currently blocked.</strong>
-      <div class="cb-dashboard-muted">Error: DEVELOPER_TOKEN_NOT_APPROVED</div>
-    `;
-    root.appendChild(errBanner);
-    return;
-  }
-
-  if (cbGoogleAdsDashboardState.error) {
-    const err = document.createElement("p");
-    err.className = "cb-form-error";
-    err.textContent = cbGoogleAdsDashboardState.error;
-    root.appendChild(err);
-  }
-
-  const normalizedReport = cbNormalizeGoogleAdsReportPayload(cbGoogleAdsDashboardState.report);
-  if (!normalizedReport || normalizedReport.error) {
-    const hint = document.createElement("p");
-    hint.className = "cb-modal-note";
-    hint.textContent = "Run a report to see results.";
-    root.appendChild(hint);
-    return;
-  }
-
-  const activeBlocks = cbGetGoogleAdsDashboardSelectedBlocks();
-  const reportData = normalizedReport.data || {};
-
-  if (activeBlocks.includes("overview")) {
-    const cards = document.createElement("div");
-    cards.className = "cb-dashboard-cards";
-    const totals = reportData.overview || {};
-    const deltas = totals.deltas || null;
-    const formatDelta = (delta) => {
-      const pct = delta?.pct;
-      if (pct == null) return "—";
-      const n = Number(pct);
-      if (!Number.isFinite(n)) return "—";
-      const sign = n > 0 ? "+" : "";
-      return `${sign}${n}%`;
-    };
-
-    const cardItems = [
-      { title: "Cost", value: cbFormatMoney(totals.cost), delta: deltas ? formatDelta(deltas.cost) : null },
-      { title: "Clicks", value: cbFormatNumber(totals.clicks), delta: deltas ? formatDelta(deltas.clicks) : null },
-      {
-        title: "Impressions",
-        value: cbFormatNumber(totals.impressions),
-        delta: deltas ? formatDelta(deltas.impressions) : null,
-      },
-      { title: "CTR", value: cbFormatPercent(totals.ctr), delta: deltas ? formatDelta(deltas.ctr) : null },
-      { title: "Avg CPC", value: cbFormatMoney(totals.avgCpc), delta: deltas ? formatDelta(deltas.avgCpc) : null },
-      {
-        title: "Conversions",
-        value: totals.conversions == null ? "—" : cbFormatMoney(totals.conversions),
-        delta: deltas ? formatDelta(deltas.conversions) : null,
-      },
-      {
-        title: "Conv Value",
-        value: totals.convValue == null ? "—" : cbFormatMoney(totals.convValue),
-        delta: deltas ? formatDelta(deltas.convValue) : null,
-      },
-      { title: "ROAS", value: cbFormatRatio(totals.roas), delta: deltas ? formatDelta(deltas.roas) : null },
-      { title: "CPA", value: cbFormatMoney(totals.cpa), delta: deltas ? formatDelta(deltas.cpa) : null },
-    ];
-
-    cardItems.forEach((item) => {
-      const card = document.createElement("div");
-      card.className = "cb-dashboard-panel";
-      const t = document.createElement("p");
-      t.className = "cb-dashboard-card-title";
-      t.textContent = item.title;
-      const v = document.createElement("p");
-      v.className = "cb-dashboard-card-value";
-      v.textContent = item.value;
-      card.appendChild(t);
-      card.appendChild(v);
-      if (item.delta != null && normalizedReport.compare) {
-        const d = document.createElement("p");
-        d.className = "cb-dashboard-card-delta";
-        d.textContent = item.delta;
-        card.appendChild(d);
-      }
-      cards.appendChild(card);
-    });
-    root.appendChild(cards);
-  }
-
-  const rangePanel = document.createElement("div");
-  rangePanel.className = "cb-dashboard-panel";
-  const rangeTitle = document.createElement("h3");
-  rangeTitle.className = "cb-dashboard-panel-title";
-  rangeTitle.textContent = "Range";
-  rangePanel.appendChild(rangeTitle);
-  const rangeNote = document.createElement("p");
-  rangeNote.className = "cb-modal-note";
-  rangeNote.textContent = `${normalizedReport.range?.from || "—"} → ${normalizedReport.range?.to || "—"}`;
-  rangePanel.appendChild(rangeNote);
-  if (normalizedReport.compare) {
-    const compNote = document.createElement("p");
-    compNote.className = "cb-modal-note";
-    const modeLabel =
-      normalizedReport.compare.mode === "previous_year"
-        ? "Previous year"
-        : normalizedReport.compare.mode === "custom"
-        ? "Custom"
-        : "Previous period";
-    compNote.textContent = `Compare (${modeLabel}): ${normalizedReport.compare.from} → ${normalizedReport.compare.to}`;
-    rangePanel.appendChild(compNote);
-  }
-
-  if (activeBlocks.includes("series")) {
-    const grid = document.createElement("div");
-    grid.className = "cb-dashboard-grid";
-
-    const chartPanel = document.createElement("div");
-    chartPanel.className = "cb-dashboard-panel";
-    const chartTitle = document.createElement("h3");
-    chartTitle.className = "cb-dashboard-panel-title";
-    chartTitle.textContent = "Cost per day";
-    chartPanel.appendChild(chartTitle);
-    const chartHtml = document.createElement("div");
-    chartHtml.innerHTML = cbBuildGoogleAdsLineChartSvg(
-      reportData.series?.daily || [],
-      reportData.series?.compareDaily || null
-    );
-    chartPanel.appendChild(chartHtml);
-    grid.appendChild(chartPanel);
-
-    grid.appendChild(rangePanel);
-    root.appendChild(grid);
-  } else {
-    root.appendChild(rangePanel);
-  }
-
-  const tablesWrap = document.createElement("div");
-  tablesWrap.className = "cb-dashboard-tables";
-
-  const renderTable = (title, headers, rows, { note = null } = {}) => {
-    const panel = document.createElement("div");
-    panel.className = "cb-dashboard-panel";
-    const h = document.createElement("h3");
-    h.className = "cb-dashboard-panel-title";
-    h.textContent = title;
-    panel.appendChild(h);
-    if (note) {
-      const noteEl = document.createElement("p");
-      noteEl.className = "cb-modal-note";
-      noteEl.textContent = note;
-      panel.appendChild(noteEl);
-    }
-    if (!rows || !rows.length) {
-      const empty = document.createElement("p");
-      empty.className = "cb-modal-note";
-      empty.textContent = "No data.";
-      panel.appendChild(empty);
-      return panel;
-    }
-    const table = document.createElement("table");
-    table.className = "cb-dashboard-table";
-    const thead = document.createElement("thead");
-    const trh = document.createElement("tr");
-    headers.forEach((hdr) => {
-      const th = document.createElement("th");
-      th.textContent = hdr;
-      trh.appendChild(th);
-    });
-    thead.appendChild(trh);
-    table.appendChild(thead);
-    const tbody = document.createElement("tbody");
-    rows.forEach((cols) => {
-      const tr = document.createElement("tr");
-      cols.forEach((col) => {
-        const td = document.createElement("td");
-        if (col && col.nodeType) {
-          td.appendChild(col);
-        } else {
-          td.textContent = col == null ? "—" : String(col);
-        }
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    panel.appendChild(table);
-    return panel;
-  };
-
-  let tablesAdded = 0;
-
-  if (activeBlocks.includes("campaigns")) {
-    const rows = (reportData.campaigns?.rows || []).map((row) => {
-      const nameEl = document.createElement("div");
-      const titleNode = document.createElement("div");
-      titleNode.textContent = row.name || "—";
-      nameEl.appendChild(titleNode);
-      const metaParts = [];
-      if (row.channel) metaParts.push(row.channel);
-      if (row.status) metaParts.push(row.status);
-      if (metaParts.length) {
-        const metaNode = document.createElement("div");
-        metaNode.className = "cb-dashboard-muted";
-        metaNode.textContent = metaParts.join(" · ");
-        nameEl.appendChild(metaNode);
-      }
-      return [nameEl, cbFormatMoney(row.cost), cbFormatMoney(row.conversions), cbFormatRatio(row.roas)];
-    });
-    tablesWrap.appendChild(renderTable("Top campaigns", ["Campaign", "Cost", "Conversions", "ROAS"], rows));
-    tablesAdded += 1;
-  }
-
-  if (activeBlocks.includes("devices")) {
-    const rows = (reportData.devices?.rows || []).map((row) => [
-      row.device || "—",
-      cbFormatMoney(row.cost),
-      cbFormatMoney(row.conversions),
-      cbFormatRatio(row.roas),
-    ]);
-    tablesWrap.appendChild(renderTable("Devices", ["Device", "Cost", "Conversions", "ROAS"], rows));
-    tablesAdded += 1;
-  }
-
-  if (activeBlocks.includes("networks")) {
-    const rows = (reportData.networks?.rows || []).map((row) => [
-      row.network || "—",
-      cbFormatMoney(row.cost),
-      cbFormatMoney(row.conversions),
-    ]);
-    tablesWrap.appendChild(renderTable("Networks", ["Network", "Cost", "Conversions"], rows));
-    tablesAdded += 1;
-  }
-
-  if (activeBlocks.includes("search_terms")) {
-    const warning = reportData.search_terms?.warning
-      ? "Search terms not available for this account."
-      : null;
-    const rows = (reportData.search_terms?.rows || []).map((row) => [
-      row.term || "—",
-      cbFormatMoney(row.cost),
-      cbFormatMoney(row.conversions),
-    ]);
-    tablesWrap.appendChild(renderTable("Search terms", ["Term", "Cost", "Conversions"], rows, { note: warning }));
-    tablesAdded += 1;
-  }
-
-  if (activeBlocks.includes("keywords")) {
-    const warning = reportData.keywords?.warning ? "Keywords not available for this account." : null;
-    const rows = (reportData.keywords?.rows || []).map((row) => {
-      const kwEl = document.createElement("div");
-      const titleNode = document.createElement("div");
-      titleNode.textContent = row.keyword || "—";
-      kwEl.appendChild(titleNode);
-      if (row.matchType) {
-        const metaNode = document.createElement("div");
-        metaNode.className = "cb-dashboard-muted";
-        metaNode.textContent = row.matchType;
-        kwEl.appendChild(metaNode);
-      }
-      return [kwEl, cbFormatMoney(row.cost), cbFormatMoney(row.conversions)];
-    });
-    tablesWrap.appendChild(renderTable("Keywords", ["Keyword", "Cost", "Conversions"], rows, { note: warning }));
-    tablesAdded += 1;
-  }
-
-  if (tablesAdded) {
-    root.appendChild(tablesWrap);
-  }
-};
-
-const cbInitGoogleAdsDashboard = () => {
-  cbRenderGoogleAdsDashboard();
-};
-
-window.cbInitGoogleAdsDashboard = cbInitGoogleAdsDashboard;
-window.cbRenderGoogleAdsDashboard = cbRenderGoogleAdsDashboard;
 
 const cbHandleGoogleAdsConnect = async () => {
   const connector = CONNECTORS_CONFIG.find((c) => c.key === "googleads");
@@ -10187,16 +5963,15 @@ const cbHandleGoogleAdsDisconnect = async () => {
   const connector = CONNECTORS_CONFIG.find((c) => c.key === "googleads");
   if (!connector || !connector.apiBase) return;
   const { ok } = await cbFetchJson(`${connector.apiBase}/disconnect`, { method: "POST" });
-	  if (ok) {
-	    cbUpdateConnectorState("googleads", {
-	      status: "disconnected",
-	      customerId: null,
-	      loginCustomerId: null,
-	      customerName: null,
-	      lastSyncAt: null,
-	      lastError: null,
-	    });
-	  } else {
+  if (ok) {
+    cbUpdateConnectorState("googleads", {
+      status: "disconnected",
+      customerId: null,
+      customerName: null,
+      lastSyncAt: null,
+      lastError: null,
+    });
+  } else {
     cbUpdateConnectorState("googleads", {
       status: "error",
       lastError: "Failed to disconnect Google Ads.",
@@ -10208,12 +5983,7 @@ const cbHandleGa4Connect = async () => {
   const connector = CONNECTORS_CONFIG.find((c) => c.key === "ga4");
   if (!connector || !connector.apiBase) return;
   cbUpdateConnectorState("ga4", { lastError: null });
-  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  const params = new URLSearchParams();
-  if (ws) params.set("workspaceId", ws);
-  const { ok, status, json } = await cbFetchJson(
-    `${connector.apiBase}/auth/url${params.toString() ? `?${params.toString()}` : ""}`
-  );
+  const { ok, status, json } = await cbFetchJson(`${connector.apiBase}/auth/url`);
   if (ok && json?.url) {
     window.location.href = json.url;
     return;
@@ -10234,12 +6004,7 @@ const cbHandleGa4Connect = async () => {
 const cbHandleGa4Disconnect = async () => {
   const connector = CONNECTORS_CONFIG.find((c) => c.key === "ga4");
   if (!connector || !connector.apiBase) return;
-  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  const { ok, status, json } = await cbFetchJson(`${connector.apiBase}/disconnect`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ workspaceId: ws }),
-  });
+  const { ok, status, json } = await cbFetchJson(`${connector.apiBase}/disconnect`, { method: "POST" });
   if (ok) {
     cbUpdateConnectorState("ga4", {
       status: "disconnected",
@@ -10259,48 +6024,21 @@ const cbHandleGa4Disconnect = async () => {
   }
 };
 
-const cbDescribeGa4Error = (status, errorCode, message) => {
-  if (status === 401) return "Sign in required to access GA4 (401).";
-  const code = (errorCode || "").toString().trim();
-  const safeMsg = (message || "").toString().trim();
-  if (code === "not_connected") return "Connect GA4 first (not_connected).";
-  if (code === "missing_refresh_token")
-    return "GA4 is missing a refresh token (missing_refresh_token). Disconnect and reconnect.";
-  if (code === "invalid_grant")
-    return "Google authorization expired (invalid_grant). Disconnect and reconnect.";
-  if (code === "invalid_range") return "Select a valid date range (invalid_range).";
-  if (code === "invalid_compare_range") return "Select a valid compare range (invalid_compare_range).";
-  if (code === "insufficient_permissions")
-    return "Your Google account has no access to GA4 properties (insufficient_permissions).";
-  if (code === "api_not_enabled")
-    return "Google Analytics API is not enabled (api_not_enabled). Enable Analytics Admin + Data APIs.";
-  if (code === "quota_exceeded") return "Google Analytics quota exceeded (quota_exceeded). Please try again later.";
-  if (code === "rate_limited") return "Google Analytics rate limited (rate_limited). Please retry shortly.";
-  if (code === "property_not_set") return "Select a GA4 property first (property_not_set).";
-  return safeMsg || (code ? `GA4 request failed (${code}).` : "GA4 request failed.");
-};
-
 const cbLoadGa4Properties = async () => {
   const connector = CONNECTORS_CONFIG.find((c) => c.key === "ga4");
   if (!connector || !connector.apiBase) return;
   cbConnectorDetailState.ga4Loading = true;
   cbConnectorDetailState.ga4Error = null;
   cbRenderConnectorDetail(connector);
-  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  const params = new URLSearchParams();
-  if (ws) params.set("workspaceId", ws);
-  const { ok, json, status } = await cbFetchJson(
-    `${connector.apiBase}/properties${params.toString() ? `?${params.toString()}` : ""}`
-  );
-  if (ok && json && Array.isArray(json.properties)) {
-    cbConnectorDetailState.ga4Properties = json.properties;
+  const { ok, json, status } = await cbFetchJson(`${connector.apiBase}/properties`);
+  if (ok && Array.isArray(json)) {
+    cbConnectorDetailState.ga4Properties = json;
     cbConnectorDetailState.ga4Error = null;
   } else {
-    cbConnectorDetailState.ga4Properties = [];
     const message =
-      (json && (json.message || json.error)) ||
+      (json && (json.error || json.message)) ||
       (status === 401 ? "Please sign in to view GA4 properties." : "Unable to load GA4 properties.");
-    cbConnectorDetailState.ga4Error = cbDescribeGa4Error(status, json?.error, message);
+    cbConnectorDetailState.ga4Error = message;
   }
   cbConnectorDetailState.ga4Loading = false;
   cbRenderConnectorDetail(connector);
@@ -10327,59 +6065,24 @@ const cbLoadGoogleAdsCustomers = async () => {
   cbRenderConnectorDetail(connector);
 };
 
-const cbLoadGoogleAdsClients = async (managerId) => {
-  const connector = CONNECTORS_CONFIG.find((c) => c.key === "googleads");
-  if (!connector || !connector.apiBase) return;
-  const normalizedManagerId = (managerId || "").toString().trim();
-  if (!normalizedManagerId) {
-    cbConnectorDetailState.googleAdsClients = [];
-    cbConnectorDetailState.googleAdsClientsError = null;
-    cbConnectorDetailState.googleAdsClientsLoading = false;
-    cbRenderConnectorDetail(connector);
-    return;
-  }
-
-  cbConnectorDetailState.googleAdsClientsLoading = true;
-  cbConnectorDetailState.googleAdsClientsError = null;
-  cbRenderConnectorDetail(connector);
-
-  const params = new URLSearchParams({ managerId: normalizedManagerId });
-  const { ok, json, status } = await cbFetchJson(`${connector.apiBase}/customers/clients?${params.toString()}`);
-  if (ok && json && Array.isArray(json.clients)) {
-    cbConnectorDetailState.googleAdsClients = json.clients;
-    cbConnectorDetailState.googleAdsClientsError = null;
-  } else {
-    cbConnectorDetailState.googleAdsClients = [];
-    const message =
-      (json && (json.message || json.error)) ||
-      (status === 401
-        ? "Please sign in to view Google Ads clients."
-        : "Unable to load Google Ads clients.");
-    cbConnectorDetailState.googleAdsClientsError = message;
-  }
-
-  cbConnectorDetailState.googleAdsClientsLoading = false;
-  cbRenderConnectorDetail(connector);
-};
-
-const cbSaveGoogleAdsCustomer = async (customerId, loginCustomerId) => {
+const cbSaveGoogleAdsCustomer = async (customerId) => {
   const connector = CONNECTORS_CONFIG.find((c) => c.key === "googleads");
   if (!connector || !connector.apiBase || !customerId) return;
   cbConnectorDetailState.googleAdsLoading = true;
   cbConnectorDetailState.googleAdsError = null;
   cbRenderConnectorDetail(connector);
-	  const { ok, json, status } = await cbFetchJson(`${connector.apiBase}/customer`, {
-	    method: "POST",
-	    headers: { "Content-Type": "application/json" },
-	    body: JSON.stringify({ customerId, loginCustomerId }),
-	  });
-	  if (ok) {
-	    cbUpdateConnectorState("googleads", { customerId, loginCustomerId, status: "connected" });
-	    cbConnectorDetailState.googleAdsError = null;
-	    cbRefreshConnectorStatuses();
-	  } else {
-	    const message =
-	      (json && (json.error || json.message)) ||
+  const { ok, json, status } = await cbFetchJson(`${connector.apiBase}/customer`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ customerId }),
+  });
+  if (ok) {
+    cbUpdateConnectorState("googleads", { customerId, status: "connected" });
+    cbConnectorDetailState.googleAdsError = null;
+    cbRefreshConnectorStatuses();
+  } else {
+    const message =
+      (json && (json.error || json.message)) ||
       (status === 401 ? "Please sign in to save Google Ads account." : "Unable to save Google Ads account.");
     cbConnectorDetailState.googleAdsError = message;
   }
@@ -10393,11 +6096,10 @@ const cbSaveGa4Property = async (propertyId) => {
   cbConnectorDetailState.ga4Loading = true;
   cbConnectorDetailState.ga4Error = null;
   cbRenderConnectorDetail(connector);
-  const ws = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
   const { ok, json, status } = await cbFetchJson(`${connector.apiBase}/property`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ propertyId, workspaceId: ws }),
+    body: JSON.stringify({ propertyId }),
   });
   if (ok) {
     cbUpdateConnectorState("ga4", { propertyId, status: "connected" });
@@ -10407,7 +6109,7 @@ const cbSaveGa4Property = async (propertyId) => {
     const message =
       (json && (json.error || json.message)) ||
       (status === 401 ? "Please sign in to save GA4 property." : "Unable to save GA4 property.");
-    cbConnectorDetailState.ga4Error = cbDescribeGa4Error(status, json?.error, message);
+    cbConnectorDetailState.ga4Error = message;
   }
   cbConnectorDetailState.ga4Loading = false;
   cbRenderConnectorDetail(connector);
@@ -10862,118 +6564,6 @@ const cbAgentDetailState = {
   ga4SummaryError: null,
 };
 
-const CB_PROVIDER_MODEL_MATRIX = {
-  auto: {
-    label: "Auto",
-    models: [
-      "gpt-4o",
-      "claude-3.5-sonnet",
-      "gemini-2.5-pro",
-      "gemini-2.5-flash",
-      "grok-2",
-      "copilot-pro",
-    ],
-  },
-  chatgpt: {
-    label: "ChatGPT",
-    models: [
-      "gpt-4o",
-      "gpt-4o-mini",
-      "gpt-4.1",
-      "gpt-4.1-mini",
-      "o1",
-      "o1-mini",
-    ],
-  },
-  claude: {
-    label: "Claude",
-    models: [
-      "claude-3.5-sonnet",
-      "claude-3.5-haiku",
-      "claude-3-opus",
-      "claude-3-sonnet",
-    ],
-  },
-  gemini: {
-    label: "Gemini",
-    models: [
-      "gemini-1.5-pro",
-      "gemini-1.5-flash",
-      "gemini-2.5-pro",
-      "gemini-2.5-flash",
-      "gemini-2.0-pro",
-      "gemini-2.0-flash",
-    ],
-  },
-  grok: {
-    label: "Grok",
-    models: [
-      "grok-2",
-      "grok-2-mini",
-      "grok-vision-beta",
-    ],
-  },
-  copilot: {
-    label: "Copilot",
-    models: [
-      "copilot-pro",
-      "copilot-vision",
-      "copilot-enterprise",
-    ],
-  },
-};
-
-const cbGetProviderConfig = (providerValue) => {
-  const key = String(providerValue || "auto").toLowerCase();
-  return CB_PROVIDER_MODEL_MATRIX[key] || CB_PROVIDER_MODEL_MATRIX.auto;
-};
-
-const cbRenderModelList = (listEl, models) => {
-  if (!listEl) return;
-  listEl.innerHTML = "";
-  models.forEach((model) => {
-    const option = document.createElement("option");
-    option.value = model;
-    listEl.appendChild(option);
-  });
-};
-
-const cbUpdateModelSearch = (providerValue, searchInput, listEl) => {
-  if (!searchInput || !listEl) return;
-  const config = cbGetProviderConfig(providerValue);
-  const placeholder =
-    providerValue === "auto" ? "Search models" : `Search ${config.label} models`;
-  cbRenderModelList(listEl, config.models);
-  searchInput.placeholder = placeholder;
-  const prevProvider = searchInput.dataset.provider || "";
-  if (prevProvider !== providerValue) {
-    searchInput.value = "";
-  }
-  searchInput.dataset.provider = providerValue;
-};
-
-const cbInitModelMenu = () => {
-  const providerSelect = document.getElementById("cb-model-selector");
-  const searchInput = document.getElementById("cb-model-search");
-  const listEl = document.getElementById("cb-model-search-list");
-  if (!providerSelect || !searchInput || !listEl) return;
-  if (providerSelect.dataset.modelMenuBound === "true") return;
-  const update = () => {
-    cbUpdateModelSearch(providerSelect.value || "auto", searchInput, listEl);
-    cbUpdateChatHeader();
-    cbUpdateActiveContextBar();
-    cbActivateContextFromUi("model-provider-change");
-  };
-  providerSelect.addEventListener("change", update);
-  searchInput.addEventListener("input", () => {
-    cbUpdateChatHeader();
-    cbUpdateActiveContextBar();
-    cbQueueActivateContextFromUi("model-hint-change");
-  });
-  update();
-  providerSelect.dataset.modelMenuBound = "true";
-};
-
 const cbPopulateAgentModelSelect = (selectEl) => {
   if (!selectEl) return;
   selectEl.innerHTML = "";
@@ -11025,22 +6615,22 @@ const cbRenderAgentDetail = (agent) => {
   if (summaryEl) summaryEl.textContent = agent.shortDescription || "";
   if (workspaceChip) workspaceChip.textContent = workspaceLabel;
   if (statusChip) {
-    if (agent.key === "ceo" || agent.key === "cmo") {
-      statusChip.textContent = "Active soon";
-      statusChip.classList.remove("cb-chip-preview");
-    } else {
-      statusChip.textContent = "Preview only";
-      statusChip.classList.add("cb-chip-preview");
-    }
+    statusChip.textContent = "Preview only";
+    statusChip.classList.add("cb-chip-preview");
   }
   if (promptEl) {
-    if (agent.key === "ceo") {
-      promptEl.value = "- Represent executive priorities and ROI.\n- Surface risks and trade-offs clearly.\n- Keep responses concise and directive.";
-    } else if (agent.key === "cmo") {
-      promptEl.value = "- Focus on paid media and performance marketing.\n- Prioritize Google Ads plus Meta/TikTok/LinkedIn insights.\n- Be actionable on budgets, audiences, and creative tests.";
-    } else {
-      promptEl.value = `System prompt for ${agent.label || agent.key}\n\nThis is a preview-only configuration. In production, this prompt will guide the agent on:\n- Role and scope\n- Guardrails and escalation rules\n- Data sources and access`;
+    const lines = [];
+    if (agent.shortDescription) lines.push(agent.shortDescription);
+    if (Array.isArray(agent.capabilities) && agent.capabilities.length) {
+      lines.push(`Capabilities: ${agent.capabilities.join(", ")}`);
     }
+    if (Array.isArray(agent.connectors) && agent.connectors.length) {
+      lines.push(`Connectors: ${agent.connectors.join(", ")}`);
+    }
+    promptEl.value =
+      lines.length > 0
+        ? lines.join("\n")
+        : `System prompt for ${agent.label || agent.key}`;
   }
   cbPopulateAgentModelSelect(modelSelect);
 
@@ -11192,48 +6782,50 @@ const cbRenderAgentDetail = (agent) => {
         appendHtmlBlock(
           `<p class="cb-form-error">${cbAgentDetailState.ga4SummaryError}</p>`
         );
-	      } else if (cbAgentDetailState.ga4Summary) {
-	        const s = cbAgentDetailState.ga4Summary;
-	        const formatValue = (val, decimals = 0) =>
-	          typeof val === "number" && Number.isFinite(val)
-	            ? val.toFixed(decimals)
-	            : "-";
-	        const rangeLabel =
-	          s.dateRange === "last_30_days" ? "Last 30 days" : "Last 7 days";
-	        appendHtmlBlock(`
-	          <section class="cb-account-card">
-	            <header class="cb-account-card-header">
-	              <div>
-	                <p class="cb-account-card-subtitle">GA4</p>
-	                <h3>${rangeLabel}</h3>
-	              </div>
-	            </header>
-	            <div class="cb-enterprise-inline">
-	              <div>
-	                <p class="cb-modal-note">Sessions</p>
-	                <p class="cb-modal-value">${formatValue(s.sessions)}</p>
-	              </div>
-	              <div>
-	                <p class="cb-modal-note">Total users</p>
-	                <p class="cb-modal-value">${formatValue(s.totalUsers)}</p>
-	              </div>
-	              <div>
-	                <p class="cb-modal-note">Active users</p>
-	                <p class="cb-modal-value">${formatValue(s.activeUsers)}</p>
-	              </div>
-	              <div>
-	                <p class="cb-modal-note">Conversions</p>
-	                <p class="cb-modal-value">${formatValue(s.conversions)}</p>
-	              </div>
-	              <div>
-	                <p class="cb-modal-note">Purchase revenue</p>
-	                <p class="cb-modal-value">${formatValue(s.purchaseRevenue, 2)}</p>
-	              </div>
-	            </div>
-	          </section>
-	        `);
-	      }
-	    }
+      } else if (cbAgentDetailState.ga4Summary) {
+        const s = cbAgentDetailState.ga4Summary;
+        const formatValue = (val, decimals = 0) =>
+          typeof val === "number" && Number.isFinite(val)
+            ? val.toFixed(decimals)
+            : "-";
+        const formatPercent = (val) =>
+          typeof val === "number" && Number.isFinite(val)
+            ? `${val.toFixed(2)}%`
+            : "-";
+        appendHtmlBlock(`
+          <section class="cb-account-card">
+            <header class="cb-account-card-header">
+              <div>
+                <p class="cb-account-card-subtitle">GA4</p>
+                <h3>Last 7 days</h3>
+              </div>
+            </header>
+            <div class="cb-enterprise-inline">
+              <div>
+                <p class="cb-modal-note">Sessions</p>
+                <p class="cb-modal-value">${formatValue(s.sessions)}</p>
+              </div>
+              <div>
+                <p class="cb-modal-note">Users</p>
+                <p class="cb-modal-value">${formatValue(s.users)}</p>
+              </div>
+              <div>
+                <p class="cb-modal-note">New users</p>
+                <p class="cb-modal-value">${formatValue(s.newUsers)}</p>
+              </div>
+              <div>
+                <p class="cb-modal-note">Session conversion rate</p>
+                <p class="cb-modal-value">${formatPercent(s.sessionConversionRate)}</p>
+              </div>
+              <div>
+                <p class="cb-modal-note">Total revenue</p>
+                <p class="cb-modal-value">${formatValue(s.totalRevenue, 2)}</p>
+              </div>
+            </div>
+          </section>
+        `);
+      }
+    }
   }
 
   if (usageEl) {
@@ -11256,9 +6848,10 @@ const cbRenderAgentDetail = (agent) => {
 };
 
 function cbOpenAgentDetail(workspaceKey, agentKey) {
-  const agent =
-    cbFindAgentByKey(agentKey, workspaceKey || cbCurrentWorkspaceId) ||
-    cbFindAgentByKey(agentKey);
+  const canonAgent =
+    cbGetCanonAgentById(agentKey) ||
+    cbFindAgentByKey(agentKey, workspaceKey || cbCurrentWorkspaceId);
+  const agent = canonAgent ? cbBuildUiAgentFromCanon(canonAgent) : null;
   if (!agent) {
     console.warn("[CB_AGENT_DETAIL] Agent not found", workspaceKey, agentKey);
     return;
@@ -11324,35 +6917,22 @@ function cbOpenAgentDetail(workspaceKey, agentKey) {
     })();
   }
 
-	  if (shouldFetchGa4) {
-	    (async () => {
-	      try {
-	        const summary = await cbFetchGa4Summary(cbCurrentWorkspaceId);
-	        if (summary && !summary.error) {
-	          cbAgentDetailState.ga4Summary = summary;
-	          cbAgentDetailState.ga4SummaryError = null;
-	        } else if (summary && summary.error === "property_not_set") {
-	          cbAgentDetailState.ga4Summary = null;
-	          cbAgentDetailState.ga4SummaryError =
-	            "Choose a GA4 property in Account & Billing → Connectors to see traffic metrics here.";
-	        } else {
-	          cbAgentDetailState.ga4Summary = null;
-	          cbAgentDetailState.ga4SummaryError = cbDescribeGa4Error(
-	            summary?.status || null,
-	            summary?.error || "ga4_api_error",
-	            summary?.message || null
-	          );
-	        }
-	      } catch (err) {
-	        cbAgentDetailState.ga4Summary = null;
-	        cbAgentDetailState.ga4SummaryError =
-	          "Could not load GA4 metrics. Please try again later.";
-	      } finally {
-	        cbAgentDetailState.ga4SummaryLoading = false;
-	        cbRenderAgentDetail(agent);
-	      }
-	    })();
-	  }
+  if (shouldFetchGa4) {
+    (async () => {
+      try {
+        const summary = await cbFetchGa4Summary(cbCurrentWorkspaceId);
+        cbAgentDetailState.ga4Summary = summary;
+        cbAgentDetailState.ga4SummaryError = null;
+      } catch (err) {
+        cbAgentDetailState.ga4Summary = null;
+        cbAgentDetailState.ga4SummaryError =
+          "Could not load GA4 metrics. Please try again later.";
+      } finally {
+        cbAgentDetailState.ga4SummaryLoading = false;
+        cbRenderAgentDetail(agent);
+      }
+    })();
+  }
 }
 
 window.cbOpenAgentDetail = cbOpenAgentDetail;
@@ -11366,11 +6946,6 @@ const cbConnectorDetailState = {
   googleAdsCustomers: [],
   googleAdsLoading: false,
   googleAdsError: null,
-  googleAdsClients: [],
-  googleAdsClientsLoading: false,
-  googleAdsClientsError: null,
-  googleAdsSelectedManagerId: null,
-  googleAdsSelectedClientId: null,
 };
 
 const cbRenderConnectorDetail = (connector) => {
@@ -11464,185 +7039,86 @@ const cbRenderConnectorDetail = (connector) => {
     }
   }
 
-	  if (accountLine) {
-	    accountLine.innerHTML = "";
-	    if (connector.key === "googleads") {
-	      if (effectiveStatus !== "connected") {
-	        accountLine.textContent = "Connect Google Ads first to select an account.";
-	        return;
-	      }
-	      const parts = [];
-	      if (state.lastError) {
-	        accountLine.textContent = state.lastError;
-	        return;
-	      }
-	      const hasLoginCustomerId =
-	        state.loginCustomerId && state.customerId && String(state.loginCustomerId) !== String(state.customerId);
-	      if (hasLoginCustomerId) parts.push(`Manager ID: ${state.loginCustomerId}`);
-	      if (state.customerId) parts.push(`Customer ID: ${state.customerId}`);
-	      if (state.lastSyncAt) parts.push(`Last sync: ${state.lastSyncAt}`);
-	      const current = document.createElement("p");
-	      current.className = "cb-modal-note";
-	      current.textContent = parts.length ? parts.join(" \u00b7 ") : "Account: -";
-	      accountLine.appendChild(current);
-	      if (effectiveStatus === "connected") {
-	        const controlsWrap = document.createElement("div");
-	        controlsWrap.className = "cb-enterprise-inline";
-
-	        const managerSelectWrap = document.createElement("div");
-	        const managerLabel = document.createElement("div");
-	        managerLabel.className = "cb-modal-label";
-	        managerLabel.textContent = "Manager account (MCC)";
-
-	        const managerSelect = document.createElement("select");
-	        managerSelect.id = "cb-googleads-manager-select";
-	        managerSelect.className = "cb-input";
-	        managerSelect.disabled = !!cbConnectorDetailState.googleAdsLoading;
-
-	        const customersLoading = cbConnectorDetailState.googleAdsLoading;
-	        const customers = Array.isArray(cbConnectorDetailState.googleAdsCustomers)
-	          ? cbConnectorDetailState.googleAdsCustomers
-	          : [];
-	        const managerDefaultOpt = document.createElement("option");
-	        managerDefaultOpt.value = "";
-	        managerDefaultOpt.textContent = customersLoading
-	          ? "Loading accounts..."
-	          : "Select a manager account";
-	        managerSelect.appendChild(managerDefaultOpt);
-	        customers.forEach((cust) => {
-	          const opt = document.createElement("option");
-	          opt.value = cust.customerId || cust.customer_id || "";
-	          const label = cust.descriptiveName || cust.descriptive_name || opt.value;
-	          opt.textContent = label ? `${label} (${opt.value})` : opt.value;
-	          managerSelect.appendChild(opt);
-	        });
-
-	        const selectedManagerId =
-	          cbConnectorDetailState.googleAdsSelectedManagerId ||
-	          (state.loginCustomerId ? String(state.loginCustomerId) : state.customerId ? String(state.customerId) : "");
-	        if (selectedManagerId) managerSelect.value = selectedManagerId;
-
-	        managerSelect.addEventListener("change", () => {
-	          const nextManagerId = managerSelect.value || null;
-	          cbConnectorDetailState.googleAdsSelectedManagerId = nextManagerId;
-	          cbConnectorDetailState.googleAdsSelectedClientId = null;
-	          cbConnectorDetailState.googleAdsClients = [];
-	          cbConnectorDetailState.googleAdsClientsError = null;
-	          cbLoadGoogleAdsClients(nextManagerId);
-	        });
-
-	        managerSelectWrap.appendChild(managerLabel);
-	        managerSelectWrap.appendChild(managerSelect);
-
-	        const clientSelectWrap = document.createElement("div");
-	        const clientLabel = document.createElement("div");
-	        clientLabel.className = "cb-modal-label";
-	        clientLabel.textContent = "Client under manager";
-
-	        const clientSelect = document.createElement("select");
-	        clientSelect.id = "cb-googleads-client-select";
-	        clientSelect.className = "cb-input";
-
-	        const managerId = selectedManagerId || "";
-	        const clientsLoading = cbConnectorDetailState.googleAdsClientsLoading;
-	        const clients = Array.isArray(cbConnectorDetailState.googleAdsClients)
-	          ? cbConnectorDetailState.googleAdsClients
-	          : [];
-
-	        clientSelect.disabled = !managerId || clientsLoading;
-
-	        const clientDefaultOpt = document.createElement("option");
-	        clientDefaultOpt.value = "";
-	        if (!managerId) {
-	          clientDefaultOpt.textContent = "Select a manager first";
-	        } else if (clientsLoading) {
-	          clientDefaultOpt.textContent = "Loading clients...";
-	        } else if (!clients.length) {
-	          clientDefaultOpt.textContent = "No clients found";
-	        } else {
-	          clientDefaultOpt.textContent = "Select a client (optional)";
-	        }
-	        clientSelect.appendChild(clientDefaultOpt);
-
-	        clients.forEach((client) => {
-	          const opt = document.createElement("option");
-	          opt.value = client.customerId || client.customer_id || "";
-	          const label = client.descriptiveName || client.descriptive_name || opt.value;
-	          opt.textContent = label ? `${label} (${opt.value})` : opt.value;
-	          clientSelect.appendChild(opt);
-	        });
-
-	        const selectedClientId = cbConnectorDetailState.googleAdsSelectedClientId || "";
-	        if (selectedClientId) clientSelect.value = selectedClientId;
-
-	        clientSelect.addEventListener("change", () => {
-	          cbConnectorDetailState.googleAdsSelectedClientId = clientSelect.value || null;
-	        });
-
-	        clientSelectWrap.appendChild(clientLabel);
-	        clientSelectWrap.appendChild(clientSelect);
-
-	        const saveBtn = document.createElement("button");
-	        saveBtn.type = "button";
-	        saveBtn.className = "btn btn-primary cb-modal-primary-button";
-	        saveBtn.textContent = cbConnectorDetailState.googleAdsLoading ? "Saving..." : "Save";
-	        const canSave = !!managerId && !cbConnectorDetailState.googleAdsLoading && !clientsLoading;
-	        saveBtn.disabled = !canSave;
-	        saveBtn.addEventListener("click", () => {
-	          const selectedManager = (cbConnectorDetailState.googleAdsSelectedManagerId || "").trim();
-	          if (!selectedManager) return;
-	          const selectedClient = (cbConnectorDetailState.googleAdsSelectedClientId || "").trim();
-	          const customerId = selectedClient || selectedManager;
-	          const loginCustomerId = selectedClient && selectedClient !== selectedManager ? selectedManager : null;
-	          cbSaveGoogleAdsCustomer(customerId, loginCustomerId);
-	        });
-
-	        controlsWrap.appendChild(managerSelectWrap);
-	        controlsWrap.appendChild(clientSelectWrap);
-	        controlsWrap.appendChild(saveBtn);
-	        accountLine.appendChild(controlsWrap);
-
-	        if (cbConnectorDetailState.googleAdsClientsError) {
-	          const err = document.createElement("p");
-	          err.className = "cb-form-error";
-	          err.textContent = cbConnectorDetailState.googleAdsClientsError;
-	          accountLine.appendChild(err);
-	        }
-
-	        if (cbConnectorDetailState.googleAdsError) {
-	          const err = document.createElement("p");
-	          err.className = "cb-form-error";
-	          err.textContent = cbConnectorDetailState.googleAdsError;
-	          accountLine.appendChild(err);
-	        } else if (!customersLoading && !customers.length) {
-	          const none = document.createElement("p");
-	          none.className = "cb-modal-note";
-	          none.textContent = "No accounts found. Check your Google Ads access.";
-	          accountLine.appendChild(none);
-	        }
-	      }
-	    } else if (connector.key === "ga4") {
+  if (accountLine) {
+    accountLine.innerHTML = "";
+    if (connector.key === "googleads") {
+      if (effectiveStatus !== "connected") {
+        accountLine.textContent = "Connect Google Ads first to select an account.";
+        return;
+      }
+      const parts = [];
       if (state.lastError) {
         accountLine.textContent = state.lastError;
         return;
       }
-	      if (state.propertyId) {
-	        const current = document.createElement("p");
-	        current.className = "cb-modal-note";
-	        const props = Array.isArray(cbConnectorDetailState.ga4Properties)
-	          ? cbConnectorDetailState.ga4Properties
-	          : [];
-	        const match = props.find((p) => {
-	          const pid = p?.propertyId || p?.id || p?.property_id || null;
-	          return pid && String(pid) === String(state.propertyId);
-	        });
-	        const displayName = match?.displayName || match?.name || null;
-	        const label = displayName ? `${displayName} (${state.propertyId})` : state.propertyId;
-	        current.textContent = `Property: ${label}${state.lastSyncAt ? ` · Last sync: ${state.lastSyncAt}` : ""}`;
-	        accountLine.appendChild(current);
-	      } else {
-	        const hint = document.createElement("p");
-	        hint.className = "cb-modal-note";
+      if (state.customerId) parts.push(`Customer ID: ${state.customerId}`);
+      if (state.lastSyncAt) parts.push(`Last sync: ${state.lastSyncAt}`);
+      accountLine.textContent = parts.length ? parts.join(" \u00b7 ") : "Account: -";
+      if (effectiveStatus === "connected") {
+        const accountsWrap = document.createElement("div");
+        accountsWrap.className = "cb-enterprise-inline";
+
+        const select = document.createElement("select");
+        select.id = "cb-googleads-customer-select";
+        select.className = "cb-input";
+        select.disabled = !!cbConnectorDetailState.googleAdsLoading;
+        const loading = cbConnectorDetailState.googleAdsLoading;
+        const customers = Array.isArray(cbConnectorDetailState.googleAdsCustomers)
+          ? cbConnectorDetailState.googleAdsCustomers
+          : [];
+        const defaultOpt = document.createElement("option");
+        defaultOpt.value = "";
+        defaultOpt.textContent = loading ? "Loading accounts..." : "Select a primary account";
+        select.appendChild(defaultOpt);
+        customers.forEach((cust) => {
+          const opt = document.createElement("option");
+          opt.value = cust.customerId || cust.customer_id || "";
+          const label = cust.descriptiveName || cust.descriptive_name || opt.value;
+          opt.textContent = label ? `${label} (${opt.value})` : opt.value;
+          select.appendChild(opt);
+        });
+        if (state.customerId) select.value = state.customerId;
+
+        const saveBtn = document.createElement("button");
+        saveBtn.type = "button";
+        saveBtn.className = "btn btn-primary";
+        saveBtn.textContent = cbConnectorDetailState.googleAdsLoading ? "Saving..." : "Save";
+        saveBtn.disabled = cbConnectorDetailState.googleAdsLoading;
+        saveBtn.addEventListener("click", () => {
+          const value = select.value;
+          if (!value) return;
+          cbSaveGoogleAdsCustomer(value);
+        });
+
+        accountsWrap.appendChild(select);
+        accountsWrap.appendChild(saveBtn);
+        accountLine.appendChild(accountsWrap);
+
+        if (cbConnectorDetailState.googleAdsError) {
+          const err = document.createElement("p");
+          err.className = "cb-form-error";
+          err.textContent = cbConnectorDetailState.googleAdsError;
+          accountLine.appendChild(err);
+        } else if (!loading && !customers.length) {
+          const none = document.createElement("p");
+          none.className = "cb-modal-note";
+          none.textContent = "No accounts found. Check your Google Ads access.";
+          accountLine.appendChild(none);
+        }
+      }
+    } else if (connector.key === "ga4") {
+      if (state.lastError) {
+        accountLine.textContent = state.lastError;
+        return;
+      }
+      if (state.propertyId) {
+        const current = document.createElement("p");
+        current.className = "cb-modal-note";
+        current.textContent = `Property: ${state.propertyId}${state.lastSyncAt ? ` · Last sync: ${state.lastSyncAt}` : ""}`;
+        accountLine.appendChild(current);
+      } else {
+        const hint = document.createElement("p");
+        hint.className = "cb-modal-note";
         hint.textContent = "No property selected yet.";
         accountLine.appendChild(hint);
       }
@@ -11669,22 +7145,18 @@ const cbRenderConnectorDetail = (connector) => {
           opt.textContent = label ? `${label} (${opt.value})` : opt.value;
           select.appendChild(opt);
         });
-	        if (state.propertyId) select.value = state.propertyId;
-	
-	        const saveBtn = document.createElement("button");
-	        saveBtn.type = "button";
-	        saveBtn.className = "btn btn-primary";
-	        saveBtn.textContent = cbConnectorDetailState.ga4Loading ? "Saving..." : "Save";
-	        const updateSaveState = () => {
-	          saveBtn.disabled = cbConnectorDetailState.ga4Loading || !select.value;
-	        };
-	        updateSaveState();
-	        select.addEventListener("change", updateSaveState);
-	        saveBtn.addEventListener("click", () => {
-	          const value = select.value;
-	          if (!value) return;
-	          cbSaveGa4Property(value);
-	        });
+        if (state.propertyId) select.value = state.propertyId;
+
+        const saveBtn = document.createElement("button");
+        saveBtn.type = "button";
+        saveBtn.className = "btn btn-primary";
+        saveBtn.textContent = cbConnectorDetailState.ga4Loading ? "Saving..." : "Save";
+        saveBtn.disabled = cbConnectorDetailState.ga4Loading;
+        saveBtn.addEventListener("click", () => {
+          const value = select.value;
+          if (!value) return;
+          cbSaveGa4Property(value);
+        });
 
         propsWrap.appendChild(select);
         propsWrap.appendChild(saveBtn);
@@ -11726,11 +7198,6 @@ function cbOpenConnectorDetail(connectorKey) {
   cbConnectorDetailState.googleAdsCustomers = [];
   cbConnectorDetailState.googleAdsError = null;
   cbConnectorDetailState.googleAdsLoading = false;
-  cbConnectorDetailState.googleAdsClients = [];
-  cbConnectorDetailState.googleAdsClientsError = null;
-  cbConnectorDetailState.googleAdsClientsLoading = false;
-  cbConnectorDetailState.googleAdsSelectedManagerId = null;
-  cbConnectorDetailState.googleAdsSelectedClientId = null;
   cbConnectorDetailState.connector = connector;
   cbRenderConnectorDetail(connector);
   if (connector.key === "ga4") {
@@ -11738,19 +7205,12 @@ function cbOpenConnectorDetail(connectorKey) {
     if (state.status === "connected") {
       cbLoadGa4Properties();
     }
-	  } else if (connector.key === "googleads") {
-	    const state = cbConnectorState.googleads || {};
-	    if (state.status === "connected") {
-	      const selectedManagerId = state.loginCustomerId || state.customerId || null;
-	      cbConnectorDetailState.googleAdsSelectedManagerId = selectedManagerId ? String(selectedManagerId) : null;
-	      cbConnectorDetailState.googleAdsSelectedClientId =
-	        state.loginCustomerId && state.customerId ? String(state.customerId) : null;
-	      cbLoadGoogleAdsCustomers();
-	      if (selectedManagerId) {
-	        cbLoadGoogleAdsClients(selectedManagerId);
-	      }
-	    }
-	  }
+  } else if (connector.key === "googleads") {
+    const state = cbConnectorState.googleads || {};
+    if (state.status === "connected") {
+      cbLoadGoogleAdsCustomers();
+    }
+  }
   openModal("cb-connector-detail-modal");
 }
 
@@ -12088,17 +7548,6 @@ const setupSupportContactLinks = () => {
   });
 };
 
-const setupSettingsEntryPoints = () => {
-  const settingsOpenAccount = document.getElementById("cb-settings-open-account");
-  if (settingsOpenAccount && settingsOpenAccount.dataset.bound !== "true") {
-    settingsOpenAccount.addEventListener("click", async () => {
-      closeModal("cb-settings-modal", { silentFocus: true });
-      await cbOpenProfile({ focus: "preferences" });
-    });
-    settingsOpenAccount.dataset.bound = "true";
-  }
-};
-
 const cbShowBillingToast = (type = "success", messageOverride = "") => {
   const toast = document.getElementById("cb-billing-toast");
   if (!toast) return;
@@ -12181,49 +7630,24 @@ const cbHandleConnectorReturn = async () => {
     const params = new URLSearchParams(window.location.search || "");
     const connector = (params.get("connector") || "").toLowerCase();
     const status = (params.get("status") || "").toLowerCase();
-    const errorCode = (params.get("error") || "").trim();
     const message = params.get("message") || "";
     if (connector !== "googleads" && connector !== "ga4") return;
 
     params.delete("connector");
     params.delete("status");
-    params.delete("error");
     params.delete("message");
     const newQuery = params.toString();
     const newUrl = `${window.location.pathname}${newQuery ? `?${newQuery}` : ""}${window.location.hash}`;
     window.history.replaceState({}, "", newUrl);
 
     const isGoogleAds = connector === "googleads";
-    const connectorLabel = isGoogleAds ? "Google Ads" : "GA4";
     if (status === "success") {
-      cbShowBillingToast("success", `${connectorLabel} was connected successfully.`);
+      cbShowBillingToast("success", isGoogleAds ? "Google Ads was connected successfully." : "GA4 connected successfully.");
       await cbRefreshConnectorStatuses();
     } else if (status === "error") {
-      let toastMessage = `We could not connect ${connectorLabel}${errorCode ? ` (${errorCode})` : ""}. Please try again.`;
-      if (errorCode === "not_configured") {
-        toastMessage = `${connectorLabel} is not configured on the server (not_configured).`;
-	      } else if (errorCode === "missing_code") {
-	        toastMessage = `Google did not return an authorization code (missing_code). Please try again.`;
-	      } else if (errorCode === "token_exchange_failed") {
-	        toastMessage = `Google token exchange failed (token_exchange_failed). Please try again.`;
-	      } else if (errorCode === "storage_failed") {
-	        toastMessage = `${connectorLabel} connected at Google, but the server could not save the token (storage_failed). Please try again.`;
-	      } else if (errorCode === "missing_refresh_token") {
-	        toastMessage = `Google did not return a refresh token (missing_refresh_token). Please try again (and make sure you grant consent).`;
-	      } else if (errorCode === "invalid_grant") {
-	        toastMessage = `Google returned invalid_grant (invalid_grant). Please try again; if it persists, verify the OAuth redirect URI configuration.`;
-	      } else if (errorCode === "access_denied") {
-	        toastMessage = `Authorization was cancelled (access_denied).`;
-	      } else if (errorCode === "redirect_uri_mismatch") {
-	        toastMessage = `Redirect URI mismatch (redirect_uri_mismatch). Please confirm the authorized redirect URI.`;
-	      }
-      cbShowBillingToast("cancel", toastMessage);
-
-      const logPayload = {};
-      if (errorCode) logPayload.error = errorCode;
-      if (message) logPayload.message = message;
-      if (Object.keys(logPayload).length > 0) {
-        console.error(isGoogleAds ? "[CONNECTOR_GOOGLE_ADS]" : "[CONNECTOR_GA4]", logPayload);
+      cbShowBillingToast("cancel", isGoogleAds ? "We could not connect Google Ads. Please try again." : "We could not connect GA4. Please try again.");
+      if (message) {
+        console.error(isGoogleAds ? "[CONNECTOR_GOOGLE_ADS]" : "[CONNECTOR_GA4]", message);
       }
       await cbRefreshConnectorStatuses();
     }
@@ -12329,13 +7753,9 @@ const toggleUserMenu = () => {
   }
 };
 
-const cbOpenProfile = async ({ focus = null } = {}) => {
-  cbProfileFocusTarget = focus;
+const cbOpenProfile = async () => {
   await populateProfileModal();
   openModal("cb-profile-modal");
-  if (cbProfileFocusTarget) {
-    requestAnimationFrame(cbFocusProfileSection);
-  }
 };
 
 const cbOpenBilling = async () => {
@@ -12343,8 +7763,9 @@ const cbOpenBilling = async () => {
   openModal("cb-billing-modal");
 };
 
-const cbOpenSettings = async () => {
-  await cbOpenProfile({ focus: "preferences" });
+const cbOpenSettings = () => {
+  syncSettingsUI();
+  openModal("cb-settings-modal");
 };
 
 const cbSignOut = () => {
@@ -12629,22 +8050,7 @@ const setupCouncilControls = () => {
     });
     button.dataset.councilBound = "true";
   }
-  const agentsButton =
-    shellElements.councilAgentsButton || document.getElementById("cb-council-agents-btn");
-  if (agentsButton && agentsButton.dataset.councilAgentsBound !== "true") {
-    agentsButton.addEventListener("click", (event) => {
-      event.preventDefault();
-      const url = cbBuildAgentsDirectoryUrl({ includeWorkspace: true });
-      if (typeof cbOnCouncilModalClose === "function") {
-        cbOnCouncilModalClose();
-      } else if (typeof closeModal === "function") {
-        closeModal("cb-council-popover", { silentFocus: true });
-      }
-      window.location.href = url;
-    });
-    agentsButton.dataset.councilAgentsBound = "true";
-  }
-  cbRenderCouncilList();
+  cbLoadCanon();
   cbInitCouncilChip();
   cbSyncCouncilUI();
 };
@@ -12658,82 +8064,6 @@ const cbEnsureAgentsViewInitialized = () => {
   if (cbIsAuthenticated() && !cbAgentsState.registryLoaded) {
     cbFetchAgentsRegistry();
   }
-};
-
-const cbDashboardRouterState = {
-  bound: false,
-  current: "chat",
-};
-
-const cbNormalizeDashboardViewParam = (value) => {
-  const v = (value || "").toString().trim().toLowerCase();
-  if (v === "ga4") return "ga4";
-  if (v === "googleads") return "googleads";
-  if (v === "agents") return "agents";
-  return "chat";
-};
-
-const cbViewParamToMainView = (param) => {
-  const view = cbNormalizeDashboardViewParam(param);
-  if (view === "ga4") return "ga4-dashboard";
-  if (view === "googleads") return "googleads-dashboard";
-  if (view === "agents") return "agents";
-  return "chat";
-};
-
-const cbUpdateSidebarViewHighlight = (activeParam) => {
-  const normalized = cbNormalizeDashboardViewParam(activeParam);
-  const buttons = document.querySelectorAll("[data-sidebar-view]");
-  buttons.forEach((btn) => {
-    const target = cbNormalizeDashboardViewParam(btn.dataset.sidebarView);
-    const isActive = target === normalized;
-    btn.classList.toggle("is-active", isActive);
-  });
-
-  const connectorsToggle = shellElements.connectorsToggle || document.getElementById("cb-connectors-toggle");
-  const connectorsActive = normalized === "ga4" || normalized === "googleads";
-  if (connectorsToggle) {
-    connectorsToggle.classList.toggle("is-active", connectorsActive);
-  }
-
-  const agentsButton =
-    shellElements.agentsButton || document.querySelector("[data-sidebar-agents]");
-  if (agentsButton) {
-    agentsButton.classList.toggle("is-active", normalized === "agents");
-  }
-};
-
-const cbApplyDashboardView = (viewParam) => {
-  const normalized = cbNormalizeDashboardViewParam(viewParam);
-  const mainView = cbViewParamToMainView(normalized);
-  cbDashboardRouterState.current = normalized;
-  cbSwitchMainView(mainView);
-  cbUpdateSidebarViewHighlight(normalized);
-  if (normalized === "ga4" && typeof cbInitGa4Dashboard === "function") {
-    cbInitGa4Dashboard();
-  } else if (normalized === "googleads" && typeof cbInitGoogleAdsDashboard === "function") {
-    cbInitGoogleAdsDashboard();
-  }
-};
-
-const cbSetDashboardView = (viewParam, { replace = false } = {}) => {
-  const normalized = cbNormalizeDashboardViewParam(viewParam);
-  const params = new URLSearchParams(window.location.search || "");
-  if (normalized === "chat") {
-    params.delete("view");
-  } else {
-    params.set("view", normalized);
-  }
-  const newQuery = params.toString();
-  const newUrl = `${window.location.pathname}${newQuery ? `?${newQuery}` : ""}${window.location.hash || ""}`;
-  window.history[replace ? "replaceState" : "pushState"]({}, "", newUrl);
-  cbApplyDashboardView(normalized);
-};
-
-const cbSyncDashboardViewFromUrl = () => {
-  const params = new URLSearchParams(window.location.search || "");
-  const view = params.get("view");
-  cbApplyDashboardView(view);
 };
 
 const cbSwitchMainView = (view) => {
@@ -12815,7 +8145,6 @@ const initCoolBitsUI = () => {
   setupUserMenuHandlers();
   setupAccountBillingEntryPoints();
   setupSupportContactLinks();
-  setupSettingsEntryPoints();
   setupEnterpriseContactFormHandlers();
   setupAccountViewTabs();
   cbRenderConnectorsPanel();
@@ -12827,28 +8156,12 @@ const initCoolBitsUI = () => {
   setupSidebarInteractions();
   syncWorkspaceShell();
   setupCouncilControls();
-  cbInitModelMenu();
-  cbEnsurePublicAgentsRegistry().then(() => cbRenderCouncilList());
   setupMainTabs();
   cbRenderCouncilBar();
-  cbUpdateChatHeader();
-  cbUpdateComposerSendState();
-  cbInitActiveContextToggle();
-  cbLoadActiveContext().catch((error) => console.warn("[ACTIVE_CONTEXT] init failed", error));
-
-  if (!cbDashboardRouterState.bound) {
-    window.addEventListener("popstate", cbSyncDashboardViewFromUrl);
-    cbDashboardRouterState.bound = true;
-  }
-  cbSyncDashboardViewFromUrl();
 };
 
 const renderMessages = () => {
   if (!elements.messages) return;
-  cbBindChatScrollToBottomButton();
-  const scrollContainer = cbGetChatScrollContainer();
-  const shouldAutoScroll = cbChatForceScrollToBottom || cbIsChatNearBottom(scrollContainer, 140);
-  cbChatForceScrollToBottom = false;
   elements.messages.innerHTML = "";
 
   if (!messages.length) {
@@ -12859,11 +8172,6 @@ const renderMessages = () => {
       ? "Start a new chat from the sidebar to begin."
       : "No conversation yet. Share your idea to begin.";
     elements.messages.appendChild(placeholder);
-    if (shouldAutoScroll) {
-      scrollToBottom();
-    } else {
-      cbUpdateChatScrollToBottomButton();
-    }
     return;
   }
 
@@ -12901,11 +8209,7 @@ const renderMessages = () => {
     elements.messages.appendChild(bubble);
   });
 
-  if (shouldAutoScroll) {
-    scrollToBottom();
-  } else {
-    cbUpdateChatScrollToBottomButton();
-  }
+  scrollToBottom();
 };
 
 function cbRenderCouncilBar() {
@@ -13029,35 +8333,6 @@ const addMessage = (role, content, { persistHistory = true } = {}) => {
     }
   }
   saveHistory();
-  cbChatForceScrollToBottom = true;
-  renderMessages();
-};
-
-const cbStartStreamingAssistantMessage = () => {
-  const message = { role: "assistant", content: "", timestamp: Date.now(), streaming: true };
-  messages.push(message);
-  cbChatForceScrollToBottom = true;
-  renderMessages();
-  return message;
-};
-
-const cbUpdateStreamingAssistantMessage = (message, delta) => {
-  if (!message || typeof delta !== "string") return;
-  message.content = `${message.content || ""}${delta}`;
-  cbChatForceScrollToBottom = true;
-  cbScheduleStreamRender();
-};
-
-const cbFinalizeStreamingAssistantMessage = (message, finalText, { persistHistory = true } = {}) => {
-  if (!message) return;
-  const text = typeof finalText === "string" ? finalText : message.content || "";
-  message.content = text;
-  delete message.streaming;
-  if (persistHistory) {
-    history.push({ role: "assistant", content: text });
-    saveHistory();
-  }
-  cbChatForceScrollToBottom = true;
   renderMessages();
 };
 
@@ -13076,12 +8351,6 @@ async function sendMessage(prefilledValue) {
     return;
   }
 
-  if (cbActiveContextState.status !== "active") {
-    showComposerError("Select agent/model and wait for green status before sending.");
-    cbUpdateComposerSendState();
-    return;
-  }
-
   if (typeof prefilledValue === "string" && input) {
     input.value = prefilledValue;
     cbResizeComposerInput();
@@ -13092,91 +8361,22 @@ async function sendMessage(prefilledValue) {
 
   clearComposerError();
   isSending = true;
-  cbUpdateComposerSendState();
   elements.button?.setAttribute("disabled", "true");
   elements.input?.setAttribute("disabled", "true");
 
-  const requestedContext = cbBuildRequestedContextFromUi();
-  const traceId = cbGenerateTraceId();
-  cbSetRoutingState({ traceId });
-  console.debug("[CHAT_REQUESTED]", { traceId, requested: requestedContext });
-
-  const useStreaming = Boolean(CB_STREAMING_ENABLED);
-  let streamingMessage = null;
-  if (useStreaming) {
-    cbClearStreamingUsage();
-  }
-  const streamHandlers = useStreaming
-    ? {
-        onRoute: (data) => {
-          cbApplyRoutingUpdate({
-            traceId: data?.traceId,
-            requested: data?.requested,
-            resolved: data?.resolved,
-            reason: data?.reason,
-          });
-        },
-        onDelta: (data) => {
-          const delta = typeof data?.delta === "string" ? data.delta : "";
-          if (delta) {
-            cbUpdateStreamingAssistantMessage(streamingMessage, delta);
-          }
-        },
-        onUsage: (data) => {
-          cbSetStreamingUsage({
-            traceId: data?.traceId || traceId,
-            promptTokens: data?.promptTokens,
-            completionTokens: data?.completionTokens,
-            costUsd: data?.costUsd,
-            costCbT: data?.costCbT,
-            isEstimate: data?.isEstimate,
-          });
-        },
-      }
-    : null;
-
   try {
     addMessage("user", message);
-    if (useStreaming) {
-      streamingMessage = cbStartStreamingAssistantMessage();
-    }
     if (councilActive && isCouncilTicket) {
       cbRunCouncilEvaluation(message);
     }
     let autoRenameSource = null;
     if (cbChatsUnsupported) {
-      if (useStreaming) {
-        const data = await legacyRequestChatReply(message, {
-          traceId,
-          requestedContext,
-          stream: true,
-          streamHandlers,
-        });
-        const reply = extractReply(data) || data?.text || "";
-        if (!reply) {
-          throw new Error("Chat service returned an empty reply.");
-        }
-        cbFinalizeStreamingAssistantMessage(streamingMessage, reply, { persistHistory: true });
-        if (data?.meta) {
-          cbApplyChatMeta(data.meta);
-        }
-        if (data?.user) {
-          cbApplyAuthPayload(data.user);
-        }
-      } else {
-        const data = await legacyRequestChatReply(message, { traceId, requestedContext });
-        const reply = extractReply(data);
-        if (!reply) {
-          throw new Error("Chat service returned an empty reply.");
-        }
-        addMessage("assistant", reply);
-        if (data?.meta) {
-          cbApplyChatMeta(data.meta);
-        }
-        if (data?.user) {
-          cbApplyAuthPayload(data.user);
-        }
+      const data = await legacyRequestChatReply(message);
+      const reply = extractReply(data);
+      if (!reply) {
+        throw new Error("Chat service returned an empty reply.");
       }
+      addMessage("assistant", reply);
       if (input) {
         input.value = "";
         cbResizeComposerInput();
@@ -13184,71 +8384,22 @@ async function sendMessage(prefilledValue) {
       }
     } else {
       let nextMessages = cbActiveChatMessages.slice();
-      if (useStreaming) {
-        if (!cbActiveChatId) {
-          const creation = await cbCreateChat(message, {
-            traceId,
-            requestedContext,
-            stream: true,
-            streamHandlers,
-          });
-          cbActiveChatId = creation?.chat?.id || null;
-          nextMessages = Array.isArray(creation?.messages) ? creation.messages : [];
-          const firstAssistant = nextMessages.find(
-            (msg) => typeof msg?.content === "string" && (msg.role || "").toLowerCase() === "assistant"
-          );
-          if (firstAssistant) {
-            autoRenameSource = firstAssistant.content;
-          }
-          const replyText = creation?.text || extractReply(creation) || "";
-          cbFinalizeStreamingAssistantMessage(streamingMessage, replyText, { persistHistory: false });
-          if (creation?.meta) {
-            cbApplyChatMeta(creation.meta);
-          }
-        } else {
-          const appendResult = await cbAppendChatMessage(cbActiveChatId, message, {
-            traceId,
-            requestedContext,
-            stream: true,
-            streamHandlers,
-          });
-          const appended = Array.isArray(appendResult?.newMessages) ? appendResult.newMessages : [];
-          nextMessages = nextMessages.concat(appended);
-          const replyText = appendResult?.text || extractReply(appendResult) || "";
-          cbFinalizeStreamingAssistantMessage(streamingMessage, replyText, { persistHistory: false });
-          if (appendResult?.meta) {
-            cbApplyChatMeta(appendResult.meta);
-          }
+      if (!cbActiveChatId) {
+        const creation = await cbCreateChat(message);
+        cbActiveChatId = creation?.chat?.id || null;
+        nextMessages = Array.isArray(creation?.messages) ? creation.messages : [];
+        const firstAssistant = nextMessages.find(
+          (msg) => typeof msg?.content === "string" && (msg.role || "").toLowerCase() === "assistant"
+        );
+        if (firstAssistant) {
+          autoRenameSource = firstAssistant.content;
         }
       } else {
-        if (!cbActiveChatId) {
-          const creation = await cbCreateChat(message, { traceId, requestedContext });
-          cbActiveChatId = creation?.chat?.id || null;
-          nextMessages = Array.isArray(creation?.messages) ? creation.messages : [];
-          const firstAssistant = nextMessages.find(
-            (msg) => typeof msg?.content === "string" && (msg.role || "").toLowerCase() === "assistant"
-          );
-          if (firstAssistant) {
-            autoRenameSource = firstAssistant.content;
-          }
-          if (creation?.meta) {
-            cbApplyChatMeta(creation.meta);
-          }
-        } else {
-          const appendResult = await cbAppendChatMessage(cbActiveChatId, message, {
-            traceId,
-            requestedContext,
-          });
-          const appended = Array.isArray(appendResult?.newMessages) ? appendResult.newMessages : [];
-          nextMessages = nextMessages.concat(appended);
-          if (appendResult?.meta) {
-            cbApplyChatMeta(appendResult.meta);
-          }
-        }
+        const appendResult = await cbAppendChatMessage(cbActiveChatId, message);
+        const appended = Array.isArray(appendResult?.newMessages) ? appendResult.newMessages : [];
+        nextMessages = nextMessages.concat(appended);
       }
-      if (nextMessages.length) {
-        cbSetActiveChatMessages(nextMessages);
-      }
+      cbSetActiveChatMessages(nextMessages);
       if (input) {
         input.value = "";
         cbResizeComposerInput();
@@ -13261,48 +8412,15 @@ async function sendMessage(prefilledValue) {
     }
   } catch (error) {
     console.error(error);
-    const payload = error?.payload || {};
-    const status = error?.status;
-    const errorCode = error?.code || payload?.errorCode || payload?.error || payload?.code;
-    if (status === 401 || status === 403 || errorCode === "UNAUTHENTICATED") {
-      clearAuthState({ showOnboarding: true });
-    }
-    let messageText =
-      payload?.message ||
-      payload?.error ||
-      (error instanceof Error ? error.message : null) ||
-      "We couldn't reach the CoolBits backend right now. Please try again.";
-    let inlineOnly = Boolean(error?.inlineOnly);
-    if (status === 402 || errorCode === "CBT_EXHAUSTED" || errorCode === "cbt_limit_reached" || errorCode === "PLAN_INACTIVE") {
-      messageText =
-        payload?.message ||
-        "Token quota reached for your current plan. Please upgrade or wait for a reset.";
-      cbSetTokenLimitBannerVisible(true);
-      inlineOnly = true;
-    } else if (status === 429) {
-      const scope = (payload?.scope || "").toLowerCase();
-      messageText = scope === "guest"
-        ? "Too many requests as guest. Please slow down."
-        : "System is rate limited. Please wait before sending more messages.";
-      inlineOnly = true;
-    }
+    const fallback = error instanceof Error ? error.message : null;
+    const messageText = fallback || "We couldn't reach the CoolBits backend right now. Please try again.";
     showComposerError(messageText);
-    if (useStreaming && streamingMessage) {
-      const index = messages.indexOf(streamingMessage);
-      if (index !== -1) {
-        messages.splice(index, 1);
-        renderMessages();
-      }
-    }
-    if (!inlineOnly) {
+    if (!error?.inlineOnly) {
       addMessage("system", messageText, { persistHistory: false });
     }
   } finally {
-    if (useStreaming) {
-      cbClearStreamingUsage();
-    }
     isSending = false;
-    cbUpdateComposerSendState();
+    elements.button?.removeAttribute("disabled");
     elements.input?.removeAttribute("disabled");
     elements.input?.focus();
   }
@@ -13350,7 +8468,6 @@ function cbAppendCouncilDecisionMessage(result) {
     createdAt: new Date().toISOString(),
   };
   messages.push(msg);
-  cbChatForceScrollToBottom = true;
   renderMessages();
 }
 
@@ -13654,8 +8771,14 @@ const bootstrap = () => {
   if (!elements.form || !elements.messages) return;
 
   messages = loadHistory();
-  cbChatForceScrollToBottom = true;
   renderMessages();
+  
+  // Force scroll to bottom after render completes
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
+  });
   
   ensureProfile()
     .then(() => updateLevelBadge())
@@ -13790,9 +8913,3 @@ console.log("[CB_CHAT_BUILD]", "v2025-12-02T15:30Z");
   window.addEventListener('DOMContentLoaded', updateCouncilText);
   updateCouncilText(); // Initial call
 })();
-
-
-
-
-
-

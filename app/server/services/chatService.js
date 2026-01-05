@@ -91,7 +91,7 @@ export async function createChat(email, firstMessageContent, options = {}) {
   try {
     await client.query('BEGIN');
     const title = options.title || (firstMessageContent || '').slice(0, 80);
-    const model = options.model || 'gpt-4.1-mini';
+    const model = options.model || 'vertex-gemini-2.5-flash-lite';
     const temperature = options.temperature ?? 0.3;
     let projectId = options.projectId || null;
     const workspaceId = options.workspaceId || 'business';

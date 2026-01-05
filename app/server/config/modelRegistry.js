@@ -54,9 +54,9 @@ export const models = {
 };
 
 export function getModelConfig(modelId) {
-  if (models[modelId]) return models[modelId];
-  const fallback = models[DEFAULT_MODEL_ID];
-  return fallback || Object.values(models)[0];
+  const key = modelId || DEFAULT_MODEL_ID;
+  if (models[key]) return models[key];
+  throw new Error(`model_not_found:${key}`);
 }
 
 export function getDefaultModelId() {
