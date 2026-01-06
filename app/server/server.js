@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from './middleware/cors.js';
 import router from './router/index.js';
+import canonRouter from './router/canon-router.js';
 import metricsRouter from './routers/metrics-router.js';
 import { logRequest, logError } from './logger.js';
 import stripeWebhookRouter from './router/stripe-webhook-router.js';
@@ -45,6 +46,7 @@ app.get('/healthz', (req, res) => {
 app.use('/api/metrics', metricsRouter);
 
 // All API routes
+app.use('/api/canon', canonRouter);
 app.use('/api', router);
 
 app.use((err, req, res, next) => {
