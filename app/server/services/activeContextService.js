@@ -44,6 +44,8 @@ const DEFAULT_PROVIDER = normalizeProviderKey(
   process.env.CHAT_PROVIDER || process.env.OPENAI_PROVIDER || 'vertex',
 );
 const OPENAI_ENABLED = String(process.env.ENABLE_OPENAI || '').toLowerCase() === 'true';
+const REQUIRE_ACTIVE_CONTEXT_STRICT =
+  String(process.env.REQUIRE_ACTIVE_CONTEXT_STRICT || '').toLowerCase() === 'true';
 const ALLOWED_PROVIDERS = new Set([DEFAULT_PROVIDER]);
 if (OPENAI_ENABLED || DEFAULT_PROVIDER === 'openai') {
   ALLOWED_PROVIDERS.add('openai');
@@ -142,6 +144,65 @@ function normalizeBillingSource(value) {
   const key = String(value || '').trim().toLowerCase();
   if (key === 'byok') return 'byok';
   return 'coolbits';
+}
+
+function pickFirstAgentId(payload) {
+  if (payload?.agentId && typeof payload.agentId === 'string' && payload.agentId.trim()) {
+    return payload.agentId.trim();
+  }
+  if (Array.isArray(payload?.agents) && payload.agents.length) {
+    return String(payload.agents[0]);
+  }
+  if (Array.isArray(payload?.council?.members) && payload.council.members.length) {
+    return String(payload.council.members[0]);
+  }
+  return null;
+}
+
+export function buildContextActivationRequest({
+  body = {},
+  workspaceId = null,
+  projectId = null,
+  traceId = null,
+} = {}) {
+  const agentId = pickFirstAgentId(body);
+  const workspaceValue =
+    (typeof body?.workspaceId === 'string' && body.workspaceId.trim())
+      ? body.workspaceId.trim()
+      : (typeof body?.workspace === 'string' && body.workspace.trim() ? body.workspace.trim() : '');
+  const provider = typeof body?.provider === 'string' && body.provider.trim()
+    ? body.provider.trim()
+    : 'auto';
+  const model = typeof body?.model === 'string' && body.model.trim()
+    ? body.model.trim()
+    : 'auto';
+  const billingSource = typeof body?.billingSource === 'string' && body.billingSource.trim()
+    ? body.billingSource.trim()
+    : undefined;
+  const byokKeyPresent = body?.byokKeyPresent === true;
+  const byokKeyLast4 = typeof body?.byokKeyLast4 === 'string' && body.byokKeyLast4.trim()
+    ? body.byokKeyLast4.trim()
+    : undefined;
+  const customName = typeof body?.customName === 'string' && body.customName.trim()
+    ? body.customName.trim()
+    : undefined;
+
+  return {
+    agentId: agentId || undefined,
+    workspaceId: workspaceValue || workspaceId || undefined,
+    projectId: projectId || undefined,
+    provider,
+    model,
+    billingSource,
+    byokKeyPresent,
+    byokKeyLast4,
+    customName,
+    traceId: traceId || undefined,
+  };
+}
+
+export function isActiveContextStrict() {
+  return REQUIRE_ACTIVE_CONTEXT_STRICT;
 }
 
 function getByokState(userId) {
@@ -315,7 +376,26 @@ export async function activateContext(userId, requested = {}) {
   return context;
 }
 
+export async function ensureActiveContext(userId, desired = {}, meta = {}) {
+  const existing = getActiveContext(userId);
+  if (existing && existing.status === 'active') return existing;
+
+  const context = await activateContext(userId, desired);
+  console.log('[CTX_AUTO_ACTIVATE]', JSON.stringify({
+    userId,
+    workspaceId: desired.workspaceId || desired.workspace || null,
+    projectId: meta.projectId || desired.projectId || null,
+    requestedProvider: context?.requested?.provider || desired.provider || 'auto',
+    resolvedProvider: context?.resolved?.provider || context?.provider || null,
+    reason: meta.reason || 'missing_active_context',
+  }));
+  return context;
+}
+
 export default {
   getActiveContext,
   activateContext,
+  ensureActiveContext,
+  buildContextActivationRequest,
+  isActiveContextStrict,
 };

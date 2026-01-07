@@ -1,0 +1,7 @@
+/pricing      /chat?view=pricing      302
+/pricing/     /chat?view=pricing      302
+/maturity     /chat?view=maturity     302
+/maturity/    /chat?view=maturity     302
+/agents       /chat?view=agents       302
+/connectors   /chat?view=connectors   302
+/orchestrators /chat?view=orchestrators 302

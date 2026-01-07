@@ -10,7 +10,12 @@ import {
 } from '../services/billingService.js';
 import { rateLimitAgentsUserWorkspace } from '../middleware/rateLimit.js';
 import { findRunsForWorkspace } from '../repositories/agentRunsRepo.js';
-import { getActiveContext } from '../services/activeContextService.js';
+import {
+  getActiveContext,
+  ensureActiveContext,
+  buildContextActivationRequest,
+  isActiveContextStrict,
+} from '../services/activeContextService.js';
 
 const router = express.Router();
 
@@ -53,9 +58,24 @@ router.post('/run', ensureAuth, rateLimitAgentsUserWorkspace, async (req, res) =
     const user = await getUserByEmail(req.authEmail);
     if (!user) return respondError(res, 401, 'UNAUTHORIZED', 'User not found.');
 
-    const activeContext = getActiveContext(user.id);
+    let activeContext = getActiveContext(user.id);
     if (!activeContext || activeContext.status !== 'active') {
-      return respondError(res, 409, 'ACTIVE_CONTEXT_REQUIRED', 'Activate context before running agents.');
+      if (isActiveContextStrict()) {
+        return respondError(res, 409, 'ACTIVE_CONTEXT_REQUIRED', 'Activate context before running agents.');
+      }
+      try {
+        const desired = buildContextActivationRequest({
+          body: req.body,
+          workspaceId,
+          projectId: req.body?.projectId || null,
+        });
+        activeContext = await ensureActiveContext(user.id, desired, {
+          reason: 'missing_active_context',
+          projectId: req.body?.projectId || null,
+        });
+      } catch (err) {
+        return respondError(res, 409, 'ACTIVE_CONTEXT_REQUIRED', 'Activate context before running agents.');
+      }
     }
 
     const { planCode, limits } = await getPlanForUser(user.id || user.email);

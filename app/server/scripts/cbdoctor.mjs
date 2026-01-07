@@ -6,6 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const scripts = [
   'selftest-provider-override.mjs',
   'selftest-provider-normalize.mjs',
+  'selftest-context-auto-activate.mjs',
   'selftest-googleads-customers-401.mjs',
   'selftest-googleads-customers-403.mjs',
   'selftest-googleads-customers-429.mjs',

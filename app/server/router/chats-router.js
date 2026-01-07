@@ -18,7 +18,12 @@ import { getPlanForUser, isPaidPlan, getCurrentPeriodForUser, getTokensUsed } fr
 import { buildCouncilMeta } from '../chat.js';
 import { getChatAgentOrNull } from '../config/chatAgents.js';
 import { getModelConfig } from '../config/modelRegistry.js';
-import { getActiveContext } from '../services/activeContextService.js';
+import {
+  getActiveContext,
+  ensureActiveContext,
+  buildContextActivationRequest,
+  isActiveContextStrict,
+} from '../services/activeContextService.js';
 import {
   normalizeCouncil,
   isCouncilIntrospection,
@@ -303,13 +308,33 @@ router.post('/', requireUser, async (req, res) => {
       });
     }
 
-    const activeContext = getActiveContext(user.id);
+    let activeContext = getActiveContext(user.id);
     if (!activeContext || activeContext.status !== 'active') {
-      return res.status(409).json({
-        error: 'ACTIVE_CONTEXT_REQUIRED',
-        message: 'Select an agent/model and wait for active status before sending.',
-        errorCode: 'ACTIVE_CONTEXT_REQUIRED',
-      });
+      if (isActiveContextStrict()) {
+        return res.status(409).json({
+          error: 'ACTIVE_CONTEXT_REQUIRED',
+          message: 'Select an agent/model and wait for active status before sending.',
+          errorCode: 'ACTIVE_CONTEXT_REQUIRED',
+        });
+      }
+      try {
+        const desired = buildContextActivationRequest({
+          body: req.body,
+          workspaceId,
+          projectId,
+          traceId,
+        });
+        activeContext = await ensureActiveContext(user.id, desired, {
+          reason: 'missing_active_context',
+          projectId,
+        });
+      } catch (err) {
+        return res.status(409).json({
+          error: 'ACTIVE_CONTEXT_REQUIRED',
+          message: 'Select an agent/model and wait for active status before sending.',
+          errorCode: 'ACTIVE_CONTEXT_REQUIRED',
+        });
+      }
     }
 
     const payloadIds = Array.isArray(req.body?.payloadIds) ? req.body.payloadIds : null;
@@ -469,13 +494,36 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
       });
     }
 
-    const activeContext = getActiveContext(user.id);
+    const requestedWorkspaceId = typeof req.body?.workspaceId === 'string' && req.body.workspaceId.trim()
+      ? req.body.workspaceId.trim()
+      : '';
+    let activeContext = getActiveContext(user.id);
     if (!activeContext || activeContext.status !== 'active') {
-      return res.status(409).json({
-        error: 'ACTIVE_CONTEXT_REQUIRED',
-        message: 'Select an agent/model and wait for active status before sending.',
-        errorCode: 'ACTIVE_CONTEXT_REQUIRED',
-      });
+      if (isActiveContextStrict()) {
+        return res.status(409).json({
+          error: 'ACTIVE_CONTEXT_REQUIRED',
+          message: 'Select an agent/model and wait for active status before sending.',
+          errorCode: 'ACTIVE_CONTEXT_REQUIRED',
+        });
+      }
+      try {
+        const desired = buildContextActivationRequest({
+          body: req.body,
+          workspaceId: requestedWorkspaceId || null,
+          traceId,
+          projectId: req.body?.projectId || null,
+        });
+        activeContext = await ensureActiveContext(user.id, desired, {
+          reason: 'missing_active_context',
+          projectId: req.body?.projectId || null,
+        });
+      } catch (err) {
+        return res.status(409).json({
+          error: 'ACTIVE_CONTEXT_REQUIRED',
+          message: 'Select an agent/model and wait for active status before sending.',
+          errorCode: 'ACTIVE_CONTEXT_REQUIRED',
+        });
+      }
     }
 
     const requestedContext = buildRequestedContext({ body: req.body, council, activeContext });
@@ -486,9 +534,7 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
     const combo = await getChatWithMessages(req.userEmail, req.params.chatId);
     if (!combo) return res.status(404).json({ error: 'Chat not found', errorCode: 'NOT_FOUND' });
 
-    const workspaceId = typeof req.body?.workspaceId === 'string' && req.body.workspaceId.trim()
-      ? req.body.workspaceId.trim()
-      : combo?.chat?.workspaceId || 'business';
+    const workspaceId = requestedWorkspaceId || combo?.chat?.workspaceId || 'business';
     const payloadIds = Array.isArray(req.body?.payloadIds) ? req.body.payloadIds : null;
     let payloadMeta = [];
     let hasPayloadRequest = false;

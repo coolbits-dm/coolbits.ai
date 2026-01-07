@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import os from 'node:os';
 import cors from './middleware/cors.js';
 import router from './router/index.js';
 import canonRouter from './router/canon-router.js';
@@ -28,6 +29,11 @@ app.use(
 // Stripe webhook needs raw body
 app.use('/api/webhook', stripeWebhookRouter);
 app.use(express.json());
+
+app.use((req, res, next) => {
+  res.setHeader('X-CB-Instance', `${process.pid}@${os.hostname()}`);
+  next();
+});
 
 app.use((req, res, next) => {
   console.log('[COOLBITS_REQUEST]', req.method, req.originalUrl);

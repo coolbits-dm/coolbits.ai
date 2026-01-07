@@ -15,7 +15,12 @@ import { loadAgentSystemPrompt } from './services/promptService.js';
 import { getChatAgentOrNull } from './config/chatAgents.js';
 import { getModelConfig } from './config/modelRegistry.js';
 import { normalizeCouncil } from './utils/councilUtils.js';
-import { getActiveContext } from './services/activeContextService.js';
+import {
+  getActiveContext,
+  ensureActiveContext,
+  buildContextActivationRequest,
+  isActiveContextStrict,
+} from './services/activeContextService.js';
 import { resolveTraceId } from './utils/trace.js';
 import {
   buildRequestedContext,
@@ -341,12 +346,31 @@ export async function handleChat(optionsOrReq, maybeRes) {
       return res.status(401).json({ error: 'Unauthorized', errorCode: 'UNAUTHENTICATED' });
     }
 
-    const activeContext = getActiveContext(authedUser.id);
+    let activeContext = getActiveContext(authedUser.id);
     if (!activeContext || activeContext.status !== 'active') {
-      return res.status(409).json({
-        error: 'ACTIVE_CONTEXT_REQUIRED',
-        message: 'Select an agent/model and wait for active status before sending.',
-      });
+      if (isActiveContextStrict()) {
+        return res.status(409).json({
+          error: 'ACTIVE_CONTEXT_REQUIRED',
+          message: 'Select an agent/model and wait for active status before sending.',
+        });
+      }
+      try {
+        const desired = buildContextActivationRequest({
+          body: req.body,
+          workspaceId,
+          projectId: req.body?.projectId || null,
+          traceId,
+        });
+        activeContext = await ensureActiveContext(authedUser.id, desired, {
+          reason: 'missing_active_context',
+          projectId: req.body?.projectId || null,
+        });
+      } catch (err) {
+        return res.status(409).json({
+          error: 'ACTIVE_CONTEXT_REQUIRED',
+          message: 'Select an agent/model and wait for active status before sending.',
+        });
+      }
     }
 
     const payloadIds = Array.isArray(body?.payloadIds) ? body.payloadIds : null;
@@ -661,14 +685,35 @@ export async function handleChatStream(optionsOrReq, maybeRes) {
       return endSse(res);
     }
 
-    const activeContext = getActiveContext(authedUser.id);
+    let activeContext = getActiveContext(authedUser.id);
     if (!activeContext || activeContext.status !== 'active') {
-      sendSse(res, 'error', {
-        traceId,
-        errorCode: 'ACTIVE_CONTEXT_REQUIRED',
-        message: 'Select an agent/model and wait for active status before sending.',
-      });
-      return endSse(res);
+      if (isActiveContextStrict()) {
+        sendSse(res, 'error', {
+          traceId,
+          errorCode: 'ACTIVE_CONTEXT_REQUIRED',
+          message: 'Select an agent/model and wait for active status before sending.',
+        });
+        return endSse(res);
+      }
+      try {
+        const desired = buildContextActivationRequest({
+          body,
+          workspaceId,
+          projectId: body?.projectId || null,
+          traceId,
+        });
+        activeContext = await ensureActiveContext(authedUser.id, desired, {
+          reason: 'missing_active_context',
+          projectId: body?.projectId || null,
+        });
+      } catch (err) {
+        sendSse(res, 'error', {
+          traceId,
+          errorCode: 'ACTIVE_CONTEXT_REQUIRED',
+          message: 'Select an agent/model and wait for active status before sending.',
+        });
+        return endSse(res);
+      }
     }
 
     const payloadIds = Array.isArray(body?.payloadIds) ? body.payloadIds : null;
