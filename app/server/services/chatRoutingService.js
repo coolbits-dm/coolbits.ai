@@ -8,6 +8,7 @@ const ROUTING_REASONS = new Set([
   'agent_default',
   'workspace_default',
   'auto_route',
+  'provider_not_allowed',
   'fallback_rate_limit',
   'fallback_missing_key',
   'fallback_timeout',

@@ -39,6 +39,15 @@ const PROVIDER_DEFAULT_MODELS = {
   deepseek: 'openai-gpt-4.1',
 };
 
+const DEFAULT_PROVIDER = normalizeProviderKey(
+  process.env.CHAT_PROVIDER || process.env.OPENAI_PROVIDER || 'vertex',
+);
+const OPENAI_ENABLED = String(process.env.ENABLE_OPENAI || '').toLowerCase() === 'true';
+const ALLOWED_PROVIDERS = new Set([DEFAULT_PROVIDER]);
+if (OPENAI_ENABLED || DEFAULT_PROVIDER === 'openai') {
+  ALLOWED_PROVIDERS.add('openai');
+}
+
 function normalizeProvider(value) {
   return normalizeProviderKey(value);
 }
@@ -77,6 +86,17 @@ function defaultModelForWorkspace(workspaceCode) {
 function defaultModelForProvider(provider, workspaceCode) {
   const fallback = PROVIDER_DEFAULT_MODELS[provider] || defaultModelForWorkspace(workspaceCode);
   return modelRegistry[fallback] ? fallback : defaultModelForWorkspace(workspaceCode);
+}
+
+function resolveProviderOverride(providerRaw) {
+  const requestedProvider = normalizeProvider(providerRaw);
+  if (requestedProvider === 'auto') {
+    return { requestedProvider, resolvedProvider: DEFAULT_PROVIDER, reason: null };
+  }
+  if (!ALLOWED_PROVIDERS.has(requestedProvider)) {
+    return { requestedProvider, resolvedProvider: DEFAULT_PROVIDER, reason: 'provider_not_allowed' };
+  }
+  return { requestedProvider, resolvedProvider: requestedProvider, reason: null };
 }
 
 function mapExternalModelToInternal(provider, modelValue) {
@@ -200,14 +220,24 @@ export async function activateContext(userId, requested = {}) {
     agentProfile = fallback;
   }
 
-  const providerRequested = normalizeProvider(requested.provider);
+  const providerResolution = resolveProviderOverride(requested.provider);
+  const providerRequested = providerResolution.requestedProvider;
+  const providerForResolution = providerResolution.resolvedProvider;
+  if (providerResolution.reason) {
+    console.warn('[PROVIDER_OVERRIDE]', JSON.stringify({
+      traceId: requested?.traceId || null,
+      requestedProvider: providerRequested,
+      resolvedProvider: providerForResolution,
+      reason: providerResolution.reason,
+    }));
+  }
   const modelResolved = resolveModel({
-    provider: providerRequested,
+    provider: providerForResolution,
     model: requested.model,
     agentProfile,
     workspaceCode,
   });
-  const providerResolved = providerFromModel(modelResolved, providerRequested);
+  const providerResolved = providerFromModel(modelResolved, providerForResolution);
 
   const billingSource = normalizeBillingSource(requested.billingSource);
   if (billingSource === 'coolbits') {
@@ -237,15 +267,17 @@ export async function activateContext(userId, requested = {}) {
   const requestedModel = typeof requested.model === 'string' && requested.model.trim()
     ? requested.model.trim()
     : 'auto';
-  let resolutionReason = 'workspace_default';
-  if (providerRequested !== 'auto' && requestedModel !== 'auto') {
-    resolutionReason = 'user_selected';
-  } else if (providerRequested !== 'auto') {
-    resolutionReason = 'auto_route';
-  } else if (requestedModel !== 'auto') {
-    resolutionReason = 'user_selected';
-  } else if (agentProfile?.model) {
-    resolutionReason = 'agent_default';
+  let resolutionReason = providerResolution.reason || 'workspace_default';
+  if (!providerResolution.reason) {
+    if (providerRequested !== 'auto' && requestedModel !== 'auto') {
+      resolutionReason = 'user_selected';
+    } else if (providerRequested !== 'auto') {
+      resolutionReason = 'auto_route';
+    } else if (requestedModel !== 'auto') {
+      resolutionReason = 'user_selected';
+    } else if (agentProfile?.model) {
+      resolutionReason = 'agent_default';
+    }
   }
 
   const context = {

@@ -971,7 +971,21 @@ router.get('/customers', requireUser, async (req, res) => {
       headers,
     });
     if (!listResp.ok) {
-      throw new Error(`listAccessibleCustomers failed: ${listResp.status}`);
+      const errorText = await listResp.text();
+      if (listResp.status === 401) {
+        console.warn('[GOOGLEADS_CUSTOMERS_AUTH_FAILED]', {
+          workspaceId,
+          userId: userKey,
+          status: listResp.status,
+          message: errorText ? errorText.slice(0, 300) : null,
+        });
+        return res.status(401).json({
+          error: 'googleads_auth_failed',
+          action: 'reconnect',
+          status: 401,
+        });
+      }
+      throw new Error(`listAccessibleCustomers failed: ${listResp.status} ${errorText || ''}`);
     }
     const listJson = await listResp.json();
     const resourceNames = Array.isArray(listJson.resourceNames) ? listJson.resourceNames : [];

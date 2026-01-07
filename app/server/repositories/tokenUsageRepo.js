@@ -11,6 +11,17 @@ function normalizeUuidOrNull(value) {
   return value;
 }
 
+function assertPlaceholderCount(text, values, label) {
+  const placeholders = text.match(/\$\d+/g) || [];
+  if (placeholders.length !== values.length) {
+    const error = new Error(
+      `[TOKEN_USAGE_QUERY_MISMATCH] ${label} placeholders=${placeholders.length} values=${values.length}`,
+    );
+    error.code = 'TOKEN_USAGE_QUERY_MISMATCH';
+    throw error;
+  }
+}
+
 export async function insertTokenUsage({
   traceId = null,
   userId,
@@ -77,7 +88,7 @@ export async function insertTokenUsage({
       plan_code,
       period_start,
       period_end
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29)
     ON CONFLICT (trace_id) DO NOTHING
     RETURNING *
   `;
@@ -112,6 +123,7 @@ export async function insertTokenUsage({
     periodStart,
     periodEnd || null,
   ];
+  assertPlaceholderCount(text, values, 'insertTokenUsage');
   const result = await executor.query(text, values);
   return result?.rows?.[0] || null;
 }
