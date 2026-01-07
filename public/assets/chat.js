@@ -1755,10 +1755,16 @@ const shellElements = {
   sidebarBackdrop: document.querySelector("[data-sidebar-backdrop]"),
   newChatButton: document.querySelector("[data-sidebar-new-chat]"),
   chatsList: document.querySelector("[data-sidebar-chat-list]"),
+  agentsButton: document.querySelector("[data-sidebar-agents]"),
   featureButtons: Array.from(document.querySelectorAll("[data-sidebar-feature]")),
   accountViewButtons: Array.from(document.querySelectorAll("[data-account-view-btn]")),
   accountViews: Array.from(document.querySelectorAll("[data-account-view]")),
   connectorsCategories: document.getElementById("cb-connectors-categories"),
+  connectorsSection: document.querySelector("[data-sidebar-connectors]"),
+  connectorsToggle: document.querySelector(".cb-connectors-toggle"),
+  connectorsMenu: document.getElementById("cb-connectors-menu"),
+  orchestratorButton: document.querySelector('[data-sidebar-feature="orchestrator"]'),
+  orchestratorMenu: document.getElementById("cb-orchestrators-menu"),
   userSlot: document.getElementById("cb-sidebar-user-slot"),
   topBarRight: document.querySelector(".top-bar-right"),
   projectSection: document.querySelector("[data-projects-section]"),
@@ -1888,12 +1894,17 @@ let cbActiveChatMessages = [];
 let cbHasManualChatSelection = false;
 let cbChatsUnsupported = false;
 let cbCurrentProjectId = null;
+let cbActiveContext = null;
+let cbContextDirty = true;
+let cbContextActivationPromise = null;
 let cbProjectMenuOpen = false;
 let cbSidebarMenuOutsideBound = false;
 const WORKSPACE_STORAGE_KEY = "coolbits:workspace";
 let cbWorkspaces = [];
 let cbCurrentWorkspaceId = "business";
 let cbWorkspaceMenuOpen = false;
+let cbConnectorsMenuOpen = false;
+let cbOrchestratorsMenuOpen = false;
 let cbPendingDeleteChatId = null;
 let cbPendingRenameChatId = null;
 const cbManualChatTitles = new Set();
@@ -3031,6 +3042,41 @@ const getQueryParam = (name) => {
   }
 };
 
+const cbHandleInitialViewParam = () => {
+  const viewRaw = getQueryParam("view");
+  const view = viewRaw ? viewRaw.trim().toLowerCase() : "";
+  if (!view) return;
+  if (view === "agents") {
+    cbSwitchMainView("agents");
+    return;
+  }
+  if (view === "connectors") {
+    cbSetAccountView("connectors");
+    cbRenderConnectorsPanel();
+    cbOpenAccountBilling({ view: "connectors" });
+    return;
+  }
+  if (view === "ga4") {
+    cbSwitchMainView("ga4-dashboard");
+    return;
+  }
+  if (view === "googleads") {
+    cbSwitchMainView("googleads-dashboard");
+    return;
+  }
+  if (view === "orchestrators") {
+    cbToggleOrchestratorsMenu(true);
+    return;
+  }
+  if (view === "pricing") {
+    cbOpenPlansModal({ source: "pricing", summary: cbLatestBillingSummary });
+    return;
+  }
+  if (view === "maturity") {
+    cbSwitchMainView("chat");
+  }
+};
+
 const getPlanLabel = (user) => {
   if (!user) {
     return STARTER_PLAN;
@@ -3511,12 +3557,27 @@ const cbSetupComposerInput = () => {
 };
 
 const cbRepositionSidebarMenus = () => {
-  const { projectMenu, projectSelector, workspaceMenu, workspaceSelector } = shellElements;
+  const {
+    projectMenu,
+    projectSelector,
+    workspaceMenu,
+    workspaceSelector,
+    connectorsMenu,
+    connectorsToggle,
+    orchestratorMenu,
+    orchestratorButton,
+  } = shellElements;
   if (cbProjectMenuOpen && projectMenu && projectSelector && !projectMenu.hidden) {
     cbPositionSidebarMenu(projectMenu, projectSelector);
   }
   if (cbWorkspaceMenuOpen && workspaceMenu && workspaceSelector && !workspaceMenu.hidden) {
     cbPositionSidebarMenu(workspaceMenu, workspaceSelector);
+  }
+  if (cbConnectorsMenuOpen && connectorsMenu && connectorsToggle && !connectorsMenu.hidden) {
+    cbPositionSidebarMenu(connectorsMenu, connectorsToggle);
+  }
+  if (cbOrchestratorsMenuOpen && orchestratorMenu && orchestratorButton && !orchestratorMenu.hidden) {
+    cbPositionSidebarMenu(orchestratorMenu, orchestratorButton);
   }
   if (userMenuOpen) {
     cbPositionUserMenu();
@@ -3569,14 +3630,91 @@ const cbToggleWorkspaceMenu = (open) => {
   }
 };
 
+const cbToggleConnectorsMenu = (open) => {
+  if (typeof open === "boolean") {
+    cbConnectorsMenuOpen = open;
+  } else {
+    cbConnectorsMenuOpen = !cbConnectorsMenuOpen;
+  }
+  const { connectorsMenu, connectorsToggle } = shellElements;
+  if (connectorsMenu) {
+    connectorsMenu.hidden = !cbConnectorsMenuOpen;
+    if (cbConnectorsMenuOpen) {
+      if (connectorsToggle) {
+        cbPositionSidebarMenu(connectorsMenu, connectorsToggle);
+      }
+    } else {
+      cbResetFloatingMenuStyles(connectorsMenu);
+    }
+  }
+  if (connectorsToggle) {
+    connectorsToggle.setAttribute("aria-expanded", cbConnectorsMenuOpen ? "true" : "false");
+    connectorsToggle.setAttribute("data-open", cbConnectorsMenuOpen ? "true" : "false");
+  }
+};
+
+const cbEnsureOrchestratorsMenu = () => {
+  if (shellElements.orchestratorMenu) return shellElements.orchestratorMenu;
+  const button = shellElements.orchestratorButton;
+  if (!button) return null;
+  const menu = document.createElement("div");
+  menu.id = "cb-orchestrators-menu";
+  menu.className = "cb-sidebar-menu cb-orchestrators-menu";
+  menu.setAttribute("role", "listbox");
+  menu.hidden = true;
+
+  const soonButton = document.createElement("button");
+  soonButton.type = "button";
+  soonButton.className = "cb-sidebar-menu-button cb-sidebar-item--locked";
+  soonButton.disabled = true;
+  soonButton.textContent = "Coming soon";
+  menu.appendChild(soonButton);
+
+  const section = button.closest(".cb-sidebar-section") || button.parentElement;
+  if (section) {
+    section.appendChild(menu);
+  }
+  shellElements.orchestratorMenu = menu;
+  return menu;
+};
+
+const cbToggleOrchestratorsMenu = (open) => {
+  if (typeof open === "boolean") {
+    cbOrchestratorsMenuOpen = open;
+  } else {
+    cbOrchestratorsMenuOpen = !cbOrchestratorsMenuOpen;
+  }
+  const button = shellElements.orchestratorButton;
+  const menu = cbEnsureOrchestratorsMenu();
+  if (menu) {
+    menu.hidden = !cbOrchestratorsMenuOpen;
+    if (cbOrchestratorsMenuOpen && button) {
+      cbPositionSidebarMenu(menu, button);
+    } else {
+      cbResetFloatingMenuStyles(menu);
+    }
+  }
+  if (button) {
+    button.setAttribute("aria-expanded", cbOrchestratorsMenuOpen ? "true" : "false");
+    button.setAttribute("data-open", cbOrchestratorsMenuOpen ? "true" : "false");
+  }
+};
+
 const cbHandleSidebarMenuOutside = (event) => {
   const target = event.target;
-  const { projectSection, workspaceSection } = shellElements;
+  const { projectSection, workspaceSection, connectorsSection } = shellElements;
   if (cbProjectMenuOpen && projectSection && !projectSection.contains(target)) {
     cbToggleProjectMenu(false);
   }
   if (cbWorkspaceMenuOpen && workspaceSection && !workspaceSection.contains(target)) {
     cbToggleWorkspaceMenu(false);
+  }
+  if (cbConnectorsMenuOpen && connectorsSection && !connectorsSection.contains(target)) {
+    cbToggleConnectorsMenu(false);
+  }
+  const orchestratorSection = shellElements.orchestratorButton?.closest(".cb-sidebar-section");
+  if (cbOrchestratorsMenuOpen && orchestratorSection && !orchestratorSection.contains(target)) {
+    cbToggleOrchestratorsMenu(false);
   }
 };
 
@@ -3863,6 +4001,7 @@ const cbOnWorkspaceChanged = (nextWorkspaceId) => {
   cbSaveWorkspaceToStorage(cbCurrentWorkspaceId);
   cbRenderWorkspaces();
   cbRenderCouncilList();
+  cbMarkContextDirty();
 
   const cachedChats = cbWorkspaceChats.get(targetWorkspace);
   if (Array.isArray(cachedChats)) {
@@ -4245,6 +4384,8 @@ let cbMobileSidebarOpen = false;
 const cbCloseMobileSidebarMenus = () => {
   cbToggleProjectMenu(false);
   cbToggleWorkspaceMenu(false);
+  cbToggleConnectorsMenu(false);
+  cbToggleOrchestratorsMenu(false);
   hideUserMenu();
 };
 
@@ -4683,11 +4824,23 @@ const cbHandleFeatureButtonClick = (key) => {
   console.log(`[FEATURE] ${key} placeholder action triggered`);
 };
 
+const cbHandleSidebarView = (viewKey) => {
+  if (!viewKey) return;
+  if (viewKey === "ga4") {
+    cbSwitchMainView("ga4-dashboard");
+  } else if (viewKey === "googleads") {
+    cbSwitchMainView("googleads-dashboard");
+  }
+  cbToggleConnectorsMenu(false);
+  cbCloseMobileSidebar();
+};
+
 function cbApplyFeatureFlags() {
   const buttons = shellElements.featureButtons || [];
   buttons.forEach((button) => {
     if (!button) return;
     const featureKey = button.getAttribute("data-sidebar-feature");
+    const isOrchestrator = featureKey === "orchestrator";
     const enabled = featureKey ? Boolean(cbFeatureFlags[featureKey]) : true;
     const pill = button.querySelector(".cb-sidebar-pill");
     if (enabled) {
@@ -4700,7 +4853,11 @@ function cbApplyFeatureFlags() {
       }
     } else {
       button.classList.add("is-disabled");
-      button.setAttribute("disabled", "disabled");
+      if (!isOrchestrator) {
+        button.setAttribute("disabled", "disabled");
+      } else {
+        button.removeAttribute("disabled");
+      }
       button.setAttribute("aria-disabled", "true");
       const tooltip = button.getAttribute("data-sidebar-tooltip") || "Coming soon";
       button.setAttribute("title", tooltip);
@@ -4710,6 +4867,10 @@ function cbApplyFeatureFlags() {
     }
     if (!button.dataset.featureBound) {
       button.addEventListener("click", () => {
+        if (isOrchestrator) {
+          cbToggleOrchestratorsMenu();
+          return;
+        }
         if (!button.classList.contains("is-disabled") && featureKey) {
           cbHandleFeatureButtonClick(featureKey);
         }
@@ -4777,6 +4938,19 @@ const setupProjectControls = () => {
   cbRenderProjects();
   cbRenderWorkspaces();
   cbEnsureSidebarMenuOutsideBinding();
+};
+
+const setupContextActivationBindings = () => {
+  const modelSelector = document.getElementById("cb-model-selector");
+  if (modelSelector && !modelSelector.dataset.contextBound) {
+    modelSelector.addEventListener("change", () => cbMarkContextDirty());
+    modelSelector.dataset.contextBound = "true";
+  }
+  const modelSearch = document.getElementById("cb-model-search");
+  if (modelSearch && !modelSearch.dataset.contextBound) {
+    modelSearch.addEventListener("change", () => cbMarkContextDirty());
+    modelSearch.dataset.contextBound = "true";
+  }
 };
 
 const setupDeleteModalHandlers = () => {
@@ -4929,10 +5103,78 @@ function cbHandleStartNewChat() {
   focusChatInput();
 }
 
-async function cbCreateChat(firstMessage) {
+const cbGetContextRequest = () => {
+  const providerSelect = document.getElementById("cb-model-selector");
+  const modelSearch = document.getElementById("cb-model-search");
+  const provider = providerSelect?.value ? providerSelect.value.trim() : "auto";
+  const model = modelSearch?.value ? modelSearch.value.trim() : "";
+  const workspaceId = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
+  const payload = { workspaceId, provider };
+  if (model) {
+    payload.model = model;
+  }
+  if (cbCurrentProjectId) {
+    payload.projectId = cbCurrentProjectId;
+  }
+  return payload;
+};
+
+const cbActivateContext = async (payload) => {
+  const response = await fetch(`${API_BASE}/context/activate`, {
+    method: "POST",
+    headers: cbGetAuthHeaders({ "Content-Type": "application/json" }),
+    credentials: "include",
+    body: JSON.stringify(payload || {}),
+  });
+  const data = await safeJson(response);
+  if (!response.ok || data?.ok === false) {
+    if (response.status === 401 || response.status === 403) {
+      clearAuthState({ showOnboarding: true });
+    }
+    const message = data?.error?.message || data?.error || "Unable to activate context.";
+    throw new Error(message);
+  }
+  return data?.context || null;
+};
+
+const cbEnsureActiveContext = async ({ force = false } = {}) => {
+  if (!cbIsAuthenticated()) return null;
+  if (!force && cbActiveContext?.status === "active" && !cbContextDirty) {
+    return cbActiveContext;
+  }
+  if (cbContextActivationPromise) {
+    return cbContextActivationPromise;
+  }
+  const payload = cbGetContextRequest();
+  console.log("[CONTEXT_UI] activating", payload);
+  cbContextActivationPromise = cbActivateContext(payload)
+    .then((context) => {
+      cbActiveContext = context;
+      cbContextDirty = false;
+      console.log("[CONTEXT_UI] activated", {
+        id: context?.id || null,
+        status: context?.status || null,
+        provider: context?.provider || null,
+        model: context?.model || null,
+      });
+      return context;
+    })
+    .finally(() => {
+      cbContextActivationPromise = null;
+    });
+  return cbContextActivationPromise;
+};
+
+const cbMarkContextDirty = () => {
+  cbContextDirty = true;
+  cbActiveContext = null;
+};
+
+async function cbCreateChat(firstMessage, { retry = false } = {}) {
   if (cbChatsUnsupported) {
     throw new Error("Chat persistence unavailable.");
   }
+  await cbEnsureActiveContext();
   const workspaceKey = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
   const councilPayload = getCouncilPayload();
   const hasCouncil = Array.isArray(councilPayload.agents) && councilPayload.agents.length > 0;
@@ -4959,6 +5201,11 @@ async function cbCreateChat(firstMessage) {
   });
   const data = await safeJson(response);
   if (!response.ok) {
+    if (!retry && response.status === 409 && data?.error === "ACTIVE_CONTEXT_REQUIRED") {
+      console.log("[CONTEXT_UI] chat create retry after activation");
+      await cbEnsureActiveContext({ force: true });
+      return cbCreateChat(firstMessage, { retry: true });
+    }
     if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
     if (response.status === 401 || response.status === 403) {
       clearAuthState({ showOnboarding: true });
@@ -4990,10 +5237,11 @@ async function cbCreateChat(firstMessage) {
   return data;
 }
 
-async function cbAppendChatMessage(chatId, content) {
+async function cbAppendChatMessage(chatId, content, { retry = false } = {}) {
   if (cbChatsUnsupported) {
     throw new Error("Chat persistence unavailable.");
   }
+  await cbEnsureActiveContext();
   const councilPayload = getCouncilPayload();
   const hasCouncil = Array.isArray(councilPayload.agents) && councilPayload.agents.length > 0;
   const councilMembers = hasCouncil ? councilPayload.agents.slice() : [];
@@ -5015,6 +5263,11 @@ async function cbAppendChatMessage(chatId, content) {
   });
   const data = await safeJson(response);
   if (!response.ok) {
+    if (!retry && response.status === 409 && data?.error === "ACTIVE_CONTEXT_REQUIRED") {
+      console.log("[CONTEXT_UI] chat create retry after activation");
+      await cbEnsureActiveContext({ force: true });
+      return cbAppendChatMessage(chatId, content, { retry: true });
+    }
     if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
     if (response.status === 401 || response.status === 403) {
       clearAuthState({ showOnboarding: true });
@@ -5201,6 +5454,8 @@ const setupSidebarInteractions = () => {
     sidebarClose,
     sidebarBackdrop,
     newChatButton,
+    agentsButton,
+    connectorsToggle,
   } = shellElements;
   if (!sidebar) {
     return;
@@ -5258,6 +5513,30 @@ const setupSidebarInteractions = () => {
       closeMobileSidebar();
     });
   }
+  if (agentsButton && !agentsButton.dataset.sidebarAgentsBound) {
+    agentsButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      cbSwitchMainView("agents");
+      cbCloseMobileSidebar();
+    });
+    agentsButton.dataset.sidebarAgentsBound = "true";
+  }
+  if (connectorsToggle && !connectorsToggle.dataset.connectorsBound) {
+    connectorsToggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      cbToggleConnectorsMenu();
+    });
+    connectorsToggle.dataset.connectorsBound = "true";
+  }
+  document.querySelectorAll("[data-sidebar-view]").forEach((button) => {
+    if (button.dataset.sidebarViewBound === "true") return;
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      const viewKey = button.getAttribute("data-sidebar-view");
+      cbHandleSidebarView(viewKey);
+    });
+    button.dataset.sidebarViewBound = "true";
+  });
   setupProjectControls();
   cbApplyFeatureFlags();
   cbApplyResponsiveSidebarState();
@@ -8183,7 +8462,9 @@ const initCoolBitsUI = () => {
   syncWorkspaceShell();
   setupCouncilControls();
   setupMainTabs();
+  setupContextActivationBindings();
   cbRenderCouncilBar();
+  cbHandleInitialViewParam();
 };
 
 const renderMessages = () => {
@@ -8397,6 +8678,7 @@ async function sendMessage(prefilledValue) {
     }
     let autoRenameSource = null;
     if (cbChatsUnsupported) {
+      await cbEnsureActiveContext();
       const data = await legacyRequestChatReply(message);
       const reply = extractReply(data);
       if (!reply) {

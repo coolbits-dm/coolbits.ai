@@ -744,6 +744,19 @@ body.cb-sidebar-collapsed .cb-chat-actions,
   opacity: 0.75;
 }
 
+.cb-sidebar-item[data-sidebar-feature="orchestrator"].is-disabled {
+  cursor: pointer;
+}
+
+.cb-sidebar-item[data-sidebar-agents] {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.cb-sidebar-item[data-sidebar-agents] .cb-sidebar-label {
+  text-align: left;
+}
+
 .cb-sidebar-icon {
   width: 22px;
   height: 22px;

@@ -43,6 +43,14 @@ app.get('/healthz', (req, res) => {
   res.json({ ok: true });
 });
 
+const redirectTo = (target) => (_req, res) => res.redirect(302, target);
+
+app.get(['/pricing', '/pricing/'], redirectTo('/chat?view=pricing'));
+app.get(['/maturity', '/maturity/'], redirectTo('/chat?view=maturity'));
+app.get(['/agents', '/agents/'], redirectTo('/chat?view=agents'));
+app.get(['/connectors', '/connectors/'], redirectTo('/chat?view=connectors'));
+app.get(['/orchestrators', '/orchestrators/'], redirectTo('/chat?view=orchestrators'));
+
 app.use('/api/metrics', metricsRouter);
 
 // All API routes
