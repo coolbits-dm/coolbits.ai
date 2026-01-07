@@ -13,7 +13,7 @@ function normalizeUuidOrNull(value) {
 
 function assertInsertCounts(text, values, label) {
   const insertMatch = text.match(/INSERT INTO token_usage\s*\(([^)]*)\)\s*VALUES\s*\(([^)]*)\)/s);
-  const placeholders = text.match(/\$\d+/g) || [];
+  const placeholderMatches = text.match(/\$\d+/g) || [];
   const columns = insertMatch
     ? insertMatch[1]
         .split(',')
@@ -21,11 +21,16 @@ function assertInsertCounts(text, values, label) {
         .filter(Boolean)
     : [];
   const columnCount = columns.length;
-  const placeholderCount = placeholders.length;
+  const placeholderCount = placeholderMatches.length;
   const valuesCount = values.length;
-  if (columnCount !== valuesCount || placeholderCount !== valuesCount) {
+  const placeholderNums = placeholderMatches
+    .map((value) => Number(value.slice(1)))
+    .filter((num) => Number.isFinite(num));
+  const expectedSeq = Array.from({ length: placeholderNums.length }, (_, i) => i + 1);
+  const sequenceOk = expectedSeq.every((num, idx) => placeholderNums[idx] === num);
+  if (columnCount !== valuesCount || placeholderCount !== valuesCount || !sequenceOk) {
     const error = new Error(
-      `[TOKEN_USAGE_QUERY_MISMATCH] ${label} columns=${columnCount} placeholders=${placeholderCount} values=${valuesCount}`,
+      `[TOKEN_USAGE_QUERY_MISMATCH] ${label} columns=${columnCount} placeholders=${placeholderCount} values=${valuesCount} sequential=${sequenceOk}`,
     );
     error.code = 'TOKEN_USAGE_QUERY_MISMATCH';
     throw error;

@@ -61,7 +61,8 @@ const columns = insertMatch
       .map((v) => v.trim())
       .filter(Boolean)
   : [];
-const placeholders = insertMatch ? (insertMatch[2].match(/\$\d+/g) || []).length : 0;
+const placeholderMatches = insertMatch ? (insertMatch[2].match(/\$\d+/g) || []) : [];
+const placeholders = placeholderMatches.length;
 const valuesMatch = text.match(/const values = \[(.*?)\n\s*\];/s);
 let valuesCount = 0;
 if (valuesMatch) {
@@ -75,7 +76,22 @@ console.log(`insert_columns=${columns.length}`);
 console.log(`values_placeholders=${placeholders}`);
 console.log(`values_array=${valuesCount}`);
 
-const countsOk = columns.length === 29 && placeholders === 29 && valuesCount === 29;
+let sequenceOk = true;
+const placeholderNums = placeholderMatches.map((value) => Number(value.slice(1))).filter((n) => Number.isFinite(n));
+const expectedSeq = Array.from({ length: placeholderNums.length }, (_, i) => i + 1);
+for (let i = 0; i < expectedSeq.length; i += 1) {
+  if (placeholderNums[i] !== expectedSeq[i]) {
+    sequenceOk = false;
+    break;
+  }
+}
+if (sequenceOk) {
+  console.log('PASS token_usage placeholders sequential');
+} else {
+  console.log('FAIL token_usage placeholders sequential');
+}
+
+const countsOk = columns.length === 29 && placeholders === 29 && valuesCount === 29 && sequenceOk;
 if (countsOk) {
   console.log('PASS token_usage insert counts');
 } else {

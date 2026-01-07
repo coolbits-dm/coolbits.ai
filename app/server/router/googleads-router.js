@@ -41,6 +41,22 @@ export function mapGoogleAdsCustomersError(err) {
       body: { error: 'googleads_auth_failed', action: 'reconnect', status: 401 },
     };
   }
+  if (status === 403) {
+    const message = String(err?.details || err?.message || '').toLowerCase();
+    const error = message.includes('developer token') || message.includes('developer_token')
+      ? 'googleads_developer_token_not_approved'
+      : 'googleads_permission_denied';
+    return {
+      httpStatus: 403,
+      body: { error, action: 'contact_support', status: 403 },
+    };
+  }
+  if (status === 429) {
+    return {
+      httpStatus: 429,
+      body: { error: 'googleads_rate_limited', action: 'retry_later', status: 429 },
+    };
+  }
   return { httpStatus: 500, body: { error: 'googleads_api_error' } };
 }
 
@@ -1014,6 +1030,21 @@ router.get('/customers', requireUser, async (req, res) => {
         workspaceId,
         userId: userKey,
         status: err?.status || 401,
+        message: details,
+      });
+    } else if (mapped.httpStatus === 403) {
+      console.warn('[GOOGLEADS_CUSTOMERS_PERMISSION_DENIED]', {
+        workspaceId,
+        userId: userKey,
+        status: err?.status || 403,
+        message: details,
+        error: mapped.body?.error || null,
+      });
+    } else if (mapped.httpStatus === 429) {
+      console.warn('[GOOGLEADS_CUSTOMERS_RATE_LIMIT]', {
+        workspaceId,
+        userId: userKey,
+        status: err?.status || 429,
         message: details,
       });
     } else {

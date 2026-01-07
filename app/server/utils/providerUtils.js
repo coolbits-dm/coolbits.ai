@@ -25,4 +25,8 @@ export function normalizeProviderFromModel(provider) {
   return PROVIDER_ALIASES[key] || key;
 }
 
-export default { normalizeProviderKey, normalizeProviderFromModel };
+export function getProviderAliases() {
+  return { ...PROVIDER_ALIASES };
+}
+
+export default { normalizeProviderKey, normalizeProviderFromModel, getProviderAliases };

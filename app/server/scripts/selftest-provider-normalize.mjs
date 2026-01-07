@@ -1,22 +1,11 @@
-import { normalizeProviderKey } from '../utils/providerUtils.js';
+import { normalizeProviderKey, getProviderAliases } from '../utils/providerUtils.js';
 
-const aliases = [
-  'auto',
-  'openai',
-  'anthropic',
-  'google',
-  'vertex',
-  'gemini',
-  'xai',
-  'grok',
-  'deepseek',
-  'chatgpt',
-  'claude',
-  'copilot',
-  'unknown-provider',
-];
+const aliasMap = getProviderAliases();
+const aliasValues = Object.values(aliasMap);
+const aliases = [...new Set([...Object.keys(aliasMap), ...aliasValues, 'unknown-provider'])];
 
 let pass = true;
+
 for (const value of aliases) {
   const normalized = normalizeProviderKey(value);
   const normalizedAgain = normalizeProviderKey(normalized);
@@ -26,8 +15,23 @@ for (const value of aliases) {
   }
 }
 
+for (const start of Object.keys(aliasMap)) {
+  const visited = new Set([start]);
+  let current = start;
+  while (aliasMap[current] && aliasMap[current] !== current) {
+    current = aliasMap[current];
+    if (visited.has(current)) {
+      console.log(`FAIL provider alias cycle: ${start} -> ${current}`);
+      pass = false;
+      break;
+    }
+    visited.add(current);
+  }
+}
+
 if (pass) {
   console.log('PASS provider normalize idempotent');
+  console.log('PASS provider alias cycles');
   process.exit(0);
 }
 
