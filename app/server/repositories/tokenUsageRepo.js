@@ -11,11 +11,21 @@ function normalizeUuidOrNull(value) {
   return value;
 }
 
-function assertPlaceholderCount(text, values, label) {
+function assertInsertCounts(text, values, label) {
+  const insertMatch = text.match(/INSERT INTO token_usage\s*\(([^)]*)\)\s*VALUES\s*\(([^)]*)\)/s);
   const placeholders = text.match(/\$\d+/g) || [];
-  if (placeholders.length !== values.length) {
+  const columns = insertMatch
+    ? insertMatch[1]
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean)
+    : [];
+  const columnCount = columns.length;
+  const placeholderCount = placeholders.length;
+  const valuesCount = values.length;
+  if (columnCount !== valuesCount || placeholderCount !== valuesCount) {
     const error = new Error(
-      `[TOKEN_USAGE_QUERY_MISMATCH] ${label} placeholders=${placeholders.length} values=${values.length}`,
+      `[TOKEN_USAGE_QUERY_MISMATCH] ${label} columns=${columnCount} placeholders=${placeholderCount} values=${valuesCount}`,
     );
     error.code = 'TOKEN_USAGE_QUERY_MISMATCH';
     throw error;
@@ -123,7 +133,7 @@ export async function insertTokenUsage({
     periodStart,
     periodEnd || null,
   ];
-  assertPlaceholderCount(text, values, 'insertTokenUsage');
+  assertInsertCounts(text, values, 'insertTokenUsage');
   const result = await executor.query(text, values);
   return result?.rows?.[0] || null;
 }

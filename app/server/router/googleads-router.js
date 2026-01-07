@@ -33,6 +33,17 @@ const GOOGLEADS_REPORT_ALLOWED_BLOCKS = new Set([
 const GOOGLEADS_REPORT_DEFAULT_BLOCKS = ['overview', 'series', 'campaigns', 'devices'];
 const GOOGLEADS_REPORT_COMPARE_MODES = new Set(['none', 'previous_period', 'previous_year', 'custom']);
 
+export function mapGoogleAdsCustomersError(err) {
+  const status = Number(err?.status || err?.response?.status || err?.statusCode || 0);
+  if (status === 401) {
+    return {
+      httpStatus: 401,
+      body: { error: 'googleads_auth_failed', action: 'reconnect', status: 401 },
+    };
+  }
+  return { httpStatus: 500, body: { error: 'googleads_api_error' } };
+}
+
 function getUserKey(user) {
   return user && user.id ? String(user.id) : null;
 }
@@ -972,20 +983,10 @@ router.get('/customers', requireUser, async (req, res) => {
     });
     if (!listResp.ok) {
       const errorText = await listResp.text();
-      if (listResp.status === 401) {
-        console.warn('[GOOGLEADS_CUSTOMERS_AUTH_FAILED]', {
-          workspaceId,
-          userId: userKey,
-          status: listResp.status,
-          message: errorText ? errorText.slice(0, 300) : null,
-        });
-        return res.status(401).json({
-          error: 'googleads_auth_failed',
-          action: 'reconnect',
-          status: 401,
-        });
-      }
-      throw new Error(`listAccessibleCustomers failed: ${listResp.status} ${errorText || ''}`);
+      const err = new Error(`listAccessibleCustomers failed: ${listResp.status}`);
+      err.status = listResp.status;
+      err.details = errorText;
+      throw err;
     }
     const listJson = await listResp.json();
     const resourceNames = Array.isArray(listJson.resourceNames) ? listJson.resourceNames : [];
@@ -1006,8 +1007,22 @@ router.get('/customers', requireUser, async (req, res) => {
     console.log('[GOOGLEADS_CUSTOMERS]', { workspaceId, userId: userKey, count: customers.length });
     return res.json({ customers });
   } catch (err) {
-    console.error('[GOOGLEADS_CUSTOMERS_ERROR]', err?.message);
-    return res.status(500).json({ error: 'googleads_api_error' });
+    const mapped = mapGoogleAdsCustomersError(err);
+    const details = err?.details ? String(err.details).slice(0, 300) : null;
+    if (mapped.httpStatus === 401) {
+      console.warn('[GOOGLEADS_CUSTOMERS_AUTH_FAILED]', {
+        workspaceId,
+        userId: userKey,
+        status: err?.status || 401,
+        message: details,
+      });
+    } else {
+      console.error('[GOOGLEADS_CUSTOMERS_ERROR]', {
+        status: err?.status || null,
+        message: err?.message,
+      });
+    }
+    return res.status(mapped.httpStatus).json(mapped.body);
   }
 });
 

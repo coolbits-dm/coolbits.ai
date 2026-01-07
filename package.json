@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "node app/server/server.js",
     "start": "node app/server/server.js",
-    "canon:validate": "node scripts/validate_canon_v1.js"
+    "canon:validate": "node scripts/validate_canon_v1.js",
+    "cbdoctor": "node app/server/scripts/cbdoctor.mjs"
   },
   "keywords": [],
   "author": "",

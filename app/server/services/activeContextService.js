@@ -33,6 +33,7 @@ const WORKSPACE_DEFAULT_MODELS = {
 
 const PROVIDER_DEFAULT_MODELS = {
   openai: 'openai-gpt-4.1',
+  vertex: 'vertex-gemini-2.5-pro',
   google: 'vertex-gemini-2.5-pro',
   anthropic: 'vertex-gemini-2.5-pro',
   xai: 'openai-gpt-4.1',
@@ -124,7 +125,7 @@ function mapExternalModelToInternal(provider, modelValue) {
     return normalized.includes('mini') ? 'openai-gpt-4.1-mini' : 'openai-gpt-4.1';
   }
 
-  if (provider === 'google') {
+  if (provider === 'vertex') {
     return 'vertex-gemini-2.5-pro';
   }
 

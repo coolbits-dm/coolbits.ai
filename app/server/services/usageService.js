@@ -4,6 +4,29 @@ import { getPlanForUser, getCurrentPeriodForUser } from './billingService.js';
 import { getModelConfig } from '../config/modelRegistry.js';
 import { normalizeUsage } from './tokenUsageHelper.js';
 import { PRICING_VERSION, FX_VERSION } from '../config/pricingConfig.js';
+import { normalizeProviderKey } from '../utils/providerUtils.js';
+
+function canonicalizeProvider(value) {
+  if (!value) return null;
+  const normalized = normalizeProviderKey(value);
+  if (normalized === 'auto') {
+    const raw = String(value).trim().toLowerCase();
+    if (!raw || raw === 'auto') return raw || null;
+    console.warn('[PROVIDER_CANONICALIZE_UNKNOWN]', { raw });
+    return null;
+  }
+  return normalized;
+}
+
+function canonicalizeExistingUsage(row) {
+  if (!row) return row;
+  return {
+    ...row,
+    provider: canonicalizeProvider(row.provider),
+    requested_provider: canonicalizeProvider(row.requested_provider),
+    resolved_provider: canonicalizeProvider(row.resolved_provider),
+  };
+}
 
 export async function recordUsage({
   userId,
@@ -52,7 +75,7 @@ export async function recordUsage({
     agentId,
     scenarioId,
     contextId,
-    provider: provider || modelConfig.provider,
+    provider: canonicalizeProvider(provider || modelConfig.provider),
     model: modelId || modelConfig.id,
     providerModelId: normalized.providerModelId,
     inputTokens: normalized.inputTokens,
@@ -60,9 +83,9 @@ export async function recordUsage({
     totalTokens: normalized.totalTokens,
     cbtDelta: normalized.cbtDelta,
     totalCost: normalized.totalCost,
-    requestedProvider: requested?.provider || null,
+    requestedProvider: canonicalizeProvider(requested?.provider || null),
     requestedModel: requested?.model || null,
-    resolvedProvider: resolved?.provider || null,
+    resolvedProvider: canonicalizeProvider(resolved?.provider || null),
     resolvedModel: resolved?.model || null,
     routingReason: reason || null,
     pricingVersion,
@@ -118,7 +141,7 @@ export async function recordUsage({
           allowanceBeforeCbT: Number(existing.allowance_before_cbt || 0),
           allowanceAfterCbT: Number(existing.allowance_after_cbt || 0),
         },
-        ledger: existing,
+        ledger: canonicalizeExistingUsage(existing),
       };
     }
 

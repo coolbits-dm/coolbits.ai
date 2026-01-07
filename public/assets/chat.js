@@ -4491,6 +4491,7 @@ const legacyRequestChatReply = async (message) => {
   if (body?.user) {
     cbApplyAuthPayload(body.user);
   }
+  cbApplyResolvedProvider(body?.meta);
   if (useCouncil) {
     cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ACK);
     cbResetCouncilStatusSoon(councilMembers);
@@ -4509,6 +4510,15 @@ const extractReply = (payload) => {
     return payload.message.trim();
   }
   return "";
+};
+
+const cbApplyResolvedProvider = (meta) => {
+  const resolved = meta && meta.resolved ? meta.resolved : null;
+  const provider = resolved && resolved.provider ? resolved.provider : null;
+  if (!provider) return;
+  if (typeof window.cbSyncResolvedProvider === "function") {
+    window.cbSyncResolvedProvider(provider, resolved.model || null);
+  }
 };
 
 const cbGetChatDisplayName = (chat) => {
@@ -4960,6 +4970,7 @@ async function cbCreateChat(firstMessage) {
     cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ACK);
     cbResetCouncilStatusSoon(councilMembers);
   }
+  cbApplyResolvedProvider(data?.meta);
   const chat = data?.chat;
   if (chat && chat.id) {
     const workspaceId = cbNormalizeWorkspaceId(chat.workspaceId || workspaceKey);
@@ -5015,6 +5026,7 @@ async function cbAppendChatMessage(chatId, content) {
     cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ACK);
     cbResetCouncilStatusSoon(councilMembers);
   }
+  cbApplyResolvedProvider(data?.meta);
   refreshAccountUsage().catch((error) => console.warn("[USAGE] refresh after chat append failed", error));
   return data;
 }
@@ -6049,6 +6061,7 @@ const cbLoadGoogleAdsCustomers = async () => {
   if (!connector || !connector.apiBase) return;
   cbConnectorDetailState.googleAdsLoading = true;
   cbConnectorDetailState.googleAdsError = null;
+  cbConnectorDetailState.googleAdsReconnect = false;
   cbRenderConnectorDetail(connector);
   const { ok, json, status } = await cbFetchJson(`${connector.apiBase}/customers`);
   if (ok && json && Array.isArray(json.customers)) {
@@ -6056,7 +6069,11 @@ const cbLoadGoogleAdsCustomers = async () => {
     cbConnectorDetailState.googleAdsError = null;
   } else {
     cbConnectorDetailState.googleAdsCustomers = [];
+    cbConnectorDetailState.googleAdsReconnect = json?.error === "googleads_auth_failed";
     const message =
+      (cbConnectorDetailState.googleAdsReconnect
+        ? "Google Ads authorization expired. Please reconnect."
+        : null) ||
       (json && (json.error || json.message)) ||
       (status === 401 ? "Please sign in to view Google Ads accounts." : "Unable to load Google Ads accounts.");
     cbConnectorDetailState.googleAdsError = message;
@@ -6946,6 +6963,7 @@ const cbConnectorDetailState = {
   googleAdsCustomers: [],
   googleAdsLoading: false,
   googleAdsError: null,
+  googleAdsReconnect: false,
 };
 
 const cbRenderConnectorDetail = (connector) => {
@@ -7099,6 +7117,14 @@ const cbRenderConnectorDetail = (connector) => {
           err.className = "cb-form-error";
           err.textContent = cbConnectorDetailState.googleAdsError;
           accountLine.appendChild(err);
+          if (cbConnectorDetailState.googleAdsReconnect) {
+            const reconnectBtn = document.createElement("button");
+            reconnectBtn.type = "button";
+            reconnectBtn.className = "btn btn-primary";
+            reconnectBtn.textContent = "Reconnect Google Ads";
+            reconnectBtn.addEventListener("click", () => cbHandleGoogleAdsConnect());
+            accountLine.appendChild(reconnectBtn);
+          }
         } else if (!loading && !customers.length) {
           const none = document.createElement("p");
           none.className = "cb-modal-note";

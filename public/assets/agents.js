@@ -12,12 +12,13 @@ const PROVIDER_API_MAP = {
   auto: "auto",
   chatgpt: "openai",
   claude: "anthropic",
-  gemini: "google",
+  gemini: "vertex",
   grok: "xai",
   copilot: "openai",
   openai: "openai",
   anthropic: "anthropic",
-  google: "google",
+  google: "vertex",
+  vertex: "vertex",
   xai: "xai",
   deepseek: "deepseek",
 };
@@ -26,6 +27,7 @@ const PROVIDER_UI_MAP = {
   openai: "chatgpt",
   anthropic: "claude",
   google: "gemini",
+  vertex: "gemini",
   xai: "grok",
   deepseek: "auto",
   auto: "auto",
@@ -520,6 +522,18 @@ function applyContextToEditor(context) {
     modelSelect.value = uiProvider;
   }
 }
+
+function syncResolvedProvider(provider, model) {
+  if (!provider || !activeContextState.context) return;
+  activeContextState.context.provider = provider;
+  if (model) {
+    activeContextState.context.model = model;
+  }
+  updateActiveAgentInfo(activeContextState.context, null, {});
+  applyContextToEditor(activeContextState.context);
+}
+
+window.cbSyncResolvedProvider = syncResolvedProvider;
 
 async function activateContext(requested, reason) {
   if (typeof window.cbActivateContext === "function") {

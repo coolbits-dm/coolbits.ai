@@ -8,6 +8,13 @@ import { TOOL_IMPL } from './toolRegistry.js';
 import { loadAgentSystemPrompt } from './promptService.js';
 import { toolMetadataFor } from './toolMetadata.js';
 import { validateToolInput, validateToolOutput } from './toolValidators.js';
+import { normalizeProviderKey } from '../utils/providerUtils.js';
+
+const DEFAULT_PROVIDER = normalizeProviderKey(
+  process.env.CHAT_PROVIDER || process.env.OPENAI_PROVIDER || 'vertex',
+);
+const OPENAI_ENABLED = String(process.env.ENABLE_OPENAI || '').toLowerCase() === 'true';
+const OPENAI_ALLOWED = OPENAI_ENABLED || DEFAULT_PROVIDER === 'openai';
 
 function cleanHistory(history = []) {
   if (!Array.isArray(history)) return [];
@@ -52,6 +59,11 @@ const PROVIDER_CALLS = {
 export async function call(modelIdInput, params = {}, usageContext = null) {
   const modelConfig = getModelConfig(modelIdInput || getDefaultModelId());
   const provider = modelConfig.provider || 'vertex';
+  if (provider === 'openai' && !OPENAI_ALLOWED) {
+    const err = new Error('provider_not_allowed:openai');
+    err.code = 'PROVIDER_NOT_ALLOWED';
+    throw err;
+  }
   const history = cleanHistory(params.history || []);
   const payload = {
     system: params.system,
