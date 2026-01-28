@@ -1,0 +1,26 @@
+{
+  "ts":"20260114T125535Z",
+  "baseUrl":"http://127.0.0.1:8788",
+  "workspaceExpected":"business",
+  "runId":"",
+  "artifactId":"",
+  "snapshotUri":"",
+  "snapshotSha256":"",
+  "hashes":{"inputHash":"","outputHash":""},
+  "steps":{
+    "health":{"status":"pass","detail":"200"},
+    "auth_gate":{"status":"pass","detail":"401"},
+    "create_run":{"status":"fail","detail":"expected 200, got 401"},
+    "run_workspace_db":{"status":"skipped","detail":"PSQL_DSN not set"},
+    "append_event":{"status":"fail","detail":"missing runId"},
+    "concurrency_http":{"status":"fail","detail":"missing runId"},
+    "concurrency_db":{"status":"skipped","detail":"PSQL_DSN not set"},
+    "snapshot_http":{"status":"fail","detail":"missing runId"},
+    "snapshot_db":{"status":"skipped","detail":"PSQL_DSN not set"},
+    "snapshot_file":{"status":"fail","detail":"missing snapshot uri"},
+    "llm_http":{"status":"fail","detail":"missing runId"},
+    "llm_events":{"status":"fail","detail":"missing runId"},
+    "tenant_isolation":{"status":"skipped","detail":"TENANT_WORKSPACE not set"}
+  },
+  "overall":"fail"
+}

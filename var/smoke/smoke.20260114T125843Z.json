@@ -1,0 +1,26 @@
+{
+  "ts":"20260114T125843Z",
+  "baseUrl":"http://127.0.0.1:8788",
+  "workspaceExpected":"business",
+  "runId":"abc00b86-853c-499f-9476-d7a0ee8258e2",
+  "artifactId":"809c080d-dbf9-48bc-9ca9-9dba14914639",
+  "snapshotUri":"/opt/coolbits.ai/var/artifacts/business/runs/abc00b86-853c-499f-9476-d7a0ee8258e2/snapshot.1768395527562.json",
+  "snapshotSha256":"449452bc797c6762ff038360fd8bfe413026e8520b0dbdac51aa48b5903fa739",
+  "hashes":{"inputHash":"990a75c0ef0ec10a9ecbc748ebac1355a921d04e89a45cfa1d4e8973caabf5a7","outputHash":"89593fb5939fba524179fce8d00aa9024fdfcbce93382598029d38da8db58965"},
+  "steps":{
+    "health":{"status":"pass","detail":"200"},
+    "auth_gate":{"status":"pass","detail":"401"},
+    "create_run":{"status":"pass","detail":"runId=abc00b86-853c-499f-9476-d7a0ee8258e2"},
+    "run_workspace_db":{"status":"pass","detail":"business"},
+    "append_event":{"status":"pass","detail":"200"},
+    "concurrency_http":{"status":"pass","detail":"     20 200;"},
+    "concurrency_db":{"status":"pass","detail":"n=20 min=2 max=21 distinct=20"},
+    "snapshot_http":{"status":"pass","detail":"artifactId=809c080d-dbf9-48bc-9ca9-9dba14914639"},
+    "snapshot_db":{"status":"pass","detail":"local"},
+    "snapshot_file":{"status":"pass","detail":"snapshot.1768395527562.json"},
+    "llm_http":{"status":"pass","detail":"hashes"},
+    "llm_events":{"status":"pass","detail":"timeline ok"},
+    "tenant_isolation":{"status":"skipped","detail":"TENANT_WORKSPACE not set"}
+  },
+  "overall":"partial"
+}

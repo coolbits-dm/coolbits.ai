@@ -1,5 +1,5 @@
 import express from 'express';
-import { verifyToken } from '../jwtService.js';
+import { requireUser } from '../middleware/auth.js';
 import { runScenario, listAgents } from '../services/agentService.js';
 import { getUserByEmail } from '../userStore.js';
 import {
@@ -19,43 +19,31 @@ import {
 
 const router = express.Router();
 
-function extractToken(req) {
-  const authHeader = req.headers.authorization || '';
-  if (authHeader.startsWith('Bearer ')) return authHeader.slice(7).trim();
-  const cookieHeader = req.headers.cookie || '';
-  const cookieMatch = cookieHeader.match(/cb_token=([^;]+)/);
-  if (cookieMatch && cookieMatch[1]) return cookieMatch[1];
-  return '';
+function getWorkspaceId(req) {
+  const candidate = req.workspaceId || null;
+  return candidate ? String(candidate).trim() : null;
 }
 
 function respondError(res, status, errorCode, message) {
   return res.status(status).json({ errorCode, message });
 }
 
-function ensureAuth(req, res, next) {
-  const token = extractToken(req);
-  if (!token) return respondError(res, 401, 'UNAUTHORIZED', 'Authentication required.');
-  const decoded = verifyToken(token);
-  if (!decoded?.email) return respondError(res, 401, 'UNAUTHORIZED', 'Authentication invalid.');
-  req.authEmail = decoded.email;
-  return next();
-}
-
-router.get('/registry', ensureAuth, rateLimitAgentsUserWorkspace, async (_req, res) => {
+router.get('/registry', requireUser, rateLimitAgentsUserWorkspace, async (_req, res) => {
   const { agents, comingSoon } = listAgents();
   return res.json({ agents, comingSoon });
 });
 
-router.post('/run', ensureAuth, rateLimitAgentsUserWorkspace, async (req, res) => {
+router.post('/run', requireUser, rateLimitAgentsUserWorkspace, async (req, res) => {
   try {
     const scenarioId = typeof req.body?.scenarioId === 'string' && req.body.scenarioId.trim()
       ? req.body.scenarioId.trim()
       : 'googleAdsAudit';
-    const workspaceId = typeof req.body?.workspaceId === 'string' && req.body.workspaceId.trim()
-      ? req.body.workspaceId.trim()
-      : 'business';
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) {
+      return res.status(403).json({ error: 'workspace_not_bound' });
+    }
 
-    const user = await getUserByEmail(req.authEmail);
+    const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return respondError(res, 401, 'UNAUTHORIZED', 'User not found.');
 
     let activeContext = getActiveContext(user.id);
@@ -143,12 +131,10 @@ router.post('/run', ensureAuth, rateLimitAgentsUserWorkspace, async (req, res) =
   }
 });
 
-router.get('/runs', ensureAuth, async (req, res, next) => {
+router.get('/runs', requireUser, async (req, res, next) => {
   try {
-    const workspaceId = req.query.workspaceId || req.workspaceId || null;
-    if (!workspaceId) {
-      return res.status(400).json({ error: 'workspaceId_required' });
-    }
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) return res.status(403).json({ error: 'workspace_not_bound' });
     const scenarioId = req.query.scenarioId || null;
     const limit = Number(req.query.limit || 20);
     const runs = await findRunsForWorkspace(workspaceId, { scenarioId, limit });

@@ -32,6 +32,34 @@ const GOOGLEADS_REPORT_ALLOWED_BLOCKS = new Set([
 ]);
 const GOOGLEADS_REPORT_DEFAULT_BLOCKS = ['overview', 'series', 'campaigns', 'devices'];
 const GOOGLEADS_REPORT_COMPARE_MODES = new Set(['none', 'previous_period', 'previous_year', 'custom']);
+const GOOGLEADS_REPORT_FIELD_LIMIT = 25;
+const GOOGLEADS_FIELDS_CATALOG = {
+  campaigns: {
+    defaults: [
+      'spend',
+      'impressions',
+      'clicks',
+      'conversions',
+      'conv_value',
+      'roas',
+      'cost_per_conv',
+      'conv_rate',
+    ],
+    fields: [
+      { id: 'spend', label: 'Spend', type: 'currency', group: 'Performance', syn: ['cost', 'ad spend'] },
+      { id: 'impressions', label: 'Impressions', type: 'number', group: 'Performance', syn: ['impr'] },
+      { id: 'clicks', label: 'Clicks', type: 'number', group: 'Performance' },
+      { id: 'ctr', label: 'CTR', type: 'percent', group: 'Rates', syn: ['click through'] },
+      { id: 'avg_cpc', label: 'Avg CPC', type: 'currency', group: 'Rates', syn: ['cpc'] },
+      { id: 'cpm', label: 'CPM', type: 'currency', group: 'Rates' },
+      { id: 'conversions', label: 'Conversions', type: 'number', group: 'Conversions' },
+      { id: 'conv_value', label: 'Conv. value', type: 'currency', group: 'Conversions', syn: ['conversion value'] },
+      { id: 'conv_rate', label: 'Conv. rate', type: 'percent', group: 'Conversions', syn: ['cvr'] },
+      { id: 'cost_per_conv', label: 'Cost / conv', type: 'currency', group: 'Conversions', syn: ['cpa'] },
+      { id: 'roas', label: 'ROAS', type: 'ratio', group: 'Conversions' },
+    ],
+  },
+};
 
 export function mapGoogleAdsCustomersError(err) {
   const status = Number(err?.status || err?.response?.status || err?.statusCode || 0);
@@ -65,7 +93,8 @@ function getUserKey(user) {
 }
 
 function getWorkspaceId(req) {
-  return req.query?.workspaceId || req.body?.workspaceId || req.workspaceId || 'business';
+  const candidate = req.workspaceId || null;
+  return candidate ? String(candidate).trim() : null;
 }
 
 function safeLogValue(value) {
@@ -323,6 +352,86 @@ function computePreviousYearRange(rangeFrom, rangeTo) {
   const compareFromDate = shiftUtcDateByYears(fromDate, -1);
   const compareToDate = shiftUtcDateByYears(toDate, -1);
   return { from: formatUtcYmd(compareFromDate), to: formatUtcYmd(compareToDate) };
+}
+
+function getGoogleAdsFieldsCatalog(preset) {
+  if (!preset) return null;
+  return GOOGLEADS_FIELDS_CATALOG[preset] || null;
+}
+
+function normalizeGoogleAdsReportFields(preset, fieldsParam) {
+  const catalog = getGoogleAdsFieldsCatalog(preset);
+  if (!catalog) {
+    return { error: 'invalid_preset', preset };
+  }
+  const defaults = Array.isArray(catalog.defaults) ? catalog.defaults : [];
+  const raw = String(fieldsParam || '').trim();
+  if (!raw) {
+    return { fields: defaults };
+  }
+  const parts = raw
+    .split(',')
+    .map((field) => field.trim().toLowerCase())
+    .filter(Boolean);
+  const unique = Array.from(new Set(parts));
+  if (unique.length > GOOGLEADS_REPORT_FIELD_LIMIT) {
+    return { error: 'too_many_fields', limit: GOOGLEADS_REPORT_FIELD_LIMIT };
+  }
+  const allowed = new Set((catalog.fields || []).map((field) => field.id));
+  for (const field of unique) {
+    if (!allowed.has(field)) {
+      return { error: 'unknown_field', field };
+    }
+  }
+  return { fields: unique.length ? unique : defaults };
+}
+
+function computeDerivedMetrics({ impressions, clicks, spend, conversions, convValue }) {
+  const ctr = impressions > 0 ? clicks / impressions : null;
+  const avgCpc = clicks > 0 ? spend / clicks : null;
+  const convRate = clicks > 0 ? conversions / clicks : null;
+  const costPerConv = conversions > 0 ? spend / conversions : null;
+  const roas = spend > 0 ? convValue / spend : null;
+  const cpm = impressions > 0 ? (spend / impressions) * 1000 : null;
+  return { ctr, avgCpc, convRate, costPerConv, roas, cpm };
+}
+
+function applyCampaignFieldMetrics(overview, rows) {
+  if (overview && typeof overview === 'object') {
+    const impressions = Number(overview.impressions || 0);
+    const clicks = Number(overview.clicks || 0);
+    const spend = Number(overview.cost || 0);
+    const conversions = Number(overview.conversions || 0);
+    const convValue = Number(overview.convValue || 0);
+    const derived = computeDerivedMetrics({ impressions, clicks, spend, conversions, convValue });
+    if (overview.spend == null) overview.spend = spend;
+    if (overview.conv_value == null) overview.conv_value = convValue;
+    if (overview.ctr == null && derived.ctr != null) overview.ctr = derived.ctr;
+    if (overview.avg_cpc == null && derived.avgCpc != null) overview.avg_cpc = derived.avgCpc;
+    if (overview.conv_rate == null && derived.convRate != null) overview.conv_rate = derived.convRate;
+    if (overview.cost_per_conv == null && derived.costPerConv != null) overview.cost_per_conv = derived.costPerConv;
+    if (overview.roas == null && derived.roas != null) overview.roas = derived.roas;
+    if (overview.cpm == null && derived.cpm != null) overview.cpm = derived.cpm;
+  }
+  if (Array.isArray(rows)) {
+    rows.forEach((row) => {
+      if (!row || typeof row !== 'object') return;
+      const impressions = Number(row.impressions || 0);
+      const clicks = Number(row.clicks || 0);
+      const spend = Number(row.cost || 0);
+      const conversions = Number(row.conversions || 0);
+      const convValue = Number(row.convValue || 0);
+      const derived = computeDerivedMetrics({ impressions, clicks, spend, conversions, convValue });
+      if (row.spend == null) row.spend = spend;
+      if (row.conv_value == null) row.conv_value = convValue;
+      if (row.ctr == null && derived.ctr != null) row.ctr = derived.ctr;
+      if (row.avg_cpc == null && derived.avgCpc != null) row.avg_cpc = derived.avgCpc;
+      if (row.conv_rate == null && derived.convRate != null) row.conv_rate = derived.convRate;
+      if (row.cost_per_conv == null && derived.costPerConv != null) row.cost_per_conv = derived.costPerConv;
+      if (row.roas == null && derived.roas != null) row.roas = derived.roas;
+      if (row.cpm == null && derived.cpm != null) row.cpm = derived.cpm;
+    });
+  }
 }
 
 function createGoogleAdsHttpError({ httpStatus, payload }) {
@@ -911,6 +1020,26 @@ router.get('/status', requireUser, async (req, res) => {
   });
 });
 
+router.get('/fields', requireUser, async (req, res) => {
+  const email = req.userEmail || req.user?.email || null;
+  if (!email) return res.status(401).json({ error: 'Unauthorized' });
+  const user = await getUserByEmail(email);
+  const userKey = getUserKey(user);
+  if (!userKey) return res.status(401).json({ error: 'Unauthorized' });
+
+  const preset = String(req.query?.preset || '').trim().toLowerCase() || 'campaigns';
+  const catalog = getGoogleAdsFieldsCatalog(preset);
+  if (!catalog) {
+    return res.status(400).json({ error: 'invalid_preset', preset });
+  }
+
+  return res.json({
+    preset,
+    defaults: catalog.defaults || [],
+    fields: catalog.fields || [],
+  });
+});
+
 router.get('/auth/url', requireUser, async (req, res) => {
   const email = req.userEmail || req.user?.email || null;
   if (!email) return res.status(401).json({ error: 'Unauthorized' });
@@ -1485,6 +1614,12 @@ router.get('/report', requireUser, async (req, res) => {
   if (!conn.customerId) {
     return res.status(400).json({ error: 'customer_not_set' });
   }
+  if (conn.loginCustomerId && String(conn.customerId) === String(conn.loginCustomerId)) {
+    return res.status(400).json({
+      error: 'manager_selected',
+      message: 'Selected account is manager. Select a client account under MCC.',
+    });
+  }
 
   const blocks = normalizeGoogleAdsBlocks(req.query?.blocks);
   const compareMode = normalizeCompareMode(req.query?.compareMode);
@@ -1516,6 +1651,21 @@ router.get('/report', requireUser, async (req, res) => {
     compare = { mode: compareMode, from: compareFrom, to: compareTo };
   }
 
+  const presetRaw = String(req.query?.preset || '').trim().toLowerCase();
+  const fieldsParam = String(req.query?.fields || '').trim();
+  let selectedFields = null;
+  if (fieldsParam || presetRaw === 'campaigns') {
+    const preset = presetRaw || 'campaigns';
+    if (preset !== 'campaigns') {
+      return res.status(400).json({ error: 'invalid_preset', preset });
+    }
+    const normalized = normalizeGoogleAdsReportFields('campaigns', fieldsParam);
+    if (normalized.error) {
+      return res.status(400).json(normalized);
+    }
+    selectedFields = normalized.fields;
+  }
+
   try {
     oauth2Client.setCredentials({ refresh_token: conn.refreshToken });
     const payload = await buildGoogleAdsReportV1({
@@ -1539,6 +1689,14 @@ router.get('/report', requireUser, async (req, res) => {
       status: 'ok',
     });
 
+    if (selectedFields) {
+      applyCampaignFieldMetrics(payload.data?.overview, payload.data?.campaigns?.rows);
+      payload.meta = {
+        ...(payload.meta || {}),
+        preset: 'campaigns',
+        selectedFields,
+      };
+    }
     return res.json(payload);
   } catch (err) {
     const classified = classifyGoogleAdsError(err);

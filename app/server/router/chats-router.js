@@ -12,6 +12,7 @@ import {
   archiveChat,
   buildCouncilSystem,
 } from '../services/chatService.js';
+import { getProjectForUser } from '../services/projectService.js';
 import { call as callLlm } from '../services/llmService.js';
 import { getUserByEmail } from '../userStore.js';
 import { getPlanForUser, isPaidPlan, getCurrentPeriodForUser, getTokensUsed } from '../services/billingService.js';
@@ -44,6 +45,11 @@ import { PRICING_VERSION, FX_VERSION } from '../config/pricingConfig.js';
 import { resolvePayloadAttachments } from '../services/payloadService.js';
 
 const router = express.Router();
+
+function getWorkspaceId(req) {
+  const candidate = req.workspaceId || null;
+  return candidate ? String(candidate).trim() : null;
+}
 
 function buildUsagePayload(aiContent) {
   if (!aiContent?.usage) return null;
@@ -254,7 +260,10 @@ router.get('/', requireUser, async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit || '20', 10);
     const offset = parseInt(req.query.offset || '0', 10);
-    const workspaceId = typeof req.query.workspaceId === 'string' && req.query.workspaceId.trim() ? req.query.workspaceId.trim() : 'business';
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) {
+      return res.status(403).json({ error: 'workspace_not_bound' });
+    }
     console.debug('[WORKSPACE]', { route: '/api/chats', email: req.userEmail, workspaceId });
     const chats = await listChatsForUser(req.userEmail, { limit, offset, workspaceId });
     res.json({ chats });
@@ -268,6 +277,13 @@ router.get('/:chatId', requireUser, async (req, res, next) => {
   try {
     const data = await getChatWithMessages(req.userEmail, req.params.chatId);
     if (!data) return res.status(404).json({ error: 'Chat not found' });
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) {
+      return res.status(403).json({ error: 'workspace_not_bound' });
+    }
+    if ((data.chat?.workspaceId || null) !== workspaceId) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
     res.json(data);
   } catch (err) {
     next(err);
@@ -283,7 +299,10 @@ router.post('/', requireUser, async (req, res) => {
     const traceId = resolveTraceId(req);
     req.traceId = traceId;
 
-    const workspaceId = typeof req.body?.workspaceId === 'string' && req.body.workspaceId.trim() ? req.body.workspaceId.trim() : 'business';
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) {
+      return res.status(403).json({ error: 'workspace_not_bound' });
+    }
     const councilMembers = Array.isArray(req.body?.councilMembers) ? req.body.councilMembers : [];
     if (!firstMessage || typeof firstMessage !== 'string') {
       return res.status(400).json({ error: 'firstMessage is required', errorCode: 'INVALID_INPUT' });
@@ -308,6 +327,15 @@ router.post('/', requireUser, async (req, res) => {
       });
     }
 
+    let scopedProjectId = projectId || null;
+    if (scopedProjectId) {
+      const project = await getProjectForUser(req.userEmail, scopedProjectId);
+      if (!project || project.workspaceId !== workspaceId) {
+        return res.status(404).json({ error: 'project_not_found' });
+      }
+      scopedProjectId = project.id;
+    }
+
     let activeContext = getActiveContext(user.id);
     if (!activeContext || activeContext.status !== 'active') {
       if (isActiveContextStrict()) {
@@ -321,12 +349,12 @@ router.post('/', requireUser, async (req, res) => {
         const desired = buildContextActivationRequest({
           body: req.body,
           workspaceId,
-          projectId,
+          projectId: scopedProjectId,
           traceId,
         });
         activeContext = await ensureActiveContext(user.id, desired, {
           reason: 'missing_active_context',
-          projectId,
+          projectId: scopedProjectId,
         });
       } catch (err) {
         return res.status(409).json({
@@ -358,7 +386,13 @@ router.post('/', requireUser, async (req, res) => {
     const wantsStream = isSseRequest(req);
 
     const modelFromContext = activeContext?.model || model;
-    const { chat, userMessage } = await createChat(req.userEmail, firstMessage, { model: modelFromContext, temperature, projectId, workspaceId, councilMembers });
+    const { chat, userMessage } = await createChat(req.userEmail, firstMessage, {
+      model: modelFromContext,
+      temperature,
+      projectId: scopedProjectId,
+      workspaceId,
+      councilMembers,
+    });
 
     const councilSystem = buildCouncilSystem(chat.workspaceId || workspaceId || 'agency', chat.councilMembers || councilMembers);
     const history = [];
@@ -478,6 +512,17 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
     const user = await getUserByEmail(req.userEmail || req.user?.email);
     if (!user) return res.status(401).json({ error: 'Unauthorized', errorCode: 'UNAUTHENTICATED' });
 
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) {
+      return res.status(403).json({ error: 'workspace_not_bound' });
+    }
+
+    const existingChat = await getChatWithMessages(req.userEmail, req.params.chatId);
+    if (!existingChat) return res.status(404).json({ error: 'Chat not found', errorCode: 'NOT_FOUND' });
+    if ((existingChat.chat?.workspaceId || null) !== workspaceId) {
+      return res.status(404).json({ error: 'Chat not found', errorCode: 'NOT_FOUND' });
+    }
+
     const { planCode, limits } = await getPlanForUser(user.id || user.email);
     const period = await getCurrentPeriodForUser(user.id, planCode);
     const used = await getTokensUsed(user.id, period);
@@ -494,9 +539,6 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
       });
     }
 
-    const requestedWorkspaceId = typeof req.body?.workspaceId === 'string' && req.body.workspaceId.trim()
-      ? req.body.workspaceId.trim()
-      : '';
     let activeContext = getActiveContext(user.id);
     if (!activeContext || activeContext.status !== 'active') {
       if (isActiveContextStrict()) {
@@ -509,7 +551,7 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
       try {
         const desired = buildContextActivationRequest({
           body: req.body,
-          workspaceId: requestedWorkspaceId || null,
+          workspaceId,
           traceId,
           projectId: req.body?.projectId || null,
         });
@@ -533,8 +575,9 @@ router.post('/:chatId/messages', requireUser, async (req, res) => {
 
     const combo = await getChatWithMessages(req.userEmail, req.params.chatId);
     if (!combo) return res.status(404).json({ error: 'Chat not found', errorCode: 'NOT_FOUND' });
-
-    const workspaceId = requestedWorkspaceId || combo?.chat?.workspaceId || 'business';
+    if ((combo.chat?.workspaceId || null) !== workspaceId) {
+      return res.status(404).json({ error: 'Chat not found', errorCode: 'NOT_FOUND' });
+    }
     const payloadIds = Array.isArray(req.body?.payloadIds) ? req.body.payloadIds : null;
     let payloadMeta = [];
     let hasPayloadRequest = false;
@@ -719,6 +762,14 @@ router.patch('/:chatId', requireUser, async (req, res, next) => {
     if (!rawTitle) {
       return res.status(400).json({ error: 'Title is required.' });
     }
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) {
+      return res.status(403).json({ error: 'workspace_not_bound' });
+    }
+    const data = await getChatWithMessages(req.userEmail, req.params.chatId);
+    if (!data || (data.chat?.workspaceId || null) !== workspaceId) {
+      return res.status(404).json({ error: 'Chat not found.' });
+    }
     const updated = await updateChatTitle({ userEmail: req.userEmail, chatId: req.params.chatId, title: rawTitle });
     if (!updated) return res.status(404).json({ error: 'Chat not found.' });
     return res.json({ id: updated.id, title: updated.title });
@@ -730,6 +781,14 @@ router.patch('/:chatId', requireUser, async (req, res, next) => {
 // DELETE /api/chats/:chatId (soft delete)
 router.delete('/:chatId', requireUser, async (req, res, next) => {
   try {
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) {
+      return res.status(403).json({ error: 'workspace_not_bound' });
+    }
+    const data = await getChatWithMessages(req.userEmail, req.params.chatId);
+    if (!data || (data.chat?.workspaceId || null) !== workspaceId) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
     await archiveChat({ chatId: req.params.chatId, userEmail: req.userEmail });
     return res.status(204).send();
   } catch (err) {

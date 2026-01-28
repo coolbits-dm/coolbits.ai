@@ -1,0 +1,29 @@
+{
+  "ts":"20260124T030855Z",
+  "baseUrl":"http://127.0.0.1:8788",
+  "workspaceExpected":"business",
+  "realMode":"0",
+  "runId":"03bcca55-931c-4141-b68c-93f55b92339a",
+  "artifactId":"548176c2-5bf7-4b94-9905-3234a47b3912",
+  "snapshotUri":"/opt/coolbits.ai/var/artifacts/business/runs/03bcca55-931c-4141-b68c-93f55b92339a/snapshot.1769224137877.json",
+  "snapshotSha256":"0854d65c4be9dcbf8e7831860c58c7d3777d298e13d9f6cc7901b083936f008d",
+  "hashes":{"inputHash":"","outputHash":""},
+  "steps":{
+    "health":{"status":"pass","detail":"200"},
+    "auth_gate":{"status":"pass","detail":"401"},
+    "create_run":{"status":"pass","detail":"runId=03bcca55-931c-4141-b68c-93f55b92339a"},
+    "run_workspace_db":{"status":"skipped","detail":"PSQL_DSN not set"},
+    "append_event":{"status":"pass","detail":"200"},
+    "concurrency_http":{"status":"pass","detail":"     20 200;"},
+    "concurrency_db":{"status":"skipped","detail":"PSQL_DSN not set"},
+    "snapshot_http":{"status":"pass","detail":"artifactId=548176c2-5bf7-4b94-9905-3234a47b3912"},
+    "snapshot_db":{"status":"skipped","detail":"PSQL_DSN not set"},
+    "snapshot_file":{"status":"pass","detail":"snapshot.1769224137877.json"},
+    "llm_http":{"status":"skipped","detail":"guardrail_blocked"},
+    "llm_events":{"status":"skipped","detail":"llm_http_skipped"},
+    "real_guardrail":{"status":"pass","detail":"not_requested"},
+    "tenant_isolation":{"status":"skipped","detail":"TENANT_WORKSPACE not set"}
+  },
+  "overall":"partial",
+  "stabilityGate":"fail"
+}

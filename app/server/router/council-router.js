@@ -12,6 +12,28 @@ const router = express.Router();
 
 router.use(requireUser);
 
+function getWorkspaceId(req) {
+  const candidate = req.workspaceId || null;
+  return candidate ? String(candidate).trim() : null;
+}
+
+function resolveWorkspace(req, res) {
+  const workspaceId = getWorkspaceId(req);
+  if (!workspaceId) {
+    res.status(403).json({ error: 'workspace_not_bound' });
+    return null;
+  }
+  const requested = req.params.workspaceId || req.query.workspaceId || req.body?.workspaceId || null;
+  if (requested) {
+    const normalized = String(requested).trim();
+    if (normalized && normalized !== workspaceId) {
+      res.status(404).json({ error: 'not_found' });
+      return null;
+    }
+  }
+  return workspaceId;
+}
+
 router.get('/registry', async (_req, res, next) => {
   try {
     const councils = await getCouncilRegistry();
@@ -23,15 +45,8 @@ router.get('/registry', async (_req, res, next) => {
 
 async function handlePerformanceSummary(req, res) {
   try {
-    const workspaceId =
-      req.header('X-Workspace-Id') ||
-      req.query.workspaceId ||
-      req.workspaceId ||
-      req.params.workspaceId ||
-      null;
-    if (!workspaceId) {
-      return res.status(400).json({ error: 'workspaceId is required' });
-    }
+    const workspaceId = resolveWorkspace(req, res);
+    if (!workspaceId) return;
     const rawRange = (req.query?.range || '').toString().toLowerCase();
     const validRanges = ['billing_period', 'last_7_days', 'last_30_days'];
     const range = validRanges.includes(rawRange) ? rawRange : 'billing_period';
@@ -102,10 +117,8 @@ router.get('/council/performance/summary', handlePerformanceSummary);
 router.get('/:slug/summary', async (req, res, next) => {
   try {
     const { slug } = req.params;
-    const workspaceId = req.query.workspaceId || req.workspaceId || null;
-    if (!workspaceId) {
-      return res.status(400).json({ error: 'workspaceId_required' });
-    }
+    const workspaceId = resolveWorkspace(req, res);
+    if (!workspaceId) return;
     const result = await getCouncilSummary({ slug, workspaceId });
     if (!result) {
       return res.status(404).json({ error: 'council_not_found' });
@@ -118,14 +131,8 @@ router.get('/:slug/summary', async (req, res, next) => {
 
 router.post('/agents/run', async (req, res) => {
   try {
-    const workspaceId =
-      req.header('X-Workspace-Id') ||
-      req.body.workspaceId ||
-      req.workspaceId ||
-      null;
-    if (!workspaceId) {
-      return res.status(400).json({ error: 'workspaceId is required' });
-    }
+    const workspaceId = resolveWorkspace(req, res);
+    if (!workspaceId) return;
     const agentId = req.body?.agentId ?? null;
     const usage = req.body?.usage ?? null;
     const councilSlug = req.body?.councilSlug || 'performance';

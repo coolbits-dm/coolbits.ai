@@ -1,0 +1,26 @@
+{
+  "run": {
+    "id": "7e71db91-4565-48c2-af37-8f253549dfaf",
+    "workspace_id": "business",
+    "client_id": null,
+    "title": "runs-ui-v1",
+    "status": "running",
+    "created_at": "2026-01-15T02:40:55.773Z",
+    "updated_at": "2026-01-15T02:40:55.773Z"
+  },
+  "events": [
+    {
+      "id": "370",
+      "run_id": "7e71db91-4565-48c2-af37-8f253549dfaf",
+      "seq": 1,
+      "ts": "2026-01-15T02:40:55.993Z",
+      "kind": "ui_debug",
+      "actor": {},
+      "payload": {
+        "note": "runs-ui"
+      },
+      "hashes": {}
+    }
+  ],
+  "createdAt": "2026-01-15T02:40:56.212Z"
+}

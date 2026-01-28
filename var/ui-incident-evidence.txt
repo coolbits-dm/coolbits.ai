@@ -1,0 +1,42 @@
+=== PROD / root headers ===
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0curl: (6) Could not resolve host: coolbits.ai
+=== PROD / root body first 80 lines (detect meta/js redirect) ===
+=== PROD /chat headers ===
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0curl: (6) Could not resolve host: coolbits.ai
+=== ORIGIN local nginx (/ with Host) headers ===
+curl: (7) Couldn't connect to server
+=== ORIGIN local nginx (/ body first 80 lines) ===
+=== Live filesystem listing ===
+total 76K
+drwxr-xr-x  3 cblm cblm 4.0K Jan 16 05:22 .
+drwxr-xr-x 17 cblm cblm 4.0K Jan 15 05:55 ..
+drwxr-xr-x  3 cblm cblm 4.0K Jan 16 05:09 assets
+-rw-rw-r--  1 cblm cblm  56K Jan 16 05:22 chat.html
+-rwxrwxr-x  1 cblm cblm   70 Jan 15 13:47 favicon.ico
+-rw-rw-r--  1 cblm cblm  430 Jan 15 03:31 index.html
+=== Does index.html exist and does it redirect? ===
+--- head index.html ---
+     1	<!doctype html>
+     2	<html lang="en">
+     3	<head>
+     4	  <meta charset="UTF-8" />
+     5	  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+     6	  <title>Cool Bits</title>
+     7	  <meta http-equiv="refresh" content="0; url=/chat" />
+     8	  <link rel="stylesheet" href="./assets/style.css?v=council-pill-v3" />
+     9	  <link rel="icon" href="/favicon.ico" />
+    10	</head>
+    11	<body>
+    12	  <script>
+    13	    window.location.replace('/chat');
+    14	  </script>
+    15	</body>
+    16	</html>
+--- redirect patterns in index.html ---
+7:  <meta http-equiv="refresh" content="0; url=/chat" />
+13:    window.location.replace('/chat');
+=== Nginx routing for coolbits.ai ===

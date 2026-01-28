@@ -22,7 +22,8 @@ function getUserKey(user) {
 }
 
 function getWorkspaceId(req) {
-  return req.query?.workspaceId || req.body?.workspaceId || req.workspaceId || 'business';
+  const candidate = req.workspaceId || null;
+  return candidate ? String(candidate).trim() : null;
 }
 
 function createOAuthClient() {

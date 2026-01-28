@@ -1,0 +1,152 @@
+# admin schema snapshot
+# utc: 2026-01-15T03:33:50Z
+
+                    List of relations
+ Schema |          Name           | Type  |    Owner     
+--------+-------------------------+-------+--------------
+ public | ads_daily_stats         | table | coolbits_app
+ public | agent_runs              | table | coolbits_app
+ public | agents                  | table | coolbits_app
+ public | artifact_attachments    | table | coolbits_app
+ public | artifacts               | table | coolbits_app
+ public | briefs                  | table | coolbits_app
+ public | chats                   | table | coolbits_app
+ public | council_briefs          | table | coolbits_app
+ public | council_runs            | table | coolbits_app
+ public | credentials             | table | coolbits_app
+ public | ga4_connections         | table | coolbits_app
+ public | ga4_snapshots           | table | coolbits_app
+ public | google_ads_connections  | table | coolbits_app
+ public | googleads_snapshots     | table | coolbits_app
+ public | insights                | table | coolbits_app
+ public | messages                | table | coolbits_app
+ public | metric_snapshots        | table | coolbits_app
+ public | payloads                | table | coolbits_app
+ public | ppc_change_proposals    | table | coolbits_app
+ public | ppc_plans               | table | coolbits_app
+ public | projects                | table | coolbits_app
+ public | provider_profiles       | table | coolbits_app
+ public | public_contact_messages | table | coolbits_app
+ public | run_events              | table | coolbits_app
+ public | runs                    | table | coolbits_app
+ public | token_usage             | table | coolbits_app
+ public | user_billing_state      | table | coolbits_app
+ public | users                   | table | coolbits_app
+ public | workspace_integrations  | table | coolbits_app
+ public | workspace_services      | table | coolbits_app
+ public | workspaces              | table | coolbits_app
+(31 rows)
+
+                                     Table "public.users"
+         Column         |           Type           | Collation | Nullable |      Default      
+------------------------+--------------------------+-----------+----------+-------------------
+ id                     | uuid                     |           | not null | gen_random_uuid()
+ email                  | text                     |           | not null | 
+ plan_id                | text                     |           | not null | 'starter'::text
+ plan_label             | text                     |           | not null | 'Starter'::text
+ tokens_remaining       | integer                  |           | not null | 1000
+ total_used             | integer                  |           | not null | 0
+ email_verified         | boolean                  |           | not null | false
+ email_verified_at      | timestamp with time zone |           |          | 
+ stripe_customer_id     | text                     |           |          | 
+ stripe_subscription_id | text                     |           |          | 
+ stripe_status          | text                     |           |          | 
+ created_at             | timestamp with time zone |           | not null | now()
+ updated_at             | timestamp with time zone |           | not null | now()
+ subscription_status    | text                     |           |          | 'inactive'::text
+ included_cbt_per_month | integer                  |           |          | 0
+ included_cbt_remaining | integer                  |           |          | 0
+ workspaces_allowed     | text[]                   |           |          | 
+ workspaces_selected    | text[]                   |           |          | 
+Indexes:
+    "users_pkey" PRIMARY KEY, btree (id)
+    "users_email_key" UNIQUE CONSTRAINT, btree (email)
+Referenced by:
+    TABLE "chats" CONSTRAINT "chats_user_id_fkey" FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    TABLE "projects" CONSTRAINT "projects_user_id_fkey" FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+
+                         Table "public.workspaces"
+     Column     |           Type           | Collation | Nullable | Default 
+----------------+--------------------------+-----------+----------+---------
+ owner_id       | character varying(64)    |           | not null | 
+ id             | character varying(64)    |           | not null | 
+ workspace_type | character varying(16)    |           | not null | 
+ system_kind    | character varying(16)    |           |          | 
+ slug           | character varying(64)    |           | not null | 
+ name           | text                     |           | not null | 
+ is_deletable   | boolean                  |           | not null | true
+ created_by     | character varying(64)    |           |          | 
+ created_at     | timestamp with time zone |           | not null | now()
+ updated_at     | timestamp with time zone |           | not null | now()
+Indexes:
+    "workspaces_pkey" PRIMARY KEY, btree (owner_id, id)
+    "idx_workspaces_owner_created" btree (owner_id, created_at DESC)
+    "idx_workspaces_owner_type" btree (owner_id, workspace_type, created_at DESC)
+    "uidx_workspaces_owner_slug" UNIQUE, btree (owner_id, slug)
+    "uidx_workspaces_owner_system_kind" UNIQUE, btree (owner_id, system_kind) WHERE workspace_type::text = 'system'::text
+Check constraints:
+    "workspaces_system_kind_check" CHECK (system_kind::text = ANY (ARRAY['personal'::character varying, 'business'::character varying, 'agency'::character varying, 'dev'::character varying]::text[]))
+    "workspaces_workspace_type_check" CHECK (workspace_type::text = ANY (ARRAY['system'::character varying, 'custom'::character varying]::text[]))
+
+                               Table "public.runs"
+    Column    |           Type           | Collation | Nullable |     Default     
+--------------+--------------------------+-----------+----------+-----------------
+ id           | text                     |           | not null | 
+ workspace_id | text                     |           | not null | 
+ client_id    | text                     |           |          | 
+ title        | text                     |           |          | 
+ status       | text                     |           | not null | 'running'::text
+ created_at   | timestamp with time zone |           | not null | now()
+ updated_at   | timestamp with time zone |           | not null | now()
+Indexes:
+    "runs_pkey" PRIMARY KEY, btree (id)
+Referenced by:
+    TABLE "run_events" CONSTRAINT "run_events_run_id_fkey" FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
+
+                                     Table "public.run_events"
+ Column  |           Type           | Collation | Nullable |                Default                 
+---------+--------------------------+-----------+----------+----------------------------------------
+ id      | bigint                   |           | not null | nextval('run_events_id_seq'::regclass)
+ run_id  | text                     |           | not null | 
+ seq     | integer                  |           | not null | 
+ ts      | timestamp with time zone |           | not null | now()
+ kind    | text                     |           | not null | 
+ actor   | jsonb                    |           | not null | '{}'::jsonb
+ payload | jsonb                    |           | not null | 
+ hashes  | jsonb                    |           | not null | '{}'::jsonb
+Indexes:
+    "run_events_pkey" PRIMARY KEY, btree (id)
+    "idx_run_events_run" btree (run_id)
+    "uq_run_events_run_seq" UNIQUE, btree (run_id, seq)
+Foreign-key constraints:
+    "run_events_run_id_fkey" FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
+
+                                     Table "public.artifacts"
+      Column      |           Type           | Collation | Nullable |           Default            
+------------------+--------------------------+-----------+----------+------------------------------
+ id               | character varying(64)    |           | not null | 
+ workspace_id     | character varying(64)    |           | not null | 
+ name             | text                     |           |          | 
+ content_type     | text                     |           | not null | 
+ bytes            | bigint                   |           | not null | 
+ sha256           | character(64)            |           | not null | 
+ storage_provider | character varying(16)    |           | not null | 
+ storage_key      | text                     |           | not null | 
+ status           | character varying(16)    |           | not null | 'pending'::character varying
+ created_by       | character varying(128)   |           | not null | 
+ created_at       | timestamp with time zone |           | not null | now()
+ retention_policy | jsonb                    |           |          | 
+ derived          | jsonb                    |           |          | 
+ run_id           | text                     |           |          | 
+ client_id        | text                     |           |          | 
+ kind             | text                     |           |          | 
+ uri              | text                     |           |          | 
+Indexes:
+    "artifacts_pkey" PRIMARY KEY, btree (id)
+    "idx_artifacts_run" btree (run_id)
+    "idx_artifacts_workspace_created" btree (workspace_id, created_at DESC)
+    "idx_artifacts_workspace_status" btree (workspace_id, status, created_at DESC)
+    "idx_artifacts_ws" btree (workspace_id)
+Referenced by:
+    TABLE "artifact_attachments" CONSTRAINT "artifact_attachments_artifact_id_fkey" FOREIGN KEY (artifact_id) REFERENCES artifacts(id) ON DELETE CASCADE
+

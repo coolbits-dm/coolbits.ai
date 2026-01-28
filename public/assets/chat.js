@@ -48,6 +48,60 @@ const CONFIG = {
   USE_MOCK_DATA: (window.COOLBITS_CONFIG && window.COOLBITS_CONFIG.USE_MOCK_DATA) || false,
 };
 
+const CONNECTORS_REGISTRY = [
+  {
+    key: "googleads",
+    label: "Google Ads",
+    group: "Google",
+    category: "Google",
+    description: "Campaign reporting and spend insights",
+    status: "available",
+    scopes: ["business", "agency"],
+    oauthStart: "/api/connectors/googleads/auth/url",
+    accounts: {
+      list: "/api/connectors/googleads/customers",
+      select: "/api/connectors/googleads/customer",
+      selectField: "customerId",
+      labelField: "descriptiveName",
+    },
+    testFetch: { url: "/api/connectors/googleads/summary" },
+  },
+  {
+    key: "ga4",
+    label: "Google Analytics 4",
+    group: "Google",
+    category: "Google",
+    description: "Traffic, engagement, and events analytics",
+    status: "available",
+    scopes: ["personal", "business", "agency"],
+    oauthStart: "/api/connectors/ga4/auth/url",
+    accounts: {
+      list: "/api/connectors/ga4/properties", // adjust if different
+      select: "/api/connectors/ga4/property", // adjust if different
+      selectField: "propertyId",
+      labelField: "displayName",
+    },
+    testFetch: { url: "/api/connectors/ga4/summary" }, // adjust if different
+  },
+
+  // Coming soon (cards only)
+  { key: "gmail", label: "Gmail", group: "Google", category: "Google", description: "Email access and labels", status: "soon", scopes: ["personal", "business", "agency"], disabled: true },
+  { key: "gdocs", label: "Google Docs", group: "Google", category: "Google", description: "Docs content and updates", status: "soon", scopes: ["personal", "business", "agency"], disabled: true },
+  { key: "gsheets", label: "Google Sheets", group: "Google", category: "Google", description: "Sheets data read/write", status: "soon", scopes: ["personal", "business", "agency"], disabled: true },
+  { key: "gdrive", label: "Google Drive", group: "Google", category: "Google", description: "Files and folders sync", status: "soon", scopes: ["personal", "business", "agency"], disabled: true },
+  { key: "gcal", label: "Google Calendar", group: "Google", category: "Google", description: "Events and availability", status: "soon", scopes: ["personal", "business", "agency"], disabled: true },
+  { key: "gsc", label: "Search Console", group: "Google", category: "Google", description: "Search performance data", status: "soon", scopes: ["business", "agency"], disabled: true },
+  { key: "gtm", label: "Tag Manager", group: "Google", category: "Google", description: "Container and tags", status: "soon", scopes: ["business", "agency"], disabled: true },
+  { key: "youtube", label: "YouTube", group: "Google", category: "Google", description: "Channel and video stats", status: "soon", scopes: ["business", "agency"], disabled: true },
+
+  { key: "metaads", label: "Meta Ads", group: "Ads Platforms", category: "Ads Platforms", description: "Meta campaigns and spend", status: "soon", scopes: ["business", "agency"], disabled: true },
+  { key: "tiktokads", label: "TikTok Ads", group: "Ads Platforms", category: "Ads Platforms", description: "TikTok ads reporting", status: "soon", scopes: ["business", "agency"], disabled: true },
+
+  { key: "github", label: "GitHub", group: "Dev", category: "Dev", description: "Repos, issues, and PRs", status: "soon", scopes: ["dev"], disabled: true },
+];
+
+window.__CONNECTORS_REGISTRY = CONNECTORS_REGISTRY;
+
 const API_BASE = CONFIG.API_BASE_URL;
 const API_CHATS = `${API_BASE}/chats`;
 const API_CHAT = `${API_BASE}/chat`;
@@ -64,7 +118,6 @@ const API_AGENTS_REGISTRY = `${API_BASE}/agents/registry`;
 const API_AGENTS_RUN = `${API_BASE}/agents/run`;
 const API_AUTH_GOOGLE_START = `${API_BASE}/auth/google/start`;
 const API_PROJECTS = `${API_BASE}/projects`;
-const API_CANON = `${API_BASE}/canon`;
 
 const CURRENCY_SYMBOLS = {
   EUR: "€",
@@ -143,6 +196,7 @@ const CONNECTORS_CONFIG = [
     status: "unknown",
     description: "Sync spend, conversions, and audiences from your core Google Ads accounts.",
     icon: "google_ads",
+    agentKeys: ["ceo", "cmo", "ppc_lead"],
     supportsAuth: true,
     apiBase: "/api/connectors/googleads",
   },
@@ -153,6 +207,7 @@ const CONNECTORS_CONFIG = [
     status: "unknown",
     description: "Pull conversion events and funnel metrics from GA4 properties.",
     icon: "ga4",
+    agentKeys: ["ceo", "cmo", "ppc_lead", "seo_lead"],
     supportsAuth: true,
     apiBase: "/api/connectors/ga4",
   },
@@ -163,6 +218,7 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Review paid social performance and audiences from Meta Ads.",
     icon: "meta",
+    agentKeys: ["cmo", "ppc_lead"],
   },
   {
     key: "tiktok_ads",
@@ -171,6 +227,7 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Centralize TikTok Ads reporting and budget pacing.",
     icon: "tiktok",
+    agentKeys: ["cmo", "ppc_lead"],
   },
   {
     key: "linkedin_ads",
@@ -179,6 +236,7 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Track B2B campaign reach and lead generation performance.",
     icon: "linkedin",
+    agentKeys: ["ceo", "cmo", "ppc_lead", "seo_lead"],
   },
   {
     key: "google_ads_mcc",
@@ -187,6 +245,7 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Manage multiple client ad accounts via MCC linking in one place.",
     icon: "mcc",
+    agentKeys: ["agency_lead", "ppc_lead"],
   },
   {
     key: "ga4_multi_property",
@@ -195,6 +254,7 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Aggregate analytics across several GA4 properties in a single view.",
     icon: "ga4",
+    agentKeys: ["agency_lead", "seo_lead"],
   },
   {
     key: "meta_business_agency",
@@ -203,6 +263,7 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Agency-grade access and governance across Meta Business portfolios.",
     icon: "meta",
+    agentKeys: ["agency_lead", "ppc_lead"],
   },
   {
     key: "tiktok_business_center",
@@ -211,6 +272,7 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Coordinate TikTok assets and permissions through Business Center.",
     icon: "tiktok",
+    agentKeys: ["agency_lead", "ppc_lead"],
   },
   {
     key: "linkedin_agency",
@@ -219,6 +281,7 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Operate client LinkedIn Ads from a unified agency workspace.",
     icon: "linkedin",
+    agentKeys: ["agency_lead", "ppc_lead", "seo_lead"],
   },
   {
     key: "git",
@@ -227,6 +290,7 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Connect repos to track deployments and pull request signals.",
     icon: "git",
+    agentKeys: ["cto", "dev_architect"],
   },
   {
     key: "google_cloud",
@@ -235,6 +299,7 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Inspect Cloud Run services and centralize log visibility.",
     icon: "gcp",
+    agentKeys: ["cto", "dev_architect"],
   },
   {
     key: "stripe",
@@ -243,6 +308,7 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Pull Stripe revenue, subscriptions, and invoice telemetry.",
     icon: "stripe",
+    agentKeys: ["ceo", "cfo", "dev_architect"],
   },
   {
     key: "tracking_debugger",
@@ -251,6 +317,7 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "QA pixels and events with a live debugger feed.",
     icon: "debug",
+    agentKeys: ["cmo", "seo_lead", "dev_architect"],
   },
   {
     key: "error_event_stream",
@@ -259,6 +326,7 @@ const CONNECTORS_CONFIG = [
     status: "coming_soon",
     description: "Stream errors and product events into CoolBits for triage.",
     icon: "errors",
+    agentKeys: ["cto", "dev_architect"],
   },
 ];
 
@@ -280,6 +348,8 @@ const cbConnectorState = {
     lastSyncAt: null,
     lastError: null,
     customerName: null,
+    lastRun: null,
+    lastReport: null,
   },
   ga4: {
     status: "unknown",
@@ -307,62 +377,11 @@ const cbPromptMeterState = {
   outcomeHint: "General reasoning",
 };
 
-const CANON_WORKSPACE_TO_UI = {
-  B: "business",
-  A: "agency",
-  D: "developer",
-  P: "personal",
-};
-
-const UI_WORKSPACE_TO_CANON = {
-  business: "B",
-  agency: "A",
-  developer: "D",
-  dev: "D",
-  personal: "P",
-};
-
 const cbNormalizeAgentWorkspace = (workspaceId) => {
   if (!workspaceId) return "business";
   const key = workspaceId.toString().toLowerCase();
   if (key === "dev" || key === "developer") return "developer";
-  if (key === "personal") return "personal";
   return key;
-};
-
-const cbMapUiWorkspaceToCanon = (workspaceId) => {
-  const normalized = cbNormalizeAgentWorkspace(workspaceId);
-  return UI_WORKSPACE_TO_CANON[normalized] || null;
-};
-
-const cbMapCanonWorkspaceToUi = (workspaceId) => {
-  const key = String(workspaceId || "").toUpperCase();
-  return CANON_WORKSPACE_TO_UI[key] || cbNormalizeAgentWorkspace(cbCurrentWorkspaceId);
-};
-
-const cbBuildWorkspacesFromCanon = (canon) => {
-  const workspaces = canon?.workspaces || {};
-  const order = ["P", "B", "A", "D"];
-  return order
-    .map((key) => workspaces[key])
-    .filter(Boolean)
-    .map((ws) => ({
-      id: cbMapCanonWorkspaceToUi(ws.id),
-      label: ws.label || ws.id,
-    }));
-};
-
-const cbBuildUiAgentFromCanon = (role) => {
-  const connectors = Array.isArray(role?.connectors) ? role.connectors.slice() : [];
-  const capabilities = Array.isArray(role?.capabilities) ? role.capabilities.slice() : [];
-  return {
-    key: role.id,
-    label: role.subtitle ? `${role.label} – ${role.subtitle}` : role.label,
-    shortDescription: role.description || "",
-    workspace: cbMapCanonWorkspaceToUi(role.workspaceId),
-    connectors,
-    capabilities,
-  };
 };
 
 const cbGetWorkspaceLabel = (workspaceId) => {
@@ -375,28 +394,27 @@ const cbGetWorkspaceLabel = (workspaceId) => {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
-const cbGetCanonRoleById = (roleId) => cbCanonState.rolesById.get(roleId) || null;
-
 const cbFindAgentByKey = (agentKey, workspaceId = null) => {
   if (!agentKey) return null;
-  const role = cbGetCanonRoleById(agentKey);
-  if (!role) return null;
-  if (workspaceId) {
-    const workspaceKey = cbMapUiWorkspaceToCanon(workspaceId);
-    if (workspaceKey && role.workspaceId !== workspaceKey) {
-      return null;
-    }
-  }
-  return cbBuildUiAgentFromCanon(role);
+  const normalizedWorkspace = workspaceId ? cbNormalizeAgentWorkspace(workspaceId) : null;
+  return (
+    AGENTS_CONFIG.find(
+      (agent) =>
+        agent &&
+        agent.key === agentKey &&
+        (!normalizedWorkspace || cbNormalizeAgentWorkspace(agent.workspace) === normalizedWorkspace)
+    ) ||
+    AGENTS_CONFIG.find((agent) => agent && agent.key === agentKey) ||
+    null
+  );
 };
 
 const cbGetAgentsForWorkspace = (workspaceId) => {
   const normalized = cbNormalizeAgentWorkspace(workspaceId || cbCurrentWorkspaceId);
-  const workspaceKey = cbMapUiWorkspaceToCanon(normalized);
-  const roles = Array.isArray(cbCanonState.roles) ? cbCanonState.roles : [];
-  const scoped = workspaceKey ? roles.filter((role) => role.workspaceId === workspaceKey) : roles;
-  const list = scoped.length ? scoped : roles;
-  return list.map(cbBuildUiAgentFromCanon);
+  const scoped = AGENTS_CONFIG.filter(
+    (agent) => cbNormalizeAgentWorkspace(agent.workspace) === normalized
+  );
+  return scoped.length ? scoped : AGENTS_CONFIG.slice();
 };
 
 const cbResolveConnectorByKey = (connectorKey) =>
@@ -409,16 +427,12 @@ const cbGetConnectorsForAgent = (agent) => {
     .filter(Boolean);
 };
 
-const cbGetAgentsForConnector = (connectorKey) => {
-  const roles = Array.isArray(cbCanonState.roles) ? cbCanonState.roles : [];
-  return roles
-    .filter(
-      (role) =>
-        Array.isArray(role.connectors) &&
-        role.connectors.includes(connectorKey)
-    )
-    .map(cbBuildUiAgentFromCanon);
-};
+const cbGetAgentsForConnector = (connectorKey) =>
+  AGENTS_CONFIG.filter(
+    (agent) =>
+      Array.isArray(agent.connectors) &&
+      agent.connectors.includes(connectorKey)
+  );
 
 const cbBuildMockUsageRows = (agent) => {
   const label = agent?.label || "Agent";
@@ -429,107 +443,113 @@ const cbBuildMockUsageRows = (agent) => {
   ];
 };
 
-const cbCanonState = {
-  loaded: false,
-  loading: false,
-  canon: null,
-  canonHash: null,
-  councilIds: [],
-  rolesById: new Map(),
-  roles: [],
-};
+const AGENTS_CONFIG = [
+  {
+    workspace: "business",
+    key: "ceo",
+    label: "CEO \u2013 Strategy",
+    shortDescription: "Executive view on priorities, ROI, and trade-offs.",
+    connectors: [],
+    showInCouncil: true,
+  },
+  {
+    workspace: "business",
+    key: "cmo",
+    label: "CMO \u2013 Growth",
+    shortDescription: "Acquisition, paid media, and performance marketing (Google Ads, Meta, etc.).",
+    connectors: ["googleads", "meta_ads", "tiktok_ads", "linkedin_ads", "ga4", "tracking_debugger"],
+    showInCouncil: true,
+  },
+  {
+    workspace: "business",
+    key: "cfo",
+    label: "CFO \u2013 Finance",
+    shortDescription: "Budgets, forecasts, and performance guardrails.",
+    connectors: ["stripe", "googleads"],
+    showInCouncil: true,
+  },
+  {
+    workspace: "business",
+    key: "coo",
+    label: "COO \u2013 Ops",
+    shortDescription: "Execution, processes, and cross-team alignment.",
+    connectors: ["ga4", "google_ads_mcc"],
+    showInCouncil: true,
+  },
+  {
+    workspace: "business",
+    key: "cto",
+    label: "CTO \u2013 Tech",
+    shortDescription: "Architecture, delivery, and technical risk.",
+    connectors: ["git", "google_cloud", "error_event_stream"],
+    showInCouncil: true,
+  },
+  {
+    workspace: "agency",
+    key: "agency_lead",
+    label: "Agency Lead",
+    shortDescription: "Multi-client governance and performance alignment.",
+    connectors: ["google_ads_mcc", "ga4_multi_property", "meta_business_agency", "tiktok_business_center", "linkedin_agency"],
+    showInCouncil: false,
+  },
+  {
+    workspace: "agency",
+    key: "ppc_lead",
+    label: "PPC Lead",
+    shortDescription: "Paid media performance across networks.",
+    connectors: ["googleads", "google_ads_mcc", "meta_ads", "tiktok_ads", "linkedin_ads"],
+    showInCouncil: false,
+  },
+  {
+    workspace: "business",
+    key: "seo_lead",
+    label: "SEO Lead",
+    shortDescription: "Organic growth, content, and technical SEO.",
+    connectors: ["ga4", "tracking_debugger"],
+    showInCouncil: false,
+  },
+  {
+    workspace: "developer",
+    key: "dev_architect",
+    label: "Dev Architect",
+    shortDescription: "Systems design, observability, and reliability.",
+    connectors: ["git", "google_cloud", "error_event_stream", "stripe"],
+    showInCouncil: false,
+  },
+];
 
-let CB_COUNCIL_MEMBERS = [];
-
-const cbNormalizeCanonPayload = (payload) => {
-  const canon = payload && payload.canon ? payload.canon : payload;
-  const canonHash = payload?.canonHash || payload?.hash || null;
-  const council = Array.isArray(canon?.groups?.council) ? canon.groups.council : [];
-  const roles = Array.isArray(canon?.roles) ? canon.roles.slice() : [];
-  return { canon, canonHash, council, roles };
-};
-
-const cbBuildCouncilMembersFromCanon = (canonData) => {
-  const councilIds = canonData?.council || [];
-  const byId = new Map((canonData?.roles || []).map((role) => [role.id, role]));
-  return councilIds
-    .map((id) => {
-      const role = byId.get(id);
-      if (!role) return null;
-      return {
-        id: role.id,
-        label: role.label || role.id,
-        shortLabel: role.label || role.id,
-        description: role.description || "",
-      };
-    })
-    .filter(Boolean);
-};
-
-const cbApplyCanonPayload = (payload) => {
-  const canonData = cbNormalizeCanonPayload(payload);
-  cbCanonState.loaded = true;
-  cbCanonState.loading = false;
-  cbCanonState.canon = canonData.canon;
-  cbCanonState.canonHash = canonData.canonHash;
-  cbCanonState.councilIds = canonData.council.slice();
-  cbCanonState.roles = canonData.roles.slice();
-  cbCanonState.rolesById = new Map(canonData.roles.map((role) => [role.id, role]));
-  cbWorkspaces = cbBuildWorkspacesFromCanon(canonData.canon);
-  const fallbackWorkspace = cbWorkspaces[0]?.id || cbCurrentWorkspaceId;
-  if (fallbackWorkspace && !cbWorkspaces.some((ws) => ws.id === cbCurrentWorkspaceId)) {
-    cbCurrentWorkspaceId = fallbackWorkspace;
-    cbSaveWorkspaceToStorage(cbCurrentWorkspaceId);
-  }
-  CB_COUNCIL_MEMBERS = cbBuildCouncilMembersFromCanon(canonData);
-  cbFilterCouncilSelection();
-};
-
-const cbGetCanonCouncilAgents = () => {
-  const canonData = cbCanonState.canon;
-  if (!canonData) return [];
-  const councilIds = cbCanonState.councilIds || [];
-  const byId = cbCanonState.rolesById;
-  return councilIds.map((id) => byId.get(id)).filter(Boolean);
-};
-
-const cbGetCanonAgentById = (agentId) => cbCanonState.rolesById.get(agentId) || null;
-
-const cbFilterCouncilSelection = () => {
-  if (!cbCanonState.councilIds.length) return;
-  const allowed = new Set(cbCanonState.councilIds);
-  const next = Array.from(cbCouncilSelectedIds).filter((id) => allowed.has(id));
-  if (next.length !== cbCouncilSelectedIds.size) {
-    cbCouncilSelectedIds = new Set(next);
-    window.cbCouncilSelectedIds = cbCouncilSelectedIds;
-  }
-  cbCouncilState.selectedKeys = next;
-};
-
-const cbLoadCanon = async () => {
-  if (cbCanonState.loaded) {
-    cbRenderCouncilList();
-    cbRenderWorkspaces();
-    return;
-  }
-  if (cbCanonState.loading) return;
-  cbCanonState.loading = true;
-  try {
-    const response = await fetch(API_CANON, { headers: { Accept: "application/json" } });
-    if (!response.ok) {
-      cbCanonState.loading = false;
-      console.warn("[CB_CANON] fetch failed", response.status);
-      return;
-    }
-    const data = await response.json();
-    cbApplyCanonPayload(data);
-    cbRenderCouncilList();
-    cbRenderWorkspaces();
-  } catch (error) {
-    cbCanonState.loading = false;
-    console.warn("[CB_CANON] load failed", error);
-  }
-};
+const CB_COUNCIL_MEMBERS = [
+  {
+    id: "ceo_strategy",
+    label: "CEO Strategy",
+    shortLabel: "CEO",
+    description: "Executive perspective & strategy",
+  },
+  {
+    id: "cto_tech",
+    label: "CTO Tech",
+    shortLabel: "CTO",
+    description: "Architecture, delivery and technical risk",
+  },
+  {
+    id: "cfo_finance",
+    label: "CFO Finance",
+    shortLabel: "CFO",
+    description: "Costs, ROI, pricing and budgets",
+  },
+  {
+    id: "cmo_growth",
+    label: "CMO Growth",
+    shortLabel: "CMO",
+    description: "Acquisition, funnels and brand",
+  },
+  {
+    id: "coo_ops",
+    label: "COO Ops",
+    shortLabel: "COO",
+    description: "Processes, operations and execution",
+  },
+];
 
 const CB_COUNCIL_STATUS_IDLE = "idle";
 const CB_COUNCIL_STATUS_PENDING = "pending";
@@ -1082,6 +1102,10 @@ const cbFormatPlanPrice = (plan) => {
 };
 
 const cbIsAccountBillingOpen = () => {
+  const wrap = document.getElementById("legacy-connectors-panel");
+  if (wrap) {
+    return !wrap.classList.contains("hidden");
+  }
   const panel = document.getElementById("cb-account-billing");
   return !!(panel && panel.hidden === false);
 };
@@ -1755,16 +1779,10 @@ const shellElements = {
   sidebarBackdrop: document.querySelector("[data-sidebar-backdrop]"),
   newChatButton: document.querySelector("[data-sidebar-new-chat]"),
   chatsList: document.querySelector("[data-sidebar-chat-list]"),
-  agentsButton: document.querySelector("[data-sidebar-agents]"),
   featureButtons: Array.from(document.querySelectorAll("[data-sidebar-feature]")),
   accountViewButtons: Array.from(document.querySelectorAll("[data-account-view-btn]")),
   accountViews: Array.from(document.querySelectorAll("[data-account-view]")),
   connectorsCategories: document.getElementById("cb-connectors-categories"),
-  connectorsSection: document.querySelector("[data-sidebar-connectors]"),
-  connectorsToggle: document.querySelector(".cb-connectors-toggle"),
-  connectorsMenu: document.getElementById("cb-connectors-menu"),
-  orchestratorButton: document.querySelector('[data-sidebar-feature="orchestrator"]'),
-  orchestratorMenu: document.getElementById("cb-orchestrators-menu"),
   userSlot: document.getElementById("cb-sidebar-user-slot"),
   topBarRight: document.querySelector(".top-bar-right"),
   projectSection: document.querySelector("[data-projects-section]"),
@@ -1894,17 +1912,16 @@ let cbActiveChatMessages = [];
 let cbHasManualChatSelection = false;
 let cbChatsUnsupported = false;
 let cbCurrentProjectId = null;
-let cbActiveContext = null;
-let cbContextDirty = true;
-let cbContextActivationPromise = null;
 let cbProjectMenuOpen = false;
 let cbSidebarMenuOutsideBound = false;
 const WORKSPACE_STORAGE_KEY = "coolbits:workspace";
-let cbWorkspaces = [];
+const cbWorkspaces = [
+  { id: "business", label: "Business" },
+  { id: "agency", label: "Agency" },
+  { id: "developer", label: "Developer" },
+];
 let cbCurrentWorkspaceId = "business";
 let cbWorkspaceMenuOpen = false;
-let cbConnectorsMenuOpen = false;
-let cbOrchestratorsMenuOpen = false;
 let cbPendingDeleteChatId = null;
 let cbPendingRenameChatId = null;
 const cbManualChatTitles = new Set();
@@ -1918,6 +1935,20 @@ const cbFeatureFlags = {
 };
 
 let cbPendingFirstMessage = null;
+let cbPushStateLogged = false;
+
+function cbSafePushUrl(url) {
+  const canPush = typeof window !== "undefined" && window.history && typeof window.history.pushState === "function";
+  if (!cbPushStateLogged) {
+    console.info("[connectors] pushState", typeof window?.history?.pushState);
+    cbPushStateLogged = true;
+  }
+  if (canPush) {
+    window.history.pushState({}, "", url);
+  } else if (typeof window !== "undefined") {
+    window.location.assign(url);
+  }
+}
 const cbNormalizeWorkspaceId = (workspaceId) => {
   if (typeof workspaceId === "string" && workspaceId.trim()) {
     return workspaceId;
@@ -2145,6 +2176,105 @@ const cbGetUserEmail = (user) => {
     user.username ||
     null
   );
+};
+
+const COUNCIL_BY_WORKSPACE = {
+  business: [
+    {
+      id: "ceo",
+      label: "CEO",
+      badge: "Strategy",
+      desc: "High-level decisions, priorities, and trade-offs for the business.",
+    },
+    {
+      id: "cto",
+      label: "CTO",
+      badge: "Tech",
+      desc: "Architecture, technical decisions, and integration trade-offs.",
+    },
+    {
+      id: "cfo",
+      label: "CFO",
+      badge: "Finance",
+      desc: "Costs, ROI, pricing structure, and financial risk.",
+    },
+    {
+      id: "cmo",
+      label: "CMO",
+      badge: "Growth",
+      desc: "Marketing strategy, channels, and messaging.",
+    },
+    {
+      id: "ops",
+      label: "COO",
+      badge: "Ops",
+      desc: "Processes, automation, and operational efficiency.",
+    },
+  ],
+  agency: [
+    {
+      id: "ppc",
+      label: "PPC Lead",
+      badge: "Ads",
+      desc: "Google Ads / Meta Ads structure, bids, and optimizations.",
+    },
+    {
+      id: "seo",
+      label: "SEO Lead",
+      badge: "SEO",
+      desc: "Search strategy, content, and on-site optimizations.",
+    },
+    {
+      id: "content",
+      label: "Content Lead",
+      badge: "Content",
+      desc: "Angles, hooks, and creative briefs.",
+    },
+    {
+      id: "analytics",
+      label: "Analytics",
+      badge: "Data",
+      desc: "Tracking, attribution, and reporting views.",
+    },
+    {
+      id: "am",
+      label: "Account Lead",
+      badge: "Client",
+      desc: "Expectations, communication, and packaging.",
+    },
+  ],
+  developer: [
+    {
+      id: "arch",
+      label: "System Architect",
+      badge: "Arch",
+      desc: "System design, boundaries, and trade-offs.",
+    },
+    {
+      id: "backend",
+      label: "Backend Dev",
+      badge: "Backend",
+      desc: "APIs, DB, performance, and integrations.",
+    },
+    {
+      id: "frontend",
+      label: "Frontend Dev",
+      badge: "Frontend",
+      desc: "UI/UX, components, and state management.",
+    },
+    {
+      id: "devops",
+      label: "DevOps",
+      badge: "Infra",
+      desc: "Deployment, monitoring, and scaling.",
+    },
+    {
+      id: "ai",
+      label: "AI Engineer",
+      badge: "AI",
+      desc: "Models, prompts, and orchestration.",
+    },
+  ],
 };
 
 let cbActiveCouncilMembers = [];
@@ -2425,12 +2555,68 @@ const saveHistory = () => {
   }
 };
 
-const scrollToBottom = () => {
-  if (!elements.messages) return;
+// Get actual scroll container (robust fallback)
+function cbGetScroller() {
+  return (
+    document.getElementById('chat-scroll') ||
+    document.querySelector('.chat-container') ||
+    document.querySelector('[data-chat-scroll]') ||
+    elements.messages
+  );
+}
+
+// Scroll to bottom (smooth or instant)
+function cbScrollToBottom(behavior = 'auto') {
+  const scroller = cbGetScroller();
+  if (!scroller) return;
   requestAnimationFrame(() => {
-    elements.messages.scrollTop = elements.messages.scrollHeight;
+    scroller.scrollTo({ top: scroller.scrollHeight, behavior });
   });
-};
+}
+
+// Legacy compat
+const scrollToBottom = () => cbScrollToBottom('auto');
+
+// Ensure scroll button exists
+function cbEnsureScrollBtn() {
+  let btn = document.getElementById('cb-scroll-bottom');
+  if (btn) return btn;
+
+  btn = document.createElement('button');
+  btn.id = 'cb-scroll-bottom';
+  btn.type = 'button';
+  btn.className = 'cb-scroll-bottom';
+  btn.setAttribute('aria-label', 'Scroll to bottom');
+  btn.innerHTML = '↓';
+  document.body.appendChild(btn);
+  return btn;
+}
+
+// Init scroll UX (button visibility + click handler)
+function cbInitScrollUX() {
+  const scroller = cbGetScroller();
+  if (!scroller) return;
+
+  const btn = cbEnsureScrollBtn();
+
+  const update = () => {
+    const dist = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight;
+    const show = dist > 220; // show if >220px from bottom
+    btn.classList.toggle('is-visible', show);
+  };
+
+  btn.addEventListener('click', () => cbScrollToBottom('smooth'));
+  scroller.addEventListener('scroll', update, { passive: true });
+
+  // Default: scroll to bottom on load
+  requestAnimationFrame(() => {
+    cbScrollToBottom('auto');
+    update();
+  });
+}
+
+// Call after DOM ready
+cbInitScrollUX();
 
 const consumeSeedMessage = () => {
   try {
@@ -3042,41 +3228,6 @@ const getQueryParam = (name) => {
   }
 };
 
-const cbHandleInitialViewParam = () => {
-  const viewRaw = getQueryParam("view");
-  const view = viewRaw ? viewRaw.trim().toLowerCase() : "";
-  if (!view) return;
-  if (view === "agents") {
-    cbSwitchMainView("agents");
-    return;
-  }
-  if (view === "connectors") {
-    cbSetAccountView("connectors");
-    cbRenderConnectorsPanel();
-    cbOpenAccountBilling({ view: "connectors" });
-    return;
-  }
-  if (view === "ga4") {
-    cbSwitchMainView("ga4-dashboard");
-    return;
-  }
-  if (view === "googleads") {
-    cbSwitchMainView("googleads-dashboard");
-    return;
-  }
-  if (view === "orchestrators") {
-    cbToggleOrchestratorsMenu(true);
-    return;
-  }
-  if (view === "pricing") {
-    cbOpenPlansModal({ source: "pricing", summary: cbLatestBillingSummary });
-    return;
-  }
-  if (view === "maturity") {
-    cbSwitchMainView("chat");
-  }
-};
-
 const getPlanLabel = (user) => {
   if (!user) {
     return STARTER_PLAN;
@@ -3557,27 +3708,12 @@ const cbSetupComposerInput = () => {
 };
 
 const cbRepositionSidebarMenus = () => {
-  const {
-    projectMenu,
-    projectSelector,
-    workspaceMenu,
-    workspaceSelector,
-    connectorsMenu,
-    connectorsToggle,
-    orchestratorMenu,
-    orchestratorButton,
-  } = shellElements;
+  const { projectMenu, projectSelector, workspaceMenu, workspaceSelector } = shellElements;
   if (cbProjectMenuOpen && projectMenu && projectSelector && !projectMenu.hidden) {
     cbPositionSidebarMenu(projectMenu, projectSelector);
   }
   if (cbWorkspaceMenuOpen && workspaceMenu && workspaceSelector && !workspaceMenu.hidden) {
     cbPositionSidebarMenu(workspaceMenu, workspaceSelector);
-  }
-  if (cbConnectorsMenuOpen && connectorsMenu && connectorsToggle && !connectorsMenu.hidden) {
-    cbPositionSidebarMenu(connectorsMenu, connectorsToggle);
-  }
-  if (cbOrchestratorsMenuOpen && orchestratorMenu && orchestratorButton && !orchestratorMenu.hidden) {
-    cbPositionSidebarMenu(orchestratorMenu, orchestratorButton);
   }
   if (userMenuOpen) {
     cbPositionUserMenu();
@@ -3630,91 +3766,14 @@ const cbToggleWorkspaceMenu = (open) => {
   }
 };
 
-const cbToggleConnectorsMenu = (open) => {
-  if (typeof open === "boolean") {
-    cbConnectorsMenuOpen = open;
-  } else {
-    cbConnectorsMenuOpen = !cbConnectorsMenuOpen;
-  }
-  const { connectorsMenu, connectorsToggle } = shellElements;
-  if (connectorsMenu) {
-    connectorsMenu.hidden = !cbConnectorsMenuOpen;
-    if (cbConnectorsMenuOpen) {
-      if (connectorsToggle) {
-        cbPositionSidebarMenu(connectorsMenu, connectorsToggle);
-      }
-    } else {
-      cbResetFloatingMenuStyles(connectorsMenu);
-    }
-  }
-  if (connectorsToggle) {
-    connectorsToggle.setAttribute("aria-expanded", cbConnectorsMenuOpen ? "true" : "false");
-    connectorsToggle.setAttribute("data-open", cbConnectorsMenuOpen ? "true" : "false");
-  }
-};
-
-const cbEnsureOrchestratorsMenu = () => {
-  if (shellElements.orchestratorMenu) return shellElements.orchestratorMenu;
-  const button = shellElements.orchestratorButton;
-  if (!button) return null;
-  const menu = document.createElement("div");
-  menu.id = "cb-orchestrators-menu";
-  menu.className = "cb-sidebar-menu cb-orchestrators-menu";
-  menu.setAttribute("role", "listbox");
-  menu.hidden = true;
-
-  const soonButton = document.createElement("button");
-  soonButton.type = "button";
-  soonButton.className = "cb-sidebar-menu-button cb-sidebar-item--locked";
-  soonButton.disabled = true;
-  soonButton.textContent = "Coming soon";
-  menu.appendChild(soonButton);
-
-  const section = button.closest(".cb-sidebar-section") || button.parentElement;
-  if (section) {
-    section.appendChild(menu);
-  }
-  shellElements.orchestratorMenu = menu;
-  return menu;
-};
-
-const cbToggleOrchestratorsMenu = (open) => {
-  if (typeof open === "boolean") {
-    cbOrchestratorsMenuOpen = open;
-  } else {
-    cbOrchestratorsMenuOpen = !cbOrchestratorsMenuOpen;
-  }
-  const button = shellElements.orchestratorButton;
-  const menu = cbEnsureOrchestratorsMenu();
-  if (menu) {
-    menu.hidden = !cbOrchestratorsMenuOpen;
-    if (cbOrchestratorsMenuOpen && button) {
-      cbPositionSidebarMenu(menu, button);
-    } else {
-      cbResetFloatingMenuStyles(menu);
-    }
-  }
-  if (button) {
-    button.setAttribute("aria-expanded", cbOrchestratorsMenuOpen ? "true" : "false");
-    button.setAttribute("data-open", cbOrchestratorsMenuOpen ? "true" : "false");
-  }
-};
-
 const cbHandleSidebarMenuOutside = (event) => {
   const target = event.target;
-  const { projectSection, workspaceSection, connectorsSection } = shellElements;
+  const { projectSection, workspaceSection } = shellElements;
   if (cbProjectMenuOpen && projectSection && !projectSection.contains(target)) {
     cbToggleProjectMenu(false);
   }
   if (cbWorkspaceMenuOpen && workspaceSection && !workspaceSection.contains(target)) {
     cbToggleWorkspaceMenu(false);
-  }
-  if (cbConnectorsMenuOpen && connectorsSection && !connectorsSection.contains(target)) {
-    cbToggleConnectorsMenu(false);
-  }
-  const orchestratorSection = shellElements.orchestratorButton?.closest(".cb-sidebar-section");
-  if (cbOrchestratorsMenuOpen && orchestratorSection && !orchestratorSection.contains(target)) {
-    cbToggleOrchestratorsMenu(false);
   }
 };
 
@@ -3917,12 +3976,12 @@ const cbRenderCouncilList = () => {
     document.getElementById("cb-council-list") ||
     document.querySelector('[data-role="council-list"]');
   if (container) {
-    const canonAgents = cbGetCanonCouncilAgents();
-    if (!canonAgents.length) {
-      container.innerHTML = "";
-      return;
+    let agents = cbGetAgentsForWorkspace(cbCurrentWorkspaceId).filter(
+      (agent) => agent.showInCouncil !== false
+    );
+    if (!agents.length) {
+      agents = AGENTS_CONFIG.filter((agent) => agent.showInCouncil !== false);
     }
-    const agents = canonAgents.map((agent) => cbBuildUiAgentFromCanon(agent));
     container.innerHTML = "";
     agents.forEach((agent) => {
       const row = document.createElement("div");
@@ -3982,10 +4041,8 @@ const cbSelectProject = (projectId) => {
 };
 
 const cbSelectWorkspace = (workspaceId) => {
-  const fallbackId = cbWorkspaces[0]?.id || cbCurrentWorkspaceId || workspaceId;
   const nextWorkspaceId =
-    cbWorkspaces.find((workspace) => workspace.id === workspaceId)?.id || fallbackId;
-  if (!nextWorkspaceId) return;
+    cbWorkspaces.find((workspace) => workspace.id === workspaceId)?.id || cbWorkspaces[0].id;
   cbToggleWorkspaceMenu(false);
   cbOnWorkspaceChanged(nextWorkspaceId);
 };
@@ -4001,7 +4058,6 @@ const cbOnWorkspaceChanged = (nextWorkspaceId) => {
   cbSaveWorkspaceToStorage(cbCurrentWorkspaceId);
   cbRenderWorkspaces();
   cbRenderCouncilList();
-  cbMarkContextDirty();
 
   const cachedChats = cbWorkspaceChats.get(targetWorkspace);
   if (Array.isArray(cachedChats)) {
@@ -4384,8 +4440,6 @@ let cbMobileSidebarOpen = false;
 const cbCloseMobileSidebarMenus = () => {
   cbToggleProjectMenu(false);
   cbToggleWorkspaceMenu(false);
-  cbToggleConnectorsMenu(false);
-  cbToggleOrchestratorsMenu(false);
   hideUserMenu();
 };
 
@@ -4632,7 +4686,6 @@ const legacyRequestChatReply = async (message) => {
   if (body?.user) {
     cbApplyAuthPayload(body.user);
   }
-  cbApplyResolvedProvider(body?.meta);
   if (useCouncil) {
     cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ACK);
     cbResetCouncilStatusSoon(councilMembers);
@@ -4651,15 +4704,6 @@ const extractReply = (payload) => {
     return payload.message.trim();
   }
   return "";
-};
-
-const cbApplyResolvedProvider = (meta) => {
-  const resolved = meta && meta.resolved ? meta.resolved : null;
-  const provider = resolved && resolved.provider ? resolved.provider : null;
-  if (!provider) return;
-  if (typeof window.cbSyncResolvedProvider === "function") {
-    window.cbSyncResolvedProvider(provider, resolved.model || null);
-  }
 };
 
 const cbGetChatDisplayName = (chat) => {
@@ -4813,26 +4857,25 @@ function cbRenderChatsList() {
   });
 }
 
-const cbHandleFeatureButtonClick = (key) => {
-  if (key === "connectors") {
-    cbSetAccountView("connectors");
-    cbRenderConnectorsPanel();
-    cbOpenAccountBilling({ view: "connectors" });
+const cbHandleFeatureButtonClick = (featureKey, ev) => {
+  const event = ev || (featureKey && featureKey.currentTarget ? featureKey : null);
+  const key =
+    (typeof featureKey === "string" && featureKey) ||
+    event?.currentTarget?.dataset?.feature ||
+    event?.currentTarget?.dataset?.key ||
+    event?.currentTarget?.id ||
+    "";
+
+  if (["connectors", "account", "manage_connectors", "btn-manage-connectors"].includes(key)) {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    const legacy = document.getElementById("legacy-connectors-panel");
+    if (legacy) legacy.classList.add("hidden");
+    cbSetView("connectors");
     cbCloseMobileSidebar();
     return;
   }
   console.log(`[FEATURE] ${key} placeholder action triggered`);
-};
-
-const cbHandleSidebarView = (viewKey) => {
-  if (!viewKey) return;
-  if (viewKey === "ga4") {
-    cbSwitchMainView("ga4-dashboard");
-  } else if (viewKey === "googleads") {
-    cbSwitchMainView("googleads-dashboard");
-  }
-  cbToggleConnectorsMenu(false);
-  cbCloseMobileSidebar();
 };
 
 function cbApplyFeatureFlags() {
@@ -4840,7 +4883,6 @@ function cbApplyFeatureFlags() {
   buttons.forEach((button) => {
     if (!button) return;
     const featureKey = button.getAttribute("data-sidebar-feature");
-    const isOrchestrator = featureKey === "orchestrator";
     const enabled = featureKey ? Boolean(cbFeatureFlags[featureKey]) : true;
     const pill = button.querySelector(".cb-sidebar-pill");
     if (enabled) {
@@ -4853,11 +4895,7 @@ function cbApplyFeatureFlags() {
       }
     } else {
       button.classList.add("is-disabled");
-      if (!isOrchestrator) {
-        button.setAttribute("disabled", "disabled");
-      } else {
-        button.removeAttribute("disabled");
-      }
+      button.setAttribute("disabled", "disabled");
       button.setAttribute("aria-disabled", "true");
       const tooltip = button.getAttribute("data-sidebar-tooltip") || "Coming soon";
       button.setAttribute("title", tooltip);
@@ -4866,13 +4904,9 @@ function cbApplyFeatureFlags() {
       }
     }
     if (!button.dataset.featureBound) {
-      button.addEventListener("click", () => {
-        if (isOrchestrator) {
-          cbToggleOrchestratorsMenu();
-          return;
-        }
-        if (!button.classList.contains("is-disabled") && featureKey) {
-          cbHandleFeatureButtonClick(featureKey);
+      button.addEventListener("click", (event) => {
+        if (!button.classList.contains("is-disabled")) {
+          cbHandleFeatureButtonClick(featureKey || event, event);
         }
       });
       button.dataset.featureBound = "true";
@@ -4938,19 +4972,6 @@ const setupProjectControls = () => {
   cbRenderProjects();
   cbRenderWorkspaces();
   cbEnsureSidebarMenuOutsideBinding();
-};
-
-const setupContextActivationBindings = () => {
-  const modelSelector = document.getElementById("cb-model-selector");
-  if (modelSelector && !modelSelector.dataset.contextBound) {
-    modelSelector.addEventListener("change", () => cbMarkContextDirty());
-    modelSelector.dataset.contextBound = "true";
-  }
-  const modelSearch = document.getElementById("cb-model-search");
-  if (modelSearch && !modelSearch.dataset.contextBound) {
-    modelSearch.addEventListener("change", () => cbMarkContextDirty());
-    modelSearch.dataset.contextBound = "true";
-  }
 };
 
 const setupDeleteModalHandlers = () => {
@@ -5103,78 +5124,10 @@ function cbHandleStartNewChat() {
   focusChatInput();
 }
 
-const cbGetContextRequest = () => {
-  const providerSelect = document.getElementById("cb-model-selector");
-  const modelSearch = document.getElementById("cb-model-search");
-  const provider = providerSelect?.value ? providerSelect.value.trim() : "auto";
-  const model = modelSearch?.value ? modelSearch.value.trim() : "";
-  const workspaceId = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
-  const payload = { workspaceId, provider };
-  if (model) {
-    payload.model = model;
-  }
-  if (cbCurrentProjectId) {
-    payload.projectId = cbCurrentProjectId;
-  }
-  return payload;
-};
-
-const cbActivateContext = async (payload) => {
-  const response = await fetch(`${API_BASE}/context/activate`, {
-    method: "POST",
-    headers: cbGetAuthHeaders({ "Content-Type": "application/json" }),
-    credentials: "include",
-    body: JSON.stringify(payload || {}),
-  });
-  const data = await safeJson(response);
-  if (!response.ok || data?.ok === false) {
-    if (response.status === 401 || response.status === 403) {
-      clearAuthState({ showOnboarding: true });
-    }
-    const message = data?.error?.message || data?.error || "Unable to activate context.";
-    throw new Error(message);
-  }
-  return data?.context || null;
-};
-
-const cbEnsureActiveContext = async ({ force = false } = {}) => {
-  if (!cbIsAuthenticated()) return null;
-  if (!force && cbActiveContext?.status === "active" && !cbContextDirty) {
-    return cbActiveContext;
-  }
-  if (cbContextActivationPromise) {
-    return cbContextActivationPromise;
-  }
-  const payload = cbGetContextRequest();
-  console.log("[CONTEXT_UI] activating", payload);
-  cbContextActivationPromise = cbActivateContext(payload)
-    .then((context) => {
-      cbActiveContext = context;
-      cbContextDirty = false;
-      console.log("[CONTEXT_UI] activated", {
-        id: context?.id || null,
-        status: context?.status || null,
-        provider: context?.provider || null,
-        model: context?.model || null,
-      });
-      return context;
-    })
-    .finally(() => {
-      cbContextActivationPromise = null;
-    });
-  return cbContextActivationPromise;
-};
-
-const cbMarkContextDirty = () => {
-  cbContextDirty = true;
-  cbActiveContext = null;
-};
-
-async function cbCreateChat(firstMessage, { retry = false } = {}) {
+async function cbCreateChat(firstMessage) {
   if (cbChatsUnsupported) {
     throw new Error("Chat persistence unavailable.");
   }
-  await cbEnsureActiveContext();
   const workspaceKey = cbNormalizeWorkspaceId(cbCurrentWorkspaceId);
   const councilPayload = getCouncilPayload();
   const hasCouncil = Array.isArray(councilPayload.agents) && councilPayload.agents.length > 0;
@@ -5201,11 +5154,6 @@ async function cbCreateChat(firstMessage, { retry = false } = {}) {
   });
   const data = await safeJson(response);
   if (!response.ok) {
-    if (!retry && response.status === 409 && data?.error === "ACTIVE_CONTEXT_REQUIRED") {
-      console.log("[CONTEXT_UI] chat create retry after activation");
-      await cbEnsureActiveContext({ force: true });
-      return cbCreateChat(firstMessage, { retry: true });
-    }
     if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
     if (response.status === 401 || response.status === 403) {
       clearAuthState({ showOnboarding: true });
@@ -5217,7 +5165,6 @@ async function cbCreateChat(firstMessage, { retry = false } = {}) {
     cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ACK);
     cbResetCouncilStatusSoon(councilMembers);
   }
-  cbApplyResolvedProvider(data?.meta);
   const chat = data?.chat;
   if (chat && chat.id) {
     const workspaceId = cbNormalizeWorkspaceId(chat.workspaceId || workspaceKey);
@@ -5237,11 +5184,10 @@ async function cbCreateChat(firstMessage, { retry = false } = {}) {
   return data;
 }
 
-async function cbAppendChatMessage(chatId, content, { retry = false } = {}) {
+async function cbAppendChatMessage(chatId, content) {
   if (cbChatsUnsupported) {
     throw new Error("Chat persistence unavailable.");
   }
-  await cbEnsureActiveContext();
   const councilPayload = getCouncilPayload();
   const hasCouncil = Array.isArray(councilPayload.agents) && councilPayload.agents.length > 0;
   const councilMembers = hasCouncil ? councilPayload.agents.slice() : [];
@@ -5263,11 +5209,6 @@ async function cbAppendChatMessage(chatId, content, { retry = false } = {}) {
   });
   const data = await safeJson(response);
   if (!response.ok) {
-    if (!retry && response.status === 409 && data?.error === "ACTIVE_CONTEXT_REQUIRED") {
-      console.log("[CONTEXT_UI] chat create retry after activation");
-      await cbEnsureActiveContext({ force: true });
-      return cbAppendChatMessage(chatId, content, { retry: true });
-    }
     if (useCouncil) cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ERROR);
     if (response.status === 401 || response.status === 403) {
       clearAuthState({ showOnboarding: true });
@@ -5279,7 +5220,6 @@ async function cbAppendChatMessage(chatId, content, { retry = false } = {}) {
     cbSetCouncilStatus(councilMembers, CB_COUNCIL_STATUS_ACK);
     cbResetCouncilStatusSoon(councilMembers);
   }
-  cbApplyResolvedProvider(data?.meta);
   refreshAccountUsage().catch((error) => console.warn("[USAGE] refresh after chat append failed", error));
   return data;
 }
@@ -5454,8 +5394,6 @@ const setupSidebarInteractions = () => {
     sidebarClose,
     sidebarBackdrop,
     newChatButton,
-    agentsButton,
-    connectorsToggle,
   } = shellElements;
   if (!sidebar) {
     return;
@@ -5513,30 +5451,6 @@ const setupSidebarInteractions = () => {
       closeMobileSidebar();
     });
   }
-  if (agentsButton && !agentsButton.dataset.sidebarAgentsBound) {
-    agentsButton.addEventListener("click", (event) => {
-      event.preventDefault();
-      cbSwitchMainView("agents");
-      cbCloseMobileSidebar();
-    });
-    agentsButton.dataset.sidebarAgentsBound = "true";
-  }
-  if (connectorsToggle && !connectorsToggle.dataset.connectorsBound) {
-    connectorsToggle.addEventListener("click", (event) => {
-      event.preventDefault();
-      cbToggleConnectorsMenu();
-    });
-    connectorsToggle.dataset.connectorsBound = "true";
-  }
-  document.querySelectorAll("[data-sidebar-view]").forEach((button) => {
-    if (button.dataset.sidebarViewBound === "true") return;
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      const viewKey = button.getAttribute("data-sidebar-view");
-      cbHandleSidebarView(viewKey);
-    });
-    button.dataset.sidebarViewBound = "true";
-  });
   setupProjectControls();
   cbApplyFeatureFlags();
   cbApplyResponsiveSidebarState();
@@ -5570,7 +5484,7 @@ const MODAL_IDS = [
   "cb-profile-modal",
   "cb-billing-modal",
   "cb-plan-modal",
-  "cb-account-billing",
+  "legacy-connectors-panel",
   "cb-agent-detail-modal",
   "cb-connector-detail-modal",
   "cb-settings-modal",
@@ -5582,16 +5496,60 @@ let activeModalId = null;
 
 const setModalVisibility = (modal, show) => {
   if (!modal) return;
+  if (modal.id === "legacy-connectors-panel") {
+    if (show) {
+      modal.classList.remove("hidden");
+      modal.setAttribute("aria-hidden", "false");
+    } else {
+      modal.classList.add("hidden");
+      modal.setAttribute("aria-hidden", "true");
+    }
+    return;
+  }
   modal.hidden = !show;
   modal.setAttribute("aria-hidden", show ? "false" : "true");
 };
 
+function cbSetLegacyAccountModalOpen(isOpen, { silentFocus = false } = {}) {
+  const wrap = document.getElementById("legacy-connectors-panel");
+  if (!wrap) return;
+
+  if (isOpen) {
+    wrap.classList.remove("hidden");
+    wrap.hidden = false;
+    wrap.setAttribute("aria-hidden", "false");
+    document.body.classList.add("cb-modal-open");
+    activeModalId = "legacy-connectors-panel";
+  } else {
+    wrap.classList.add("hidden");
+    wrap.hidden = true;
+    wrap.setAttribute("aria-hidden", "true");
+    if (activeModalId === "legacy-connectors-panel") {
+      activeModalId = null;
+    }
+    if (!isAnyModalOpen()) {
+      document.body.classList.remove("cb-modal-open");
+    }
+    if (!silentFocus) {
+      focusChatInput();
+    }
+  }
+}
+
 const isAnyModalOpen = () => MODAL_IDS.some((id) => {
   const el = document.getElementById(id);
-  return el && !el.hidden;
+  if (!el) return false;
+  if (id === "legacy-connectors-panel") {
+    return !el.classList.contains("hidden");
+  }
+  return !el.hidden;
 });
 
 const openModal = (modalId) => {
+  if (modalId === "cb-account-billing") {
+    cbSetLegacyAccountModalOpen(true);
+    return;
+  }
   const modal = document.getElementById(modalId);
   if (!modal) return;
   if (activeModalId && activeModalId !== modalId) {
@@ -5603,6 +5561,10 @@ const openModal = (modalId) => {
 };
 
 const closeModal = (modalId, { silentFocus = false } = {}) => {
+  if (modalId === "cb-account-billing" || modalId === "legacy-connectors-panel") {
+    cbSetLegacyAccountModalOpen(false, { silentFocus });
+    return;
+  }
   const modal = document.getElementById(modalId);
   if (!modal) return;
   if (modalId === "cb-project-modal") {
@@ -6081,6 +6043,7 @@ const cbUpdateConnectorState = (key, partial = {}) => {
     status: "unknown",
     customerId: null,
     customerName: null,
+    loginCustomerId: null,
     propertyId: null,
     lastSyncAt: null,
     lastError: null,
@@ -6101,6 +6064,7 @@ const cbFetchConnectorStatusGoogleAds = async () => {
   if (ok && json) {
     const customerId = json.customerId || json.customer_id || null;
     const customerName = json.customerName || json.customer_name || null;
+    const loginCustomerId = json.loginCustomerId || json.login_customer_id || null;
     const lastSync =
       json.lastSyncAt || json.last_sync_at || json.lastSync || null;
     cbUpdateConnectorState("googleads", {
@@ -6111,9 +6075,13 @@ const cbFetchConnectorStatusGoogleAds = async () => {
         : "disconnected",
       customerId,
       customerName,
+      loginCustomerId,
       lastSyncAt: lastSync,
       lastError: json.error ? String(json.error) : null,
     });
+    if (loginCustomerId) {
+      cbSetConnectorStorage("googleads", "managerId", loginCustomerId);
+    }
     return;
   }
   let lastError = "Unable to fetch status.";
@@ -6160,6 +6128,12 @@ const cbFetchConnectorStatusGa4 = async () => {
 };
 
 const cbRefreshConnectorStatuses = async () => {
+  if (!cbConnectorsAuthState.loaded) {
+    await cbEnsureConnectorsAuth();
+  }
+  if (!cbConnectorsAuthState.authed) {
+    return;
+  }
   await cbFetchConnectorStatusGoogleAds();
   await cbFetchConnectorStatusGa4();
 };
@@ -6259,6 +6233,7 @@ const cbHandleGoogleAdsDisconnect = async () => {
       status: "disconnected",
       customerId: null,
       customerName: null,
+      loginCustomerId: null,
       lastSyncAt: null,
       lastError: null,
     });
@@ -6340,7 +6315,6 @@ const cbLoadGoogleAdsCustomers = async () => {
   if (!connector || !connector.apiBase) return;
   cbConnectorDetailState.googleAdsLoading = true;
   cbConnectorDetailState.googleAdsError = null;
-  cbConnectorDetailState.googleAdsReconnect = false;
   cbRenderConnectorDetail(connector);
   const { ok, json, status } = await cbFetchJson(`${connector.apiBase}/customers`);
   if (ok && json && Array.isArray(json.customers)) {
@@ -6348,11 +6322,7 @@ const cbLoadGoogleAdsCustomers = async () => {
     cbConnectorDetailState.googleAdsError = null;
   } else {
     cbConnectorDetailState.googleAdsCustomers = [];
-    cbConnectorDetailState.googleAdsReconnect = json?.error === "googleads_auth_failed";
     const message =
-      (cbConnectorDetailState.googleAdsReconnect
-        ? "Google Ads authorization expired. Please reconnect."
-        : null) ||
       (json && (json.error || json.message)) ||
       (status === 401 ? "Please sign in to view Google Ads accounts." : "Unable to load Google Ads accounts.");
     cbConnectorDetailState.googleAdsError = message;
@@ -6367,13 +6337,19 @@ const cbSaveGoogleAdsCustomer = async (customerId) => {
   cbConnectorDetailState.googleAdsLoading = true;
   cbConnectorDetailState.googleAdsError = null;
   cbRenderConnectorDetail(connector);
+  const managerId =
+    cbGetConnectorStorage("googleads", "managerId", null) ||
+    cbConnectorState?.googleads?.loginCustomerId ||
+    null;
+  const body = managerId ? { customerId, loginCustomerId: managerId } : { customerId };
   const { ok, json, status } = await cbFetchJson(`${connector.apiBase}/customer`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ customerId }),
+    body: JSON.stringify(body),
   });
   if (ok) {
-    cbUpdateConnectorState("googleads", { customerId, status: "connected" });
+    const loginCustomerId = json?.loginCustomerId || json?.login_customer_id || managerId || null;
+    cbUpdateConnectorState("googleads", { customerId, loginCustomerId, status: "connected" });
     cbConnectorDetailState.googleAdsError = null;
     cbRefreshConnectorStatuses();
   } else {
@@ -6911,22 +6887,22 @@ const cbRenderAgentDetail = (agent) => {
   if (summaryEl) summaryEl.textContent = agent.shortDescription || "";
   if (workspaceChip) workspaceChip.textContent = workspaceLabel;
   if (statusChip) {
-    statusChip.textContent = "Preview only";
-    statusChip.classList.add("cb-chip-preview");
+    if (agent.key === "ceo" || agent.key === "cmo") {
+      statusChip.textContent = "Active soon";
+      statusChip.classList.remove("cb-chip-preview");
+    } else {
+      statusChip.textContent = "Preview only";
+      statusChip.classList.add("cb-chip-preview");
+    }
   }
   if (promptEl) {
-    const lines = [];
-    if (agent.shortDescription) lines.push(agent.shortDescription);
-    if (Array.isArray(agent.capabilities) && agent.capabilities.length) {
-      lines.push(`Capabilities: ${agent.capabilities.join(", ")}`);
+    if (agent.key === "ceo") {
+      promptEl.value = "- Represent executive priorities and ROI.\n- Surface risks and trade-offs clearly.\n- Keep responses concise and directive.";
+    } else if (agent.key === "cmo") {
+      promptEl.value = "- Focus on paid media and performance marketing.\n- Prioritize Google Ads plus Meta/TikTok/LinkedIn insights.\n- Be actionable on budgets, audiences, and creative tests.";
+    } else {
+      promptEl.value = `System prompt for ${agent.label || agent.key}\n\nThis is a preview-only configuration. In production, this prompt will guide the agent on:\n- Role and scope\n- Guardrails and escalation rules\n- Data sources and access`;
     }
-    if (Array.isArray(agent.connectors) && agent.connectors.length) {
-      lines.push(`Connectors: ${agent.connectors.join(", ")}`);
-    }
-    promptEl.value =
-      lines.length > 0
-        ? lines.join("\n")
-        : `System prompt for ${agent.label || agent.key}`;
   }
   cbPopulateAgentModelSelect(modelSelect);
 
@@ -7144,10 +7120,9 @@ const cbRenderAgentDetail = (agent) => {
 };
 
 function cbOpenAgentDetail(workspaceKey, agentKey) {
-  const canonAgent =
-    cbGetCanonAgentById(agentKey) ||
-    cbFindAgentByKey(agentKey, workspaceKey || cbCurrentWorkspaceId);
-  const agent = canonAgent ? cbBuildUiAgentFromCanon(canonAgent) : null;
+  const agent =
+    cbFindAgentByKey(agentKey, workspaceKey || cbCurrentWorkspaceId) ||
+    cbFindAgentByKey(agentKey);
   if (!agent) {
     console.warn("[CB_AGENT_DETAIL] Agent not found", workspaceKey, agentKey);
     return;
@@ -7242,7 +7217,6 @@ const cbConnectorDetailState = {
   googleAdsCustomers: [],
   googleAdsLoading: false,
   googleAdsError: null,
-  googleAdsReconnect: false,
 };
 
 const cbRenderConnectorDetail = (connector) => {
@@ -7396,14 +7370,6 @@ const cbRenderConnectorDetail = (connector) => {
           err.className = "cb-form-error";
           err.textContent = cbConnectorDetailState.googleAdsError;
           accountLine.appendChild(err);
-          if (cbConnectorDetailState.googleAdsReconnect) {
-            const reconnectBtn = document.createElement("button");
-            reconnectBtn.type = "button";
-            reconnectBtn.className = "btn btn-primary";
-            reconnectBtn.textContent = "Reconnect Google Ads";
-            reconnectBtn.addEventListener("click", () => cbHandleGoogleAdsConnect());
-            accountLine.appendChild(reconnectBtn);
-          }
         } else if (!loading && !customers.length) {
           const none = document.createElement("p");
           none.className = "cb-modal-note";
@@ -7796,7 +7762,7 @@ const cbOpenAccountBilling = async ({ view = "overview" } = {}) => {
   cbSetAccountView(view);
   cbRenderConnectorsPanel();
    cbRefreshConnectorStatuses();
-  openModal("cb-account-billing");
+  cbSetLegacyAccountModalOpen(true);
   cbRenderAccountBilling(cbLatestBillingSummary, {
     loading: cbAccountBillingState.loading || !cbLatestBillingSummary,
   });
@@ -8346,6 +8312,22 @@ const setupGuestHintHandlers = () => {
   });
 };
 
+const setupCouncilModalHandlers = () => {
+  const closeButtons = document.querySelectorAll(
+    '[data-modal-id="cb-council-popover"], .cb-council-close-btn'
+  );
+  closeButtons.forEach((button) => {
+    if (button.dataset.councilCloseBound === "true") {
+      return;
+    }
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      cbOnCouncilModalClose();
+    });
+    button.dataset.councilCloseBound = "true";
+  });
+};
+
 const setupCouncilControls = () => {
   const button = shellElements.councilButton;
   if (button && button.dataset.councilBound !== "true") {
@@ -8355,7 +8337,8 @@ const setupCouncilControls = () => {
     });
     button.dataset.councilBound = "true";
   }
-  cbLoadCanon();
+  setupCouncilModalHandlers();
+  cbRenderCouncilList();
   cbInitCouncilChip();
   cbSyncCouncilUI();
 };
@@ -8388,6 +8371,1625 @@ const cbSwitchMainView = (view) => {
     cbEnsureAgentsViewInitialized();
   }
 };
+
+function cbGetView() {
+  const u = new URL(window.location.href);
+  return u.searchParams.get("view") || "chat";
+}
+
+function cbSetView(view, extra = {}) {
+  const u = new URL(window.location.href);
+  u.searchParams.set("view", view);
+  if (view !== "connectors") {
+    u.searchParams.delete("connector");
+    u.searchParams.delete("tab");
+  }
+  for (const [k, v] of Object.entries(extra)) {
+    if (v === null || v === undefined || v === "") u.searchParams.delete(k);
+    else u.searchParams.set(k, String(v));
+  }
+  cbSafePushUrl(u.toString());
+  cbRoute();
+}
+
+function cbRoute() {
+  const view = cbGetView();
+  const connRoot = document.getElementById("cb-connectors-view");
+
+  if (view === "connectors") {
+    if (connRoot) connRoot.classList.remove("hidden");
+    cbSwitchMainView("connectors");
+    if (window.__CB_DEBUG_CONNECTORS) {
+      console.info("[connectors] url", window.location.href);
+    }
+    console.info("[connectors] registry", CONNECTORS_REGISTRY?.length, CONNECTORS_REGISTRY?.map((c) => c.key || c.id || c.name));
+    if (!CB_CONNECTOR_TABS.includes(cbGetConnectorTab()) && cbConnectorsUiState.filter && !["all", "connected", "available", "soon"].includes(cbConnectorsUiState.filter)) {
+      cbConnectorsUiState.filter = "all";
+    }
+    cbEnsureConnectorsViewReady();
+    cbSetLegacyAccountModalOpen(false, { silentFocus: true });
+    return;
+  }
+
+  if (connRoot) connRoot.classList.add("hidden");
+  cbSwitchMainView("chat");
+}
+
+window.addEventListener("popstate", () => {
+  cbRoute();
+});
+
+async function cbApiJson(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "content-type": "application/json" },
+    credentials: "include",
+    ...opts,
+  });
+
+  window.__cbLastConnectorCall = { url, status: res.status };
+
+  const text = await res.text();
+  let json = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch (_) {}
+
+  if (!res.ok) {
+    const err = new Error((json && (json.error || json.message)) || `HTTP ${res.status}`);
+    err.status = res.status;
+    err.body = json || text;
+    throw err;
+  }
+  return json;
+}
+
+function cbGroupBy(arr, key) {
+  const m = new Map();
+  for (const x of arr) {
+    const k = x[key] || "Other";
+    if (!m.has(k)) m.set(k, []);
+    m.get(k).push(x);
+  }
+  return m;
+}
+
+const CB_CONNECTOR_TABS = ["setup", "data", "output"];
+const cbConnectorsUiState = {
+  search: "",
+  filter: "all",
+};
+
+const cbConnectorsAuthState = {
+  loaded: false,
+  loading: false,
+  authed: false,
+  user: null,
+  error: null,
+  statusLoaded: false,
+};
+
+const CB_CONNECTOR_RUNS_MAX = 20;
+
+function cbToYmd(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+}
+
+function cbGetRangeFromKey(rangeKey) {
+  const normalized = String(rangeKey || "LAST_30_DAYS").toUpperCase();
+  const days = normalized === "LAST_7_DAYS" ? 7 : normalized === "LAST_90_DAYS" ? 90 : 30;
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - (days - 1));
+  return {
+    from: cbToYmd(start),
+    to: cbToYmd(end),
+    label: `${days}d`,
+  };
+}
+
+function cbFormatNumber(value, decimals = 0) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}
+
+function cbFormatPercent(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  return `${(value * 100).toFixed(2)}%`;
+}
+
+function cbFormatCurrency(value, currency) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "—";
+  const symbol = CURRENCY_SYMBOLS[currency] || `${currency} `;
+  return `${symbol}${cbFormatNumber(value, 2)}`;
+}
+
+function cbGetConnectorRuns(connectorKey) {
+  const runs = cbGetConnectorStorage(connectorKey, "runs", []);
+  return Array.isArray(runs) ? runs : [];
+}
+
+function cbAddConnectorRun(connectorKey, run) {
+  const runs = cbGetConnectorRuns(connectorKey);
+  runs.unshift(run);
+  const trimmed = runs.slice(0, CB_CONNECTOR_RUNS_MAX);
+  cbSetConnectorStorage(connectorKey, "runs", trimmed);
+  return trimmed;
+}
+
+async function cbEnsureConnectorsAuth() {
+  if (cbConnectorsAuthState.loading || cbConnectorsAuthState.loaded) {
+    return cbConnectorsAuthState;
+  }
+  cbConnectorsAuthState.loading = true;
+  cbConnectorsAuthState.error = null;
+  const { ok, status, json } = await cbFetchJson(API_AUTH_ME);
+  if (ok && json) {
+    const payload = json.user && typeof json.user === "object" ? json.user : json;
+    cbConnectorsAuthState.authed = true;
+    cbConnectorsAuthState.user = payload || null;
+  } else {
+    cbConnectorsAuthState.authed = false;
+    cbConnectorsAuthState.user = null;
+    if (status && status !== 401 && status !== 403) {
+      cbConnectorsAuthState.error = `auth_${status}`;
+    }
+  }
+  cbConnectorsAuthState.loading = false;
+  cbConnectorsAuthState.loaded = true;
+  return cbConnectorsAuthState;
+}
+
+function cbNeedsConnectorsAuth() {
+  return (cbConnectorsAuthState.loading || cbConnectorsAuthState.loaded) && !cbConnectorsAuthState.authed;
+}
+
+async function cbEnsureConnectorsViewReady() {
+  cbRenderConnectorsShell();
+  const state = await cbEnsureConnectorsAuth();
+  if (state.authed && !state.statusLoaded) {
+    await cbRefreshConnectorStatuses();
+    cbConnectorsAuthState.statusLoaded = true;
+  }
+  cbRenderConnectorsShell();
+}
+
+function cbGetWorkspaceStorageKey() {
+  if (typeof cbCurrentWorkspaceId === "string" && cbCurrentWorkspaceId.trim()) {
+    return cbCurrentWorkspaceId.trim();
+  }
+  const labelEl = document.getElementById("cb-workspace-current-label");
+  const label = labelEl ? labelEl.textContent.trim().toLowerCase() : "";
+  if (label) return label.replace(/\s+/g, "-");
+  return "default";
+}
+
+function cbGetConnectorStorageKey(connectorKey, suffix) {
+  const workspaceId = cbGetWorkspaceStorageKey();
+  return `cbx.conn.${workspaceId}.${connectorKey}.${suffix}`;
+}
+
+function cbSetConnectorStorage(connectorKey, suffix, value) {
+  try {
+    const key = cbGetConnectorStorageKey(connectorKey, suffix);
+    if (value === null || value === undefined) {
+      window.localStorage.removeItem(key);
+    } else {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    }
+  } catch (error) {
+    console.warn("[connectors] storage write failed", error);
+  }
+}
+
+function cbGetConnectorStorage(connectorKey, suffix, fallback = null) {
+  try {
+    const key = cbGetConnectorStorageKey(connectorKey, suffix);
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (error) {
+    console.warn("[connectors] storage read failed", error);
+    return fallback;
+  }
+}
+
+function cbIsConnectorConnected(connectorKey) {
+  const connected = cbGetConnectorStorage(connectorKey, "connected", false);
+  const account = cbGetConnectorStorage(connectorKey, "account", null);
+  if (connectorKey === "googleads") {
+    return Boolean(connected && account && account.customerId);
+  }
+  return Boolean(connected);
+}
+
+function cbNormConnectorStatus(value) {
+  const v = String(value || "").trim().toLowerCase();
+  if (!v) return "available";
+  if (v === "available" || v === "connected" || v === "soon") return v;
+  if (v === "coming" || v === "comingsoon" || v === "coming_soon" || v === "coming-soon") return "soon";
+  return "available";
+}
+
+function cbGetConnectorStatus(conn) {
+  const state = cbConnectorState && cbConnectorState[conn.key];
+  if (state && String(state.status).toLowerCase() === "connected") {
+    return "connected";
+  }
+  if (conn.key === "googleads" && cbIsConnectorConnected(conn.key)) {
+    return "connected";
+  }
+  if (conn.disabled) return "soon";
+  return cbNormConnectorStatus(conn.status);
+}
+
+function cbGetConnectorCategory(conn) {
+  return conn.category || conn.group || "Other";
+}
+
+function cbGetScopeTags(scopes = []) {
+  const map = {
+    personal: "P",
+    business: "B",
+    agency: "A",
+    dev: "D",
+  };
+  return scopes.map((scope) => map[scope] || scope.slice(0, 1).toUpperCase());
+}
+
+function cbSetConnectorViewParams(connectorKey, tab) {
+  cbSetConnUrl(connectorKey || null, tab || null);
+  cbRoute();
+}
+
+function cbGetConnectorParam() {
+  const u = new URL(window.location.href);
+  return u.searchParams.get("connector") || "";
+}
+
+function cbGetConnectorTab() {
+  const u = new URL(window.location.href);
+  const tab = u.searchParams.get("tab");
+  return CB_CONNECTOR_TABS.includes(tab) ? tab : "";
+}
+
+function cbGetConnKeyFromUrl() {
+  const u = new URL(window.location.href);
+  const key = u.searchParams.get("connector") || "";
+  if (!key) return "";
+  return CONNECTORS_REGISTRY.some((c) => c.key === key) ? key : "";
+}
+
+function cbGetConnTabFromUrl(connectorKey) {
+  if (!connectorKey) return "";
+  const u = new URL(window.location.href);
+  const tab = u.searchParams.get("tab");
+  return CB_CONNECTOR_TABS.includes(tab) ? tab : "setup";
+}
+
+function cbSetConnUrl(connectorKey, tab) {
+  const u = new URL(window.location.href);
+  u.searchParams.set("view", "connectors");
+  if (!connectorKey) {
+    u.searchParams.delete("connector");
+    u.searchParams.delete("tab");
+  } else {
+    u.searchParams.set("connector", connectorKey);
+    u.searchParams.set("tab", tab || "setup");
+  }
+  cbSafePushUrl(u.toString());
+}
+
+function cbOpenConnector(key, tab = "setup") {
+  cbSetConnUrl(key, tab);
+  cbRenderConnectorsShell();
+}
+
+function cbRenderConnectorsHome(selectedKey = "") {
+  const listEl = document.getElementById("cbx-connectors-list");
+  const filterWrap = document.getElementById("cbx-conn-filters");
+  const searchEl = document.getElementById("cbx-conn-search");
+  if (!listEl) return;
+  const needsAuth = cbNeedsConnectorsAuth();
+  const authNotice = needsAuth
+    ? `<div class="cbx-empty">${cbConnectorsAuthState.loading ? "Checking sign-in..." : "Sign in to view connectors."}</div>`
+    : "";
+
+  const registry = Array.isArray(CONNECTORS_REGISTRY) ? CONNECTORS_REGISTRY : [];
+  if (!registry.length) {
+    console.warn("[connectors] registry empty or missing");
+    listEl.innerHTML = authNotice || `<div class="cbx-empty">No connectors available.</div>`;
+    return;
+  }
+
+  if (searchEl && searchEl.dataset.bound !== "true") {
+    searchEl.addEventListener("input", (event) => {
+      cbConnectorsUiState.search = event.target.value || "";
+      cbRenderConnectorsHome(cbGetConnectorParam());
+    });
+    searchEl.dataset.bound = "true";
+  }
+  if (searchEl) {
+    searchEl.value = cbConnectorsUiState.search;
+  }
+
+  const filters = [
+    { key: "all", label: "All" },
+    { key: "connected", label: "Connected" },
+    { key: "available", label: "Available" },
+    { key: "soon", label: "Soon" },
+  ];
+
+  if (filterWrap) {
+    filterWrap.innerHTML = filters
+      .map((filter) => {
+        const isActive = cbConnectorsUiState.filter === filter.key;
+        return `<button class="cbx-filter${isActive ? " is-active" : ""}" data-filter="${filter.key}" type="button">${filter.label}</button>`;
+      })
+      .join("");
+
+    if (filterWrap.dataset.bound !== "true") {
+      filterWrap.addEventListener("click", (event) => {
+        const btn = event.target.closest("[data-filter]");
+        if (!btn) return;
+        cbConnectorsUiState.filter = btn.getAttribute("data-filter") || "all";
+        cbRenderConnectorsHome(cbGetConnectorParam());
+      });
+      filterWrap.dataset.bound = "true";
+    }
+  }
+
+  const query = cbConnectorsUiState.search.trim().toLowerCase();
+  const filtered = registry.filter((conn) => {
+    const status = cbNormConnectorStatus(cbGetConnectorStatus(conn));
+    const matchesFilter =
+      cbConnectorsUiState.filter === "all" ||
+      cbConnectorsUiState.filter === status;
+    const matchesQuery =
+      !query ||
+      conn.label.toLowerCase().includes(query) ||
+      (conn.description || "").toLowerCase().includes(query);
+    return matchesFilter && matchesQuery;
+  });
+
+  if (!filtered.length && registry.length && cbConnectorsUiState.filter !== "all") {
+    cbConnectorsUiState.filter = "all";
+    return cbRenderConnectorsHome(selectedKey);
+  }
+
+  const byCategory = cbGroupBy(filtered, "category");
+  let html = "";
+
+  for (const [category, items] of byCategory.entries()) {
+    html += `<div class="cbx-group">${category}</div>`;
+    for (const conn of items) {
+      const status = cbGetConnectorStatus(conn);
+      const isSelected = selectedKey === conn.key;
+      const tags = cbGetScopeTags(conn.scopes || []);
+      const account = conn.key === "googleads" ? cbGetConnectorStorage(conn.key, "account", null) : null;
+      const accountLine = account && account.customerId ? `Active: ${account.customerName || "Account"} (${account.customerId})` : "";
+      const buttonLabel = needsAuth ? "Sign in" : status === "soon" ? "Soon" : "Configure";
+      const buttonDisabled = needsAuth || status === "soon" ? "disabled" : "";
+      html += `
+        <div class="cbx-row${isSelected ? " is-active" : ""}" data-conn-key="${conn.key}">
+          <div>
+            <div class="cbx-row-title">${conn.label}</div>
+            <div class="cbx-row-desc">${conn.description || ""}</div>
+            ${accountLine ? `<div class="cbx-row-desc">${accountLine}</div>` : ""}
+          </div>
+          <div class="cbx-row-meta">
+            <div class="cbx-tags">${tags.map((tag) => `<span class="cbx-tag">${tag}</span>`).join("")}</div>
+            <span class="cbx-status cbx-status-${status}">${status === "soon" ? "Soon" : status === "connected" ? "Connected" : "Available"}</span>
+            <button class="cbx-btn" data-configure="${conn.key}" ${buttonDisabled}>${buttonLabel}</button>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  listEl.innerHTML = authNotice + (html || `<div class="cbx-empty">No connectors found.</div>`);
+
+  listEl.querySelectorAll("[data-configure]").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const key = btn.getAttribute("data-configure");
+      if (!key) return;
+      cbOpenConnector(key);
+    });
+  });
+
+  listEl.querySelectorAll("[data-conn-key]").forEach((row) => {
+    row.addEventListener("click", () => {
+      const key = row.getAttribute("data-conn-key");
+      if (!key) return;
+      cbOpenConnector(key);
+    });
+  });
+}
+
+function cbRenderConnectorsShell() {
+  const connectorKey = cbGetConnKeyFromUrl();
+  const tab = cbGetConnTabFromUrl(connectorKey);
+  cbRenderConnectorsHome(connectorKey);
+
+  if (!connectorKey) {
+    const u = new URL(window.location.href);
+    if (u.searchParams.has("tab")) {
+      cbSetConnUrl(null, null);
+    }
+    cbRenderConnectorsDetailPanel("", "");
+    return;
+  }
+
+  cbRenderConnectorsDetailPanel(connectorKey, tab);
+}
+
+function cbRenderConnectorsDetailPanel(connectorKey, tabKey) {
+  const detailEl = document.getElementById("cbx-connectors-detail");
+  const shell = document.getElementById("cb-connectors-shell");
+  if (!detailEl) return;
+  if (cbNeedsConnectorsAuth()) {
+    if (shell) shell.classList.remove("cbx-detail-open");
+    detailEl.innerHTML = `<div class="cbx-empty">Sign in to view connectors.</div>`;
+    return;
+  }
+
+  if (!connectorKey) {
+    if (shell) shell.classList.remove("cbx-detail-open");
+    detailEl.innerHTML = `<div class="cbx-empty">Select a connector to configure.</div>`;
+    return;
+  }
+
+  const conn = CONNECTORS_REGISTRY.find((item) => item.key === connectorKey);
+  if (!conn) {
+    if (shell) shell.classList.remove("cbx-detail-open");
+    detailEl.innerHTML = `<div class="cbx-empty">Connector not found.</div>`;
+    return;
+  }
+
+  if (shell) shell.classList.add("cbx-detail-open");
+  const status = cbGetConnectorStatus(conn);
+  const state = cbConnectorState?.[conn.key] || {};
+  const lastSync = state.lastSyncAt ? new Date(state.lastSyncAt) : null;
+  const lastSyncLabel = lastSync && !Number.isNaN(lastSync.getTime()) ? lastSync.toLocaleString() : "—";
+  const errorNote = state.lastError ? `<div class="cbx-log">${state.lastError}</div>` : "";
+  const tab = CB_CONNECTOR_TABS.includes(tabKey) ? tabKey : "setup";
+
+  const tabsHtml = CB_CONNECTOR_TABS.map((tabName) => {
+    const isActive = tabName === tab;
+    return `<button class="cbx-tab${isActive ? " is-active" : ""}" data-tab="${tabName}" type="button">${tabName[0].toUpperCase() + tabName.slice(1)}</button>`;
+  }).join("");
+
+  const connectControls = conn.oauthStart
+    ? `
+      <div class="cbx-section">
+        <div class="cbx-section-title">Connect</div>
+        <div class="cbx-row-compact">
+          <button id="cbx-conn-connect" class="cbx-btn" type="button">Connect</button>
+          <button id="cbx-conn-disconnect" class="cbx-btn" type="button" ${status === "connected" ? "" : "disabled"}>Disconnect</button>
+          <span id="cbx-conn-connect-note" class="cbx-log"></span>
+        </div>
+      </div>
+    `
+    : `
+      <div class="cbx-section">
+        <div class="cbx-section-title">Setup</div>
+        <div class="cbx-log">Setup workflow will appear here.</div>
+      </div>
+    `;
+
+  const setupContent = conn.key === "googleads"
+    ? `
+      ${connectControls}
+      <div class="cbx-section">
+        <div class="cbx-section-title">Choose account</div>
+        <div class="cbx-row-compact">
+          <input id="cbx-conn-mcc" class="cbx-input" type="text" inputmode="numeric" placeholder="MCC (manager) ID" />
+          <button id="cbx-conn-load" class="cbx-btn" type="button">Load clients</button>
+        </div>
+        <div class="cbx-row-compact">
+          <select id="cbx-conn-accounts" class="cbx-input">
+            <option value="">Load accounts…</option>
+          </select>
+          <button id="cbx-conn-save" class="cbx-btn" type="button">Save</button>
+        </div>
+        <div id="cbx-conn-accounts-note" class="cbx-log"></div>
+        <div id="cbx-conn-shape-note" class="cbx-log"></div>
+        <div id="cbx-conn-active" class="cbx-log"></div>
+      </div>
+    `
+    : `
+      ${connectControls}
+    `;
+
+  const baseReportBuilder = `
+    <div class="cbx-section">
+      <div class="cbx-section-title">Report builder</div>
+      <div class="cbx-row-compact">
+        <select class="cbx-input" id="cbx-report-type">
+          <option value="campaign">Campaigns</option>
+          <option value="ad_group">Ad groups</option>
+          <option value="search_term_view">Search terms</option>
+          <option value="asset_group">PMax asset groups</option>
+        </select>
+        <select class="cbx-input" id="cbx-date-range">
+          <option value="LAST_7_DAYS">Last 7 days</option>
+          <option value="LAST_30_DAYS">Last 30 days</option>
+          <option value="LAST_90_DAYS">Last 90 days</option>
+          <option value="CUSTOM" disabled>Custom (soon)</option>
+        </select>
+        <label class="cbx-log"><input type="checkbox" id="cbx-compare-toggle" /> Compare previous</label>
+      </div>
+      <div class="cbx-row-compact">
+        <button id="cbx-conn-fetch" class="cbx-btn" type="button">Fetch</button>
+        <div id="cbx-data-note" class="cbx-log"></div>
+      </div>
+    </div>
+    <div class="cbx-section">
+      <div class="cbx-section-title">Presets</div>
+      <div class="cbx-row-compact" id="cbx-data-packs">
+        <button class="cbx-chip" data-preset="overview" type="button">Overview</button>
+        <button class="cbx-chip" data-preset="campaigns" type="button">Campaigns</button>
+        <button class="cbx-chip" data-preset="search_terms" type="button">Search terms</button>
+        <button class="cbx-chip" data-preset="pmax_asset_groups" type="button">PMax asset groups</button>
+      </div>
+    </div>
+    <div class="cbx-section" id="cbx-gads-fields">
+      <div class="cbx-section-title">More data</div>
+      <div class="cbx-row-compact">
+        <button id="cbx-gads-fields-open" class="cbx-btn" type="button">More data</button>
+        <div id="cbx-gads-fields-note" class="cbx-log"></div>
+      </div>
+      <div id="cbx-gads-fields-drawer" class="cbx-section" hidden>
+        <div class="cbx-row-compact">
+          <input id="cbx-gads-fields-search" class="cbx-input" type="search" placeholder="Search metrics" />
+        </div>
+        <div id="cbx-gads-fields-list" class="cbx-log"></div>
+        <div id="cbx-gads-fields-error" class="cbx-log"></div>
+        <div class="cbx-row-compact">
+          <button id="cbx-gads-fields-apply" class="cbx-btn" type="button">Apply</button>
+          <button id="cbx-gads-fields-reset" class="cbx-btn" type="button">Reset defaults</button>
+          <button id="cbx-gads-fields-close" class="cbx-btn" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const dataContent = conn.key === "googleads"
+    ? `
+      ${baseReportBuilder}
+      <div id="cbx-data-error" class="cbx-log"></div>
+      <div class="cbx-section">
+        <div class="cbx-section-title">KPIs</div>
+        <div id="cbx-data-kpis" class="cbx-row-compact"></div>
+      </div>
+      <div class="cbx-section">
+        <div class="cbx-section-title">Top campaigns</div>
+        <div id="cbx-data-campaigns" class="cbx-log">No data yet.</div>
+      </div>
+    `
+    : baseReportBuilder;
+
+  const outputContent = conn.key === "googleads"
+    ? `
+      <div class="cbx-section">
+        <div class="cbx-section-title">Run output</div>
+        <div class="cbx-row-compact">
+          <button id="cbx-conn-run" class="cbx-btn" type="button">Run now</button>
+          <button id="cbx-conn-save-snap" class="cbx-btn" type="button">Save Snapshot</button>
+          <button id="cbx-conn-copy" class="cbx-btn" type="button">Copy payload</button>
+        </div>
+        <div id="cbx-conn-log" class="cbx-log">Last call: —</div>
+        <pre id="cbx-conn-output" class="cbx-pre"></pre>
+      </div>
+      <div class="cbx-section">
+        <div class="cbx-section-title">Run history</div>
+        <div id="cbx-conn-history" class="cbx-log">No runs yet.</div>
+      </div>
+      <div class="cbx-section">
+        <div class="cbx-section-title">Snapshots</div>
+        <div id="cbx-conn-snapshots" class="cbx-log">No snapshots yet.</div>
+      </div>
+    `
+    : `
+    <div class="cbx-section">
+      <div class="cbx-section-title">Run output</div>
+      <div class="cbx-row-compact">
+        <button id="cbx-conn-run" class="cbx-btn" type="button">Run now</button>
+        <button id="cbx-conn-save-snap" class="cbx-btn" type="button">Save Current Snapshot</button>
+        <button id="cbx-conn-copy" class="cbx-btn" type="button">Copy payload</button>
+      </div>
+      <div class="cbx-row-compact">
+        <label class="cbx-log"><input type="checkbox" id="cbx-run-insights" /> Generate Insights</label>
+        <label class="cbx-log"><input type="checkbox" id="cbx-run-council" /> Send to Council</label>
+      </div>
+      <div id="cbx-conn-log" class="cbx-log">Last call: —</div>
+      <pre id="cbx-conn-output" class="cbx-pre"></pre>
+    </div>
+    `;
+  detailEl.innerHTML = `
+    <div class="cbx-detail-card">
+      <div class="cbx-detail-header">
+        <button class="cbx-back" type="button" data-conn-back>Back to Connectors</button>
+        <div>
+          <div class="cbx-detail-title">${conn.label}</div>
+          <div class="cbx-detail-sub">
+            <span class="cbx-status cbx-status-${status}">${status === "soon" ? "Soon" : status === "connected" ? "Connected" : "Available"}</span>
+            <span>Last sync: ${lastSyncLabel}</span>
+          </div>
+          ${errorNote}
+        </div>
+        <button class="cbx-close" type="button" data-conn-close>×</button>
+      </div>
+      <div class="cbx-tabs">${tabsHtml}</div>
+      <div class="cbx-detail-body">
+        <div data-tab-panel="setup" ${tab === "setup" ? "" : "hidden"}>${setupContent}</div>
+        <div data-tab-panel="data" ${tab === "data" ? "" : "hidden"}>${dataContent}</div>
+        <div data-tab-panel="output" ${tab === "output" ? "" : "hidden"}>${outputContent}</div>
+      </div>
+    </div>
+  `;
+
+  detailEl.querySelectorAll("[data-conn-back],[data-conn-close]").forEach((btn) => {
+    btn.addEventListener("click", () => cbSetConnectorViewParams(null, null));
+  });
+
+  detailEl.querySelectorAll("[data-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const nextTab = btn.getAttribute("data-tab");
+      cbSetConnectorViewParams(conn.key, nextTab);
+    });
+  });
+
+  detailEl.querySelectorAll("[data-tab-panel]").forEach((panel) => {
+    panel.hidden = panel.getAttribute("data-tab-panel") !== tab;
+  });
+
+  if (tab === "data") {
+    if (conn.key === "googleads") {
+      cbBindGoogleAdsData(conn);
+    } else {
+      detailEl.querySelectorAll(".cbx-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          chip.classList.toggle("is-active");
+        });
+      });
+    }
+  }
+
+  if (tab === "setup" && conn.oauthStart) {
+    cbBindConnectorSetup(conn);
+  }
+
+  if (tab === "output") {
+    if (conn.key === "googleads") {
+      cbBindGoogleAdsOutput(conn);
+    } else {
+      cbBindConnectorOutput(conn);
+    }
+  }
+}
+
+const GOOGLEADS_CAMPAIGNS_FIELDS_FALLBACK = {
+  preset: "campaigns",
+  defaults: [
+    "spend",
+    "impressions",
+    "clicks",
+    "conversions",
+    "conv_value",
+    "roas",
+    "cost_per_conv",
+    "conv_rate",
+  ],
+  fields: [
+    { id: "spend", label: "Spend", type: "currency", group: "Performance", syn: ["cost", "ad spend"] },
+    { id: "impressions", label: "Impressions", type: "number", group: "Performance", syn: ["impr"] },
+    { id: "clicks", label: "Clicks", type: "number", group: "Performance" },
+    { id: "ctr", label: "CTR", type: "percent", group: "Rates", syn: ["click through"] },
+    { id: "avg_cpc", label: "Avg CPC", type: "currency", group: "Rates", syn: ["cpc"] },
+    { id: "cpm", label: "CPM", type: "currency", group: "Rates" },
+    { id: "conversions", label: "Conversions", type: "number", group: "Conversions" },
+    { id: "conv_value", label: "Conv. value", type: "currency", group: "Conversions", syn: ["conversion value"] },
+    { id: "conv_rate", label: "Conv. rate", type: "percent", group: "Conversions", syn: ["cvr"] },
+    { id: "cost_per_conv", label: "Cost / conv", type: "currency", group: "Conversions", syn: ["cpa"] },
+    { id: "roas", label: "ROAS", type: "ratio", group: "Conversions" },
+  ],
+};
+
+const cbGoogleAdsFieldsCatalog = {
+  campaigns: null,
+};
+
+function cbNormalizeGoogleAdsPreset(preset) {
+  if (!preset) return "overview";
+  if (preset === "campaign_performance") return "campaigns";
+  return preset;
+}
+
+function cbGetGoogleAdsFieldsStorageKey(preset) {
+  return `cb_gads_fields_${preset}_v1`;
+}
+
+function cbGetGoogleAdsFieldsFallback(preset) {
+  if (preset === "campaigns") return GOOGLEADS_CAMPAIGNS_FIELDS_FALLBACK;
+  return { preset, defaults: [], fields: [] };
+}
+
+async function cbLoadGoogleAdsFieldsCatalog(preset) {
+  if (cbGoogleAdsFieldsCatalog[preset]) return cbGoogleAdsFieldsCatalog[preset];
+  const fallback = cbGetGoogleAdsFieldsFallback(preset);
+  try {
+    const { ok, json } = await cbFetchJson(`/api/connectors/googleads/fields?preset=${encodeURIComponent(preset)}`);
+    if (ok && json?.fields) {
+      cbGoogleAdsFieldsCatalog[preset] = json;
+      return json;
+    }
+  } catch (error) {
+    // ignore
+  }
+  cbGoogleAdsFieldsCatalog[preset] = fallback;
+  return fallback;
+}
+
+function cbOrderGoogleAdsFields(selected, defaults) {
+  const unique = Array.from(new Set((selected || []).filter(Boolean)));
+  const ordered = [];
+  (defaults || []).forEach((field) => {
+    if (unique.includes(field)) ordered.push(field);
+  });
+  unique
+    .filter((field) => !(defaults || []).includes(field))
+    .sort((a, b) => a.localeCompare(b))
+    .forEach((field) => ordered.push(field));
+  return ordered;
+}
+
+function cbReadGoogleAdsSelectedFields(preset, defaults) {
+  const key = cbGetGoogleAdsFieldsStorageKey(preset);
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return defaults;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length) return parsed;
+  } catch (error) {
+    // ignore
+  }
+  return defaults;
+}
+
+function cbWriteGoogleAdsSelectedFields(preset, fields) {
+  const key = cbGetGoogleAdsFieldsStorageKey(preset);
+  try {
+    localStorage.setItem(key, JSON.stringify(fields || []));
+  } catch (error) {
+    // ignore
+  }
+}
+
+function cbScoreGoogleAdsField(field, query) {
+  if (!query) return 0;
+  const q = query.toLowerCase();
+  const label = String(field.label || "").toLowerCase();
+  const id = String(field.id || "").toLowerCase();
+  if (label.includes(q)) return 3;
+  if (Array.isArray(field.syn) && field.syn.some((syn) => String(syn || "").toLowerCase().includes(q))) return 2;
+  if (id.includes(q)) return 1;
+  return 0;
+}
+
+function cbComputeGoogleAdsMetricValues(source) {
+  const impressions = Number(source?.impressions || 0);
+  const clicks = Number(source?.clicks || 0);
+  const spend = Number(source?.spend ?? source?.cost ?? 0);
+  const conversions = Number(source?.conversions || 0);
+  const convValue = Number(source?.conv_value ?? source?.convValue ?? 0);
+  const ctr = source?.ctr ?? (impressions > 0 ? clicks / impressions : null);
+  const avgCpc = source?.avg_cpc ?? source?.avgCpc ?? (clicks > 0 ? spend / clicks : null);
+  const convRate = source?.conv_rate ?? source?.convRate ?? (clicks > 0 ? conversions / clicks : null);
+  const costPerConv = source?.cost_per_conv ?? source?.cpa ?? (conversions > 0 ? spend / conversions : null);
+  const roas = source?.roas ?? (spend > 0 ? convValue / spend : null);
+  const cpm = source?.cpm ?? (impressions > 0 ? (spend / impressions) * 1000 : null);
+  return {
+    spend,
+    impressions,
+    clicks,
+    conversions,
+    conv_value: convValue,
+    ctr,
+    avg_cpc: avgCpc,
+    conv_rate: convRate,
+    cost_per_conv: costPerConv,
+    roas,
+    cpm,
+  };
+}
+
+function cbFormatGoogleAdsFieldValue(field, value, currency) {
+  if (value == null) return "—";
+  if (field?.type === "currency") return cbFormatCurrency(value, currency);
+  if (field?.type === "percent") return cbFormatPercent(value);
+  if (field?.type === "ratio") return cbFormatNumber(value);
+  return cbFormatNumber(value);
+}
+
+function cbBuildGoogleAdsReportSpec({ resource, dateRange, preset, compare }) {
+  const normalizedPreset = cbNormalizeGoogleAdsPreset(preset);
+  const presets = {
+    overview: {
+      metrics: ["metrics.cost_micros", "metrics.clicks", "metrics.conversions"],
+      dimensions: ["customer.id"],
+    },
+    campaigns: {
+      metrics: ["metrics.cost_micros", "metrics.clicks", "metrics.conversions"],
+      dimensions: ["campaign.id", "campaign.name"],
+    },
+    search_terms: {
+      metrics: ["metrics.clicks", "metrics.conversions", "metrics.impressions"],
+      dimensions: ["search_term_view.search_term"],
+    },
+    pmax_asset_groups: {
+      metrics: ["metrics.cost_micros", "metrics.conversions"],
+      dimensions: ["asset_group.id", "asset_group.name"],
+    },
+  };
+  const selected = presets[normalizedPreset] || presets.overview;
+  return {
+    resource,
+    dateRange,
+    metrics: selected.metrics,
+    dimensions: selected.dimensions,
+    segments: [],
+    compare: Boolean(compare),
+    preset: normalizedPreset,
+    updatedAt: Date.now(),
+  };
+}
+
+function cbBindGoogleAdsData(conn) {
+  const reportType = document.getElementById("cbx-report-type");
+  const dateRange = document.getElementById("cbx-date-range");
+  const compareToggle = document.getElementById("cbx-compare-toggle");
+  const fetchBtn = document.getElementById("cbx-conn-fetch");
+  const chips = Array.from(document.querySelectorAll("#cbx-data-packs .cbx-chip"));
+  const stored = cbGetConnectorStorage(conn.key, "reportSpec", null);
+
+  const defaultPreset = stored?.preset || "overview";
+  const defaultResource = stored?.resource || "campaign";
+  const defaultRange = stored?.dateRange || "LAST_30_DAYS";
+
+  if (reportType) reportType.value = defaultResource;
+  if (dateRange) dateRange.value = defaultRange;
+  if (compareToggle) compareToggle.checked = Boolean(stored?.compare);
+
+  chips.forEach((chip) => {
+    const preset = chip.getAttribute("data-preset");
+    chip.classList.toggle("is-active", preset === defaultPreset);
+    chip.addEventListener("click", () => {
+      chips.forEach((c) => c.classList.remove("is-active"));
+      chip.classList.add("is-active");
+      cbPersistGoogleAdsReportSpec(conn);
+      cbSetGoogleAdsFieldPickerVisibility();
+    });
+  });
+
+  [reportType, dateRange, compareToggle].forEach((el) => {
+    if (!el) return;
+    el.addEventListener("change", () => cbPersistGoogleAdsReportSpec(conn));
+  });
+
+  cbPersistGoogleAdsReportSpec(conn);
+
+  if (fetchBtn && fetchBtn.dataset.bound !== "true") {
+    fetchBtn.addEventListener("click", () => cbRunGoogleAdsReport({ source: "data" }));
+    fetchBtn.dataset.bound = "true";
+  }
+
+  cbInitGoogleAdsFieldPicker(conn);
+  cbSetGoogleAdsFieldPickerVisibility();
+}
+
+function cbPersistGoogleAdsReportSpec(conn) {
+  const reportType = document.getElementById("cbx-report-type");
+  const dateRange = document.getElementById("cbx-date-range");
+  const compareToggle = document.getElementById("cbx-compare-toggle");
+  const activeChip = document.querySelector("#cbx-data-packs .cbx-chip.is-active");
+
+  const resource = reportType?.value || "campaign";
+  const range = dateRange?.value || "LAST_30_DAYS";
+  const preset = cbNormalizeGoogleAdsPreset(activeChip?.getAttribute("data-preset") || "overview");
+  const compare = Boolean(compareToggle?.checked);
+
+  const spec = cbBuildGoogleAdsReportSpec({
+    resource,
+    dateRange: range,
+    preset,
+    compare,
+  });
+
+  cbSetConnectorStorage(conn.key, "reportSpec", spec);
+}
+
+function cbGetGoogleAdsReportParams() {
+  const reportType = document.getElementById("cbx-report-type");
+  const dateRange = document.getElementById("cbx-date-range");
+  const activeChip = document.querySelector("#cbx-data-packs .cbx-chip.is-active");
+  return {
+    resource: reportType?.value || "campaign",
+    rangeKey: dateRange?.value || "LAST_30_DAYS",
+    preset: cbNormalizeGoogleAdsPreset(activeChip?.getAttribute("data-preset") || "overview"),
+  };
+}
+
+function cbInitGoogleAdsFieldPicker(conn) {
+  const wrapper = document.getElementById("cbx-gads-fields");
+  if (!wrapper) return;
+  const openBtn = document.getElementById("cbx-gads-fields-open");
+  const drawer = document.getElementById("cbx-gads-fields-drawer");
+  const listEl = document.getElementById("cbx-gads-fields-list");
+  const searchEl = document.getElementById("cbx-gads-fields-search");
+  const applyBtn = document.getElementById("cbx-gads-fields-apply");
+  const resetBtn = document.getElementById("cbx-gads-fields-reset");
+  const closeBtn = document.getElementById("cbx-gads-fields-close");
+  const noteEl = document.getElementById("cbx-gads-fields-note");
+  const errorEl = document.getElementById("cbx-gads-fields-error");
+
+  const preset = cbGetGoogleAdsReportParams().preset;
+  const isCampaigns = preset === "campaigns";
+  wrapper.hidden = !isCampaigns;
+  if (!isCampaigns) {
+    if (drawer) drawer.hidden = true;
+    return;
+  }
+
+  if (!openBtn || openBtn.dataset.bound === "true") return;
+  openBtn.dataset.bound = "true";
+
+  let catalogCache = null;
+  let selectedSet = null;
+
+  const ensureCatalog = async () => {
+    if (catalogCache) return catalogCache;
+    try {
+      catalogCache = await cbLoadGoogleAdsFieldsCatalog("campaigns");
+    } catch (error) {
+      if (errorEl) errorEl.textContent = "Unable to load fields catalog. Using defaults.";
+      catalogCache = cbGetGoogleAdsFieldsFallback("campaigns");
+    }
+    if (!selectedSet) {
+      const defaults = catalogCache.defaults || [];
+      selectedSet = new Set(cbReadGoogleAdsSelectedFields("campaigns", defaults));
+    }
+    if (noteEl) noteEl.textContent = `${selectedSet.size} selected`;
+    return catalogCache;
+  };
+
+  const renderList = async () => {
+    if (!listEl) return;
+    const catalog = await ensureCatalog();
+    const query = String(searchEl?.value || "").trim().toLowerCase();
+    const items = (catalog.fields || [])
+      .map((field) => ({ field, score: cbScoreGoogleAdsField(field, query) }))
+      .filter((item) => !query || item.score > 0)
+      .sort((a, b) => b.score - a.score || String(a.field.label || "").localeCompare(String(b.field.label || "")));
+
+    listEl.innerHTML = "";
+    if (!items.length) {
+      listEl.textContent = "No matching metrics.";
+      return;
+    }
+    items.forEach(({ field }) => {
+      const row = document.createElement("label");
+      row.className = "cbx-row-compact";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.value = field.id;
+      input.checked = selectedSet ? selectedSet.has(field.id) : false;
+      input.addEventListener("change", () => {
+        if (!selectedSet) selectedSet = new Set();
+        if (input.checked) selectedSet.add(field.id);
+        else selectedSet.delete(field.id);
+        if (noteEl) noteEl.textContent = `${selectedSet.size} selected`;
+      });
+      const text = document.createElement("span");
+      text.className = "cbx-log";
+      text.textContent = field.label;
+      row.appendChild(input);
+      row.appendChild(text);
+      listEl.appendChild(row);
+    });
+  };
+
+  openBtn.addEventListener("click", async () => {
+    if (drawer) drawer.hidden = false;
+    if (errorEl) errorEl.textContent = "";
+    await renderList();
+  });
+
+  closeBtn?.addEventListener("click", () => {
+    if (drawer) drawer.hidden = true;
+  });
+
+  searchEl?.addEventListener("input", () => {
+    renderList();
+  });
+
+  applyBtn?.addEventListener("click", async () => {
+    const catalog = await ensureCatalog();
+    const defaults = catalog.defaults || [];
+    const selected = cbOrderGoogleAdsFields(Array.from(selectedSet || []), defaults);
+    const finalFields = selected.length ? selected : defaults;
+    cbWriteGoogleAdsSelectedFields("campaigns", finalFields);
+    if (noteEl) noteEl.textContent = `${finalFields.length} selected`;
+    if (drawer) drawer.hidden = true;
+    cbRunGoogleAdsReport({ source: "data" });
+  });
+
+  resetBtn?.addEventListener("click", async () => {
+    const catalog = await ensureCatalog();
+    const defaults = catalog.defaults || [];
+    selectedSet = new Set(defaults);
+    cbWriteGoogleAdsSelectedFields("campaigns", defaults);
+    if (noteEl) noteEl.textContent = `${defaults.length} selected`;
+    await renderList();
+  });
+
+  ensureCatalog();
+}
+
+function cbSetGoogleAdsFieldPickerVisibility() {
+  const wrapper = document.getElementById("cbx-gads-fields");
+  const drawer = document.getElementById("cbx-gads-fields-drawer");
+  if (!wrapper) return;
+  const preset = cbGetGoogleAdsReportParams().preset;
+  const isCampaigns = preset === "campaigns";
+  wrapper.hidden = !isCampaigns;
+  if (!isCampaigns && drawer) {
+    drawer.hidden = true;
+  }
+}
+
+function cbGetGoogleAdsCampaignCatalog() {
+  return cbGoogleAdsFieldsCatalog.campaigns || GOOGLEADS_CAMPAIGNS_FIELDS_FALLBACK;
+}
+
+function cbGetGoogleAdsFieldMap(catalog) {
+  const map = new Map();
+  (catalog?.fields || []).forEach((field) => {
+    map.set(field.id, field);
+  });
+  return map;
+}
+
+function cbGetGoogleAdsSelectedFields(preset, catalog) {
+  const defaults = catalog?.defaults || [];
+  const selected = cbReadGoogleAdsSelectedFields(preset, defaults);
+  return cbOrderGoogleAdsFields(selected, defaults);
+}
+
+function cbRenderGoogleAdsDataNote(note) {
+  const noteEl = document.getElementById("cbx-data-note");
+  if (noteEl) noteEl.textContent = note || "";
+}
+
+function cbRenderGoogleAdsDataError(message) {
+  const errorEl = document.getElementById("cbx-data-error");
+  if (errorEl) errorEl.textContent = message || "";
+}
+
+function cbRenderGoogleAdsKpis(overview, currency, selectedFields) {
+  const kpisEl = document.getElementById("cbx-data-kpis");
+  if (!kpisEl) return;
+  kpisEl.innerHTML = "";
+  if (!overview) {
+    kpisEl.textContent = "No data yet.";
+    return;
+  }
+  const catalog = cbGetGoogleAdsCampaignCatalog();
+  const fieldMap = cbGetGoogleAdsFieldMap(catalog);
+  const fields = selectedFields && selectedFields.length
+    ? selectedFields
+    : cbGetGoogleAdsSelectedFields("campaigns", catalog);
+  const metrics = cbComputeGoogleAdsMetricValues(overview);
+  fields.forEach((fieldId) => {
+    const field = fieldMap.get(fieldId) || { id: fieldId, label: fieldId, type: "number" };
+    const value = metrics[fieldId];
+    const chip = document.createElement("div");
+    chip.className = "cbx-chip";
+    chip.textContent = `${field.label}: ${cbFormatGoogleAdsFieldValue(field, value, currency)}`;
+    kpisEl.appendChild(chip);
+  });
+}
+
+function cbRenderGoogleAdsCampaigns(rows, currency, selectedFields) {
+  const campaignsEl = document.getElementById("cbx-data-campaigns");
+  if (!campaignsEl) return;
+  campaignsEl.innerHTML = "";
+  if (!Array.isArray(rows) || rows.length === 0) {
+    campaignsEl.textContent = "No campaigns yet.";
+    return;
+  }
+  const catalog = cbGetGoogleAdsCampaignCatalog();
+  const fieldMap = cbGetGoogleAdsFieldMap(catalog);
+  const fields = selectedFields && selectedFields.length
+    ? selectedFields
+    : cbGetGoogleAdsSelectedFields("campaigns", catalog);
+  rows.slice(0, 10).forEach((row) => {
+    const line = document.createElement("div");
+    line.className = "cbx-row-compact";
+    const name = document.createElement("div");
+    name.className = "cbx-log";
+    name.textContent = row.name || "Unnamed campaign";
+    const metrics = document.createElement("div");
+    metrics.className = "cbx-log";
+    const values = cbComputeGoogleAdsMetricValues(row);
+    const parts = fields.map((fieldId) => {
+      const field = fieldMap.get(fieldId) || { id: fieldId, label: fieldId, type: "number" };
+      return `${field.label} ${cbFormatGoogleAdsFieldValue(field, values[fieldId], currency)}`;
+    });
+    metrics.textContent = parts.join(" · ");
+    line.appendChild(name);
+    line.appendChild(metrics);
+    campaignsEl.appendChild(line);
+  });
+}
+
+function cbRenderGoogleAdsRunHistory() {
+  const historyEl = document.getElementById("cbx-conn-history");
+  if (!historyEl) return;
+  const runs = cbGetConnectorRuns("googleads");
+  historyEl.innerHTML = "";
+  if (!runs.length) {
+    historyEl.textContent = "No runs yet.";
+    return;
+  }
+  runs.forEach((run) => {
+    const row = document.createElement("div");
+    row.className = "cbx-row-compact";
+    const left = document.createElement("div");
+    left.className = "cbx-log";
+    left.textContent = `${run.status.toUpperCase()} · ${run.rangeLabel || ""}`.trim();
+    const right = document.createElement("div");
+    right.className = "cbx-log";
+    right.textContent = `${run.customerId || "—"} · ${formatDateTime(run.startedAt)}`;
+    row.appendChild(left);
+    row.appendChild(right);
+    historyEl.appendChild(row);
+  });
+}
+
+async function cbFetchGoogleAdsSnapshots() {
+  const snapEl = document.getElementById("cbx-conn-snapshots");
+  if (!snapEl) return;
+  const { ok, json, status } = await cbFetchJson("/api/connectors/googleads/snapshots?limit=10");
+  if (!ok || !json) {
+    snapEl.textContent = status === 401 ? "Sign in to view snapshots." : "Unable to load snapshots.";
+    return;
+  }
+  const snaps = Array.isArray(json.snapshots) ? json.snapshots : [];
+  if (!snaps.length) {
+    snapEl.textContent = "No snapshots yet.";
+    return;
+  }
+  snapEl.innerHTML = "";
+  snaps.forEach((snap) => {
+    const row = document.createElement("div");
+    row.className = "cbx-row-compact";
+    const label = document.createElement("div");
+    label.className = "cbx-log";
+    label.textContent = snap.label || `Snapshot #${snap.id}`;
+    const meta = document.createElement("div");
+    meta.className = "cbx-log";
+    meta.textContent = `${snap.from} → ${snap.to}`;
+    row.appendChild(label);
+    row.appendChild(meta);
+    snapEl.appendChild(row);
+  });
+}
+
+async function cbSaveGoogleAdsSnapshot() {
+  const log = document.getElementById("cbx-conn-log");
+  const lastRun = cbConnectorState.googleads?.lastRun || null;
+  if (!lastRun) {
+    if (log) log.textContent = "Run a report before saving a snapshot.";
+    return;
+  }
+  const body = {
+    from: lastRun.from,
+    to: lastRun.to,
+    blocks: lastRun.blocks,
+    label: lastRun.label || null,
+  };
+  const { ok, json } = await cbFetchJson("/api/connectors/googleads/snapshots", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (ok && json?.snapshotId) {
+    if (log) log.textContent = `Snapshot saved (#${json.snapshotId}).`;
+    await cbFetchGoogleAdsSnapshots();
+    return;
+  }
+  if (log) log.textContent = "Snapshot failed.";
+}
+
+async function cbRunGoogleAdsReport({ source } = {}) {
+  const log = document.getElementById("cbx-conn-log");
+  const out = document.getElementById("cbx-conn-output");
+  const { rangeKey, preset } = cbGetGoogleAdsReportParams();
+  const range = cbGetRangeFromKey(rangeKey);
+  const blocks = ["overview", "campaigns"];
+  const params = new URLSearchParams({
+    from: range.from,
+    to: range.to,
+    blocks: blocks.join(","),
+  });
+  let selectedFields = [];
+  if (preset === "campaigns") {
+    const catalog = cbGetGoogleAdsCampaignCatalog();
+    selectedFields = cbGetGoogleAdsSelectedFields("campaigns", catalog);
+    if (selectedFields.length) {
+      params.set("fields", selectedFields.join(","));
+    }
+    params.set("preset", "campaigns");
+  }
+  const startedAt = new Date().toISOString();
+  const t0 = Date.now();
+  if (log) log.textContent = "Running report...";
+  cbRenderGoogleAdsDataError("");
+  cbRenderGoogleAdsDataNote(`${range.label} · ${preset}`);
+  const { ok, status, json } = await cbFetchJson(`/api/connectors/googleads/report?${params.toString()}`);
+  const durationMs = Date.now() - t0;
+  const customerId = cbConnectorState.googleads?.customerId || null;
+  const run = {
+    id: `${Date.now()}`,
+    startedAt,
+    durationMs,
+    status: ok ? "ok" : "error",
+    error: ok ? null : (json?.error || `http_${status}`),
+    rangeLabel: range.label,
+    from: range.from,
+    to: range.to,
+    blocks,
+    preset,
+    customerId,
+  };
+  cbConnectorState.googleads.lastRun = run;
+  if (ok && json) {
+    cbConnectorState.googleads.lastReport = json;
+    cbRenderGoogleAdsKpis(json.data?.overview || null, json.currencyCode || "USD", selectedFields);
+    cbRenderGoogleAdsCampaigns(json.data?.campaigns?.rows || [], json.currencyCode || "USD", selectedFields);
+    if (out) {
+      const payload = JSON.stringify(json, null, 2);
+      out.textContent = payload.length > 8000 ? payload.slice(0, 8000) + "\n…" : payload;
+    }
+    if (log) log.textContent = `Report ok (${Math.round(durationMs)}ms)`;
+  } else {
+    const managerSelected = status === 400 && json?.error === "manager_selected";
+    const errMessage = managerSelected
+      ? "Selected account is a manager. Choose a client account in Setup."
+      : status === 401
+      ? "Please sign in to run reports."
+      : "Report failed.";
+    cbRenderGoogleAdsDataError(errMessage);
+    if (out) out.textContent = json ? JSON.stringify(json, null, 2) : "Report failed.";
+    if (log) log.textContent = `Report failed (${status || "error"})`;
+  }
+  cbAddConnectorRun("googleads", run);
+  cbRenderGoogleAdsRunHistory();
+  if (source === "output") {
+    await cbFetchGoogleAdsSnapshots();
+  }
+}
+
+function cbBindGoogleAdsOutput(conn) {
+  const runBtn = document.getElementById("cbx-conn-run");
+  const saveBtn = document.getElementById("cbx-conn-save-snap");
+  const copyBtn = document.getElementById("cbx-conn-copy");
+  const out = document.getElementById("cbx-conn-output");
+  const log = document.getElementById("cbx-conn-log");
+
+  const reportSpec = cbGetConnectorStorage(conn.key, "reportSpec", null);
+  if (out) out.textContent = "";
+  if (log) log.textContent = "Last call: —";
+
+  if (runBtn) {
+    runBtn.onclick = async () => {
+      await cbRunGoogleAdsReport({ source: "output" });
+    };
+  }
+
+  if (saveBtn) {
+    saveBtn.onclick = async () => {
+      await cbSaveGoogleAdsSnapshot();
+    };
+  }
+
+  if (copyBtn) {
+    copyBtn.onclick = async () => {
+      const account = cbGetConnectorStorage(conn.key, "account", null);
+      const snapshot = cbConnectorState.googleads?.lastReport || null;
+      const payload = {
+        connectorKey: conn.key,
+        account,
+        reportSpec,
+        snapshot,
+      };
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+        if (log) log.textContent = "Payload copied to clipboard.";
+      } catch (error) {
+        if (log) log.textContent = "Copy failed. Clipboard unavailable.";
+      }
+    };
+  }
+
+  cbRenderGoogleAdsRunHistory();
+  cbFetchGoogleAdsSnapshots();
+}
+
+function cbBindConnectorSetup(conn) {
+  const connectBtn = document.getElementById("cbx-conn-connect");
+  const disconnectBtn = document.getElementById("cbx-conn-disconnect");
+  const connectNote = document.getElementById("cbx-conn-connect-note");
+  const managerInput = document.getElementById("cbx-conn-mcc");
+  const accountsSel = document.getElementById("cbx-conn-accounts");
+  const loadBtn = document.getElementById("cbx-conn-load");
+  const saveBtn = document.getElementById("cbx-conn-save");
+  const accountsNote = document.getElementById("cbx-conn-accounts-note");
+  const shapeNote = document.getElementById("cbx-conn-shape-note");
+  const activeNote = document.getElementById("cbx-conn-active");
+
+  if (connectNote) {
+    connectNote.textContent = conn.oauthStart ? "OAuth ready." : "No OAuth endpoint set.";
+  }
+
+  if (connectBtn) {
+    connectBtn.onclick = async () => {
+      if (conn.key === "googleads") {
+        cbHandleGoogleAdsConnect();
+        return;
+      }
+      if (conn.key === "ga4") {
+        cbHandleGa4Connect();
+        return;
+      }
+      if (!conn.oauthStart) return;
+      if (conn.oauthStart.includes("/auth/url")) {
+        const { ok, json } = await cbFetchJson(conn.oauthStart);
+        if (ok && json?.url) {
+          window.location.href = json.url;
+        }
+        return;
+      }
+      window.location.href = conn.oauthStart;
+    };
+  }
+
+  if (disconnectBtn) {
+    disconnectBtn.onclick = async () => {
+      if (conn.key === "googleads") {
+        cbHandleGoogleAdsDisconnect();
+        return;
+      }
+      if (conn.key === "ga4") {
+        cbHandleGa4Disconnect();
+        return;
+      }
+      if (!conn.apiBase) return;
+      await cbFetchJson(`${conn.apiBase}/disconnect`, { method: "POST" });
+    };
+  }
+
+  if (accountsSel) {
+    accountsSel.innerHTML = `<option value="">Load accounts…</option>`;
+  }
+  if (accountsNote) accountsNote.textContent = "";
+  if (shapeNote) shapeNote.textContent = "";
+  if (activeNote) {
+    const existing = cbGetConnectorStorage(conn.key, "account", null);
+    const managerStored = cbGetConnectorStorage(conn.key, "managerId", null);
+    const managerId =
+      managerStored ||
+      existing?.loginCustomerId ||
+      cbConnectorState?.[conn.key]?.loginCustomerId ||
+      null;
+    if (managerInput && managerId) managerInput.value = managerId;
+    activeNote.textContent = existing && existing.customerId
+      ? `Active client: ${existing.customerName || "Account"} (${existing.customerId})${managerId ? ` · MCC: ${managerId}` : ""}`
+      : managerId
+      ? `MCC: ${managerId} (select a client account)`
+      : "Active account: —";
+  }
+
+  if (loadBtn) {
+    loadBtn.onclick = async () => {
+      try {
+        if (!conn.accounts?.list) throw new Error("No accounts.list endpoint set.");
+        if (accountsNote) accountsNote.textContent = "Loading…";
+        const managerIdRaw =
+          (managerInput && managerInput.value ? managerInput.value : "") ||
+          cbGetConnectorStorage(conn.key, "managerId", null) ||
+          cbConnectorState?.[conn.key]?.loginCustomerId ||
+          "";
+        const managerId = String(managerIdRaw || "").trim();
+        const listUrl =
+          conn.key === "googleads" && managerId
+            ? `/api/connectors/googleads/customers/clients?managerId=${encodeURIComponent(managerId)}`
+            : conn.accounts.list;
+        const data = await cbApiJson(listUrl, { method: "GET" });
+
+        const rawItems =
+          Array.isArray(data?.items) ? data.items :
+          Array.isArray(data?.clients) ? data.clients :
+          Array.isArray(data?.customers) ? data.customers :
+          Array.isArray(data?.properties) ? data.properties :
+          Array.isArray(data?.accounts) ? data.accounts :
+          null;
+
+        const shape =
+          Array.isArray(data?.items) ? "items" :
+          Array.isArray(data?.clients) ? "clients" :
+          Array.isArray(data?.customers) ? "customers" :
+          Array.isArray(data?.properties) ? "properties" :
+          Array.isArray(data?.accounts) ? "accounts" :
+          "unknown";
+
+        if (shapeNote) {
+          shapeNote.textContent = `${managerId ? `MCC: ${managerId} · ` : ""}Detected shape: ${shape} · count: ${rawItems ? rawItems.length : 0}`;
+          const last = window.__cbLastConnectorCall;
+          if (last) {
+            shapeNote.textContent += ` · last: ${last.status} ${last.url}`;
+          }
+        }
+
+        if (!rawItems) {
+          throw new Error("Unknown response shape. Expected items/customers/properties/accounts.");
+        }
+
+        const items = rawItems.map((x) => {
+          const id =
+            x.id ??
+            x.customerId ??
+            x.propertyId ??
+            x.accountId ??
+            x.customer_id ??
+            x.property_id;
+
+          const name =
+            x.name ??
+            x.descriptiveName ??
+            x.displayName ??
+            x.label ??
+            id;
+
+          return { id: String(id), name: String(name), raw: x };
+        });
+
+        if (accountsSel) {
+          accountsSel.innerHTML =
+            `<option value="">Select…</option>` +
+            items.map((it) => `<option value="${it.id}">${it.name} (${it.id})</option>`).join("");
+        }
+
+        if (accountsNote) {
+          accountsNote.textContent = items.length ? `Loaded ${items.length} accounts.` : "No accounts found.";
+        }
+        if (activeNote) {
+          const existing = cbGetConnectorStorage(conn.key, "account", null);
+          activeNote.textContent = existing && existing.customerId
+            ? `Active client: ${existing.customerName || "Account"} (${existing.customerId})${managerId ? ` · MCC: ${managerId}` : ""}`
+            : managerId
+            ? `MCC: ${managerId} (select a client account)`
+            : "Active account: —";
+        }
+      } catch (e) {
+        if (accountsNote) accountsNote.textContent = `Error: ${e.message}`;
+      }
+    };
+  }
+
+  if (saveBtn) {
+    saveBtn.onclick = async () => {
+      try {
+        if (!conn.accounts?.select) throw new Error("No accounts.select endpoint set.");
+        const v = accountsSel ? accountsSel.value : "";
+        if (!v) throw new Error("Pick an account first.");
+        if (accountsNote) accountsNote.textContent = "Saving…";
+
+        const managerIdRaw = managerInput && managerInput.value ? managerInput.value : "";
+        const managerId = String(managerIdRaw || "").trim() || null;
+
+        if (shapeNote) {
+          shapeNote.textContent = `Save payload: ${conn.accounts?.selectField ? conn.accounts.selectField : "id"}=${v}`;
+        }
+
+        const body = conn.accounts?.selectField
+          ? { [conn.accounts.selectField]: v }
+          : { id: v };
+        if (conn.key === "googleads" && managerId) {
+          body.loginCustomerId = managerId;
+        }
+
+        await cbApiJson(conn.accounts.select, {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
+
+        const selectedName = accountsSel ? accountsSel.options[accountsSel.selectedIndex]?.textContent : null;
+        const accountPayload = {
+          customerId: v,
+          customerName: selectedName ? selectedName.replace(/\s*\([^)]*\)\s*$/, "").trim() : null,
+          loginCustomerId: managerId,
+          savedAt: Date.now(),
+        };
+        cbSetConnectorStorage(conn.key, "account", accountPayload);
+        cbSetConnectorStorage(conn.key, "connected", true);
+        if (managerId) {
+          cbSetConnectorStorage(conn.key, "managerId", managerId);
+        }
+        if (conn.key === "googleads") {
+          cbUpdateConnectorState("googleads", { customerId: v, loginCustomerId: managerId, status: "connected" });
+        }
+        if (activeNote) {
+          activeNote.textContent = `Active client: ${accountPayload.customerName || "Account"} (${accountPayload.customerId})${managerId ? ` · MCC: ${managerId}` : ""}`;
+        }
+        cbRenderConnectorsHome(conn.key);
+
+        if (shapeNote) {
+          const last = window.__cbLastConnectorCall;
+          if (last) {
+            shapeNote.textContent += ` · last: ${last.status} ${last.url}`;
+          }
+        }
+
+        if (accountsNote) accountsNote.textContent = "Saved.";
+      } catch (e) {
+        if (accountsNote) accountsNote.textContent = `Error: ${e.message}`;
+      }
+    };
+  }
+}
+
+function cbBindConnectorOutput(conn) {
+  const runBtn = document.getElementById("cbx-conn-run");
+  const out = document.getElementById("cbx-conn-output");
+  const log = document.getElementById("cbx-conn-log");
+  if (out) out.textContent = "";
+  if (!runBtn) return;
+
+  runBtn.onclick = async () => {
+    try {
+      if (!conn.testFetch?.url) throw new Error("No testFetch.url endpoint set.");
+      if (log) log.textContent = "Running…";
+      const data = await cbApiJson(conn.testFetch.url, { method: "GET" });
+      if (out) out.textContent = JSON.stringify(data, null, 2);
+      const last = window.__cbLastConnectorCall;
+      if (log && last) log.textContent = `Last call: ${last.status} ${last.url}`;
+    } catch (e) {
+      if (out) {
+        out.textContent = `Error: ${e.message}\n\n` + (e.body ? JSON.stringify(e.body, null, 2) : "");
+      }
+      const last = window.__cbLastConnectorCall;
+      if (log && last) log.textContent = `Last call: ${last.status} ${last.url}`;
+    }
+  };
+}
+
+function cbInitConnectorsNav() {
+  const btn = document.getElementById("btn-manage-connectors");
+  if (btn && btn.dataset.connectorsNavBound !== "true") {
+    btn.addEventListener("click", (event) => {
+      event.preventDefault?.();
+      event.stopPropagation?.();
+      cbSetView("connectors", { connector: null, tab: null });
+    });
+    btn.dataset.connectorsNavBound = "true";
+  }
+}
 
 const setupMainTabs = () => {
   const tabs = document.querySelectorAll("[data-view-target]");
@@ -8462,9 +10064,9 @@ const initCoolBitsUI = () => {
   syncWorkspaceShell();
   setupCouncilControls();
   setupMainTabs();
-  setupContextActivationBindings();
+  cbInitConnectorsNav();
+  cbRoute();
   cbRenderCouncilBar();
-  cbHandleInitialViewParam();
 };
 
 const renderMessages = () => {
@@ -8678,7 +10280,6 @@ async function sendMessage(prefilledValue) {
     }
     let autoRenameSource = null;
     if (cbChatsUnsupported) {
-      await cbEnsureActiveContext();
       const data = await legacyRequestChatReply(message);
       const reply = extractReply(data);
       if (!reply) {
@@ -9221,3 +10822,9 @@ console.log("[CB_CHAT_BUILD]", "v2025-12-02T15:30Z");
   window.addEventListener('DOMContentLoaded', updateCouncilText);
   updateCouncilText(); // Initial call
 })();
+
+
+
+
+
+

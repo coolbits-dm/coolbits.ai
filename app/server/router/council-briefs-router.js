@@ -18,9 +18,8 @@ const GA4_ALLOWED_BLOCKS_SET = new Set(GA4_ALLOWED_BLOCKS);
 const GA4_BLOCK_ORDER = GA4_ALLOWED_BLOCKS.slice();
 
 function getWorkspaceId(req) {
-  const header = req.header('X-Workspace-Id');
-  const workspaceId = header || req.body?.workspaceId || req.query?.workspaceId || req.workspaceId || 'business';
-  return String(workspaceId || 'business').trim() || 'business';
+  const candidate = req.workspaceId || null;
+  return candidate ? String(candidate).trim() : null;
 }
 
 function normalizeMode(value) {
@@ -539,6 +538,7 @@ router.post('/briefs', requireUser, async (req, res) => {
   if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
   const workspaceId = getWorkspaceId(req);
+  if (!workspaceId) return res.status(403).json({ error: 'workspace_not_bound' });
   const source = safeTrim(req.body?.source, 24).toLowerCase();
   if (source !== 'ga4') {
     return res.status(400).json({ error: 'invalid_source', message: 'Only ga4 is supported for now.' });

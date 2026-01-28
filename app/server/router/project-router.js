@@ -9,6 +9,10 @@ import {
 
 const router = express.Router();
 
+function getWorkspaceId(req) {
+  const candidate = req.workspaceId || null;
+  return candidate ? String(candidate).trim() : null;
+}
 
 function handleProjectError(req, res, err, route = 'unknown') {
   console.error('[PROJECT_ERROR]', {
@@ -33,9 +37,10 @@ function handleProjectError(req, res, err, route = 'unknown') {
 // GET /api/projects
 router.get('/', requireUser, async (req, res, next) => {
   try {
-    const workspaceId = typeof req.query.workspaceId === 'string' && req.query.workspaceId.trim()
-      ? req.query.workspaceId.trim()
-      : 'business';
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) {
+      return res.status(403).json({ error: 'workspace_not_bound' });
+    }
     console.debug('[WORKSPACE]', { route: '/api/projects', email: req.userEmail, workspaceId });
     const projects = await listProjectsForUser(req.userEmail, workspaceId);
     res.json({ projects });
@@ -48,9 +53,10 @@ router.get('/', requireUser, async (req, res, next) => {
 router.post('/', requireUser, async (req, res, next) => {
   try {
     const name = String(req.body?.name || '').trim();
-    const workspaceId = typeof req.body?.workspaceId === 'string' && req.body.workspaceId.trim()
-      ? req.body.workspaceId.trim()
-      : 'business';
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) {
+      return res.status(403).json({ error: 'workspace_not_bound' });
+    }
     if (!name) {
       return res.status(400).json({ error: 'invalid_name', message: 'Project name is required.' });
     }
@@ -64,6 +70,14 @@ router.post('/', requireUser, async (req, res, next) => {
 // PATCH /api/projects/:id
 router.patch('/:id', requireUser, async (req, res, next) => {
   try {
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) {
+      return res.status(403).json({ error: 'workspace_not_bound' });
+    }
+    const project = await getProjectForUser(req.userEmail, req.params.id);
+    if (!project || project.workspaceId !== workspaceId) {
+      return res.status(404).json({ error: 'not_found' });
+    }
     const patch = {};
     if (typeof req.body?.name === 'string') {
       patch.name = req.body.name.trim();
@@ -71,9 +85,9 @@ router.patch('/:id', requireUser, async (req, res, next) => {
     if (typeof req.body?.archived === 'boolean') {
       patch.archived = req.body.archived;
     }
-    const project = await updateProjectForUser(req.userEmail, req.params.id, patch);
-    if (!project) return res.status(404).json({ error: 'not_found' });
-    res.json(project);
+    const updated = await updateProjectForUser(req.userEmail, req.params.id, patch);
+    if (!updated) return res.status(404).json({ error: 'not_found' });
+    res.json(updated);
   } catch (err) {
     if (err.status === 404 || err.message === 'project_not_found') {
       return res.status(404).json({ error: 'not_found' });

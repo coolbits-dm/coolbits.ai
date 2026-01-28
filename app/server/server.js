@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import fs from 'node:fs';
 import os from 'node:os';
 import cors from './middleware/cors.js';
 import router from './router/index.js';
@@ -9,6 +10,26 @@ import { logRequest, logError } from './logger.js';
 import stripeWebhookRouter from './router/stripe-webhook-router.js';
 
 console.log('[COOLBITS_BOOT]', import.meta.url);
+
+const BUILD_COMMIT_PATH = '/opt/coolbits.ai/var/build_commit';
+const readBuildCommit = () => {
+  try {
+    const raw = fs.readFileSync(BUILD_COMMIT_PATH, 'utf8');
+    const info = {};
+    for (const line of raw.split('\n')) {
+      if (!line) continue;
+      const idx = line.indexOf('=');
+      if (idx === -1) continue;
+      const key = line.slice(0, idx).trim();
+      const value = line.slice(idx + 1).trim();
+      if (!key) continue;
+      info[key] = value;
+    }
+    return Object.keys(info).length > 0 ? info : null;
+  } catch (err) {
+    return null;
+  }
+};
 
 const app = express();
 app.use(
@@ -43,10 +64,10 @@ app.use((req, res, next) => {
 });
 
 app.get('/health', (req, res) => {
-  res.json({ ok: true });
+  res.json({ ok: true, buildCommit: readBuildCommit() });
 });
 app.get('/healthz', (req, res) => {
-  res.json({ ok: true });
+  res.json({ ok: true, buildCommit: readBuildCommit() });
 });
 
 const redirectTo = (target) => (_req, res) => res.redirect(302, target);

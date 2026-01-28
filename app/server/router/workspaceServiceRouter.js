@@ -5,9 +5,29 @@ import { buildIntegrationSummary } from '../services/integrationSummaryService.j
 
 const router = express.Router();
 
+function getWorkspaceId(req) {
+  const candidate = req.workspaceId || null;
+  return candidate ? String(candidate).trim() : null;
+}
+
+function resolveWorkspace(req, res) {
+  const workspaceId = getWorkspaceId(req);
+  if (!workspaceId) {
+    res.status(403).json({ error: 'workspace_not_bound' });
+    return null;
+  }
+  const requested = req.params?.workspaceId || null;
+  if (requested && String(requested).trim() !== workspaceId) {
+    res.status(404).json({ error: 'not_found' });
+    return null;
+  }
+  return workspaceId;
+}
+
 // GET /api/workspaces/:workspaceId/services/summary
 router.get('/workspaces/:workspaceId/services/summary', requireUser, async (req, res) => {
-  const { workspaceId } = req.params;
+  const workspaceId = resolveWorkspace(req, res);
+  if (!workspaceId) return;
 
   try {
     const summary = await buildIntegrationSummary(workspaceId);
@@ -20,7 +40,9 @@ router.get('/workspaces/:workspaceId/services/summary', requireUser, async (req,
 
 // POST /api/workspaces/:workspaceId/services/:code/connect
 router.post('/workspaces/:workspaceId/services/:code/connect', requireUser, async (req, res) => {
-  const { workspaceId, code } = req.params;
+  const workspaceId = resolveWorkspace(req, res);
+  if (!workspaceId) return;
+  const { code } = req.params;
   const userId = req.userEmail || null;
 
   try {

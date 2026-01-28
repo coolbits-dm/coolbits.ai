@@ -1,0 +1,14 @@
+nohup: ignoring input
+[STRIPE] configured { mode: 'live' }
+[VERTEX_CONFIG] {
+  model: 'gemini-2.5-flash-lite',
+  project: 'coolbits-ai',
+  location: 'us-central1',
+  provider: 'vertex'
+}
+[BILLING_ROUTER_LOADED]
+[GOOGLEADS_ROUTER_LOADED]
+[GA4_ROUTER_LOADED]
+[ROUTER] context mounted at /api/context
+[COOLBITS_BOOT] file:///opt/coolbits.ai/app/server/server.js
+CoolBits.ai server running on port 8788
